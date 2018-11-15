@@ -8,17 +8,13 @@ splitted to two different projects):
 - MCFBlock, a SMS++ :Block for Linear Min-Cost Flow Problems
 
 - MCFSolver, a SMS++ :Solver for MCFBlock based on forwarding the interface
-  of (objects derived from the general abstract) MCFClass of the
-  [MCFClass project](http://www.di.unipi.it/optimize/Software/MCF.html)
+  of (objects derived from the general abstract) [MCFClass of the
+  MCFClass project](http://www.di.unipi.it/optimize/Software/MCF.html)
 
-The project obviously requires the "core" SMS++, avalable at
-
-    https://gitlab.com/frangio68/sms_plus_plus
-
-However, it also requires (for the MCFSolver component) the MCFClass project,
-available at
-
-    https://github.com/frangio68/Min-Cost-Flow-Class
+The project obviously requires the ["core"
+SMS++](https://gitlab.com/frangio68/sms_plus_plus); however, it also requires
+(for the MCFSolver component) the [MCFClass
+project](https://github.com/frangio68/Min-Cost-Flow-Class).
 
 The arrangement of folders is assumed to be
 
