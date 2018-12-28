@@ -1258,7 +1258,7 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
      const auto cp = static_cast<BoxConstraint * const>( tmod->f_constraint );
 
      // ensure that no "physical modification" is issued
-     MCFB->chg_ucap( bound_number( cp ) , cp->get_rhs() , eNoMod , iPA );
+     MCFB->chg_ucap( cp->get_rhs() , bound_number( cp ) , eNoMod , iPA );
      return;
      }
 
@@ -1266,7 +1266,7 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
      auto cp = static_cast<FRowConstraint * const>( tmod->f_constraint );
 
      // ensure that no "physical modification" is issued
-     MCFB->chg_dfct( const_number( cp ) , cp->get_rhs() , eNoMod , iPA );
+     MCFB->chg_dfct( cp->get_rhs() , const_number( cp ) , eNoMod , iPA );
      return;
      }
 
@@ -1741,7 +1741,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_cost( c_Index arc , c_CNumber NCost ,
+void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc , 
 			 c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( arc >= get_NArcs() )
@@ -2121,7 +2121,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_dfct( c_Index nde , c_CNumber NDfct ,
+void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
 			 c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( nde >= get_NNodes() )

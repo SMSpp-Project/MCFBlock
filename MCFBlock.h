@@ -1079,7 +1079,7 @@ public:
   * Note that this can issue only one Modification of each type; the
   * "physical" one is a MCFBlockRngdMod with stop = start + 1. */
 
- void chg_cost( c_Index arc , c_CNumber NCost ,
+ void chg_cost( c_CNumber NCost , c_Index arc , 
 		c_ModParam issueMod = eNoBlck ,
 		c_ModParam issueAMod = eNoBlck );
 
@@ -1199,7 +1199,7 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with stop = start + 1. */
 
- void chg_dfct( c_Index nde , c_FNumber NDfct ,
+ void chg_dfct( c_FNumber NDfct , c_Index nde ,
 		c_ModParam issueMod = eNoBlck ,
 		c_ModParam issueAMod = eNoBlck );
 

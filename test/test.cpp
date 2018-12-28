@@ -489,8 +489,8 @@ int main( int argc , char **argv )
   // change costs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   if( drand48() <= 0.2 ) {  // ... but only in 20% of the cases
-   MCFBlock::Index tochange = min( double( 1 ) , drand48() * n_change );
-   cout << tochange << " cost - ";
+   MCFBlock::Index tochange = max( double( 1 ) , drand48() * n_change );
+   cout << tochange << " cost";
 
    if( tochange == 1 ) {
     MCFBlock::CNumber newcst = c_min +
@@ -499,7 +499,8 @@ int main( int argc , char **argv )
     MCFBlock::Index arc = MCFBlock::Index( drand48() * ( m - 1 ) );
 
     mcf->ChgCost( arc , newcst );
-    mMCFB->chg_cost( arc , newcst );
+    mMCFB->chg_cost( newcst , arc );
+    cout << " - ";
     }
    else {
     for( MCFBlock::Index i = 0 ; i < n_change ; i++ )
@@ -512,6 +513,7 @@ int main( int argc , char **argv )
      MCFBlock::Index stp = strt + tochange;
      mcf->ChgCosts( newcsts.data() , nullptr , strt , stp );
      mMCFB->chg_costs( newcsts.begin() , strt , stp );
+     cout << "s(r) - ";
      }
     else {
      MCFBlock::Vec_Index nms( m + 1 );
@@ -527,6 +529,7 @@ int main( int argc , char **argv )
      mcf->ChgCosts( newcsts.data() , nms.data() );
      nms.resize( tochange );
      mMCFB->chg_costs( newcsts.begin() , std::move( nms ) , true );
+     cout << "s(s) - ";
      }
     }
    }  // end( if( change costs ) )
@@ -534,14 +537,15 @@ int main( int argc , char **argv )
   // change capacities- - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   if( drand48() <= 0.2 ) {  // ... but only in 20% of the cases
-   MCFBlock::Index tochange = min( double( 1 ) , drand48() * n_change );
-   cout << tochange << " capacity - ";
+   MCFBlock::Index tochange = max( double( 1 ) , drand48() * n_change );
+   cout << tochange << " capacit";
 
    if( tochange == 1 ) {
     MCFBlock::Index arc = MCFBlock::Index( drand48() * ( m - 1 ) );
     MCFBlock::CNumber newcap = mcf->MCFUCap( arc ) * rndfctr();
     mcf->ChgUCap( arc , newcap );
-    mMCFB->chg_ucap( arc , newcap );
+    mMCFB->chg_ucap( newcap , arc );
+    cout << "y - ";
     }
    else
     // in 50% of the cases do a ranged change, in the others a sparse change
@@ -552,6 +556,7 @@ int main( int argc , char **argv )
       newcaps[ i ] = mcf->MCFUCap( i + strt ) * rndfctr();
      mcf->ChgUCaps( newcaps.data() , nullptr , strt , stp );
      mMCFB->chg_ucaps( newcaps.begin() , strt , stp );
+     cout << "ies(r) - ";
      }
     else {
      MCFBlock::Vec_Index nms( m + 1 );
@@ -569,13 +574,14 @@ int main( int argc , char **argv )
      mcf->ChgUCaps( newcsts.data() , nms.data() );
      nms.resize( tochange );
      mMCFB->chg_ucaps( newcsts.begin() , std::move( nms ) , true );
+     cout << "ies(s) - ";
      }
    }  // end( if( change capacities ) )
 
   // change deficits- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   if( drand48() <= 0.2 ) {  // ... but only in 20% of the cases
-   cout << " 2 deficits - ";
+   cout << "2 deficits - ";
 
    MCFClass::Index posn;
    MCFClass::Index negn;
@@ -614,8 +620,8 @@ int main( int argc , char **argv )
 
    mcf->ChgDfct( posn , posd );
    mcf->ChgDfct( negn , negd );
-   mMCFB->chg_dfct( posn , posd );
-   mMCFB->chg_dfct( negn , negd );
+   mMCFB->chg_dfct( posd , posn );
+   mMCFB->chg_dfct( negd , negn );
 
    }  // end( change deficits )
 
