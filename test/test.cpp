@@ -503,7 +503,8 @@ int main( int argc , char **argv )
     }
    else {
     for( MCFBlock::Index i = 0 ; i < n_change ; i++ )
-     newcsts[ i ] = c_min + MCFBlock::CNumber( drand48() * ( c_max - c_min ) );
+     newcsts[ i ] = c_min +
+                          MCFBlock::CNumber( drand48() * ( c_max - c_min ) );
 
     // in 50% of the cases do a ranged change, in the others a sparse change
     if( drand48() <= 0.5 ) {
