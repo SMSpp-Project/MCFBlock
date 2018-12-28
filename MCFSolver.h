@@ -227,30 +227,28 @@ public:
 
  virtual void set_Block( Block * block ) override
  {
-  auto MCFB = dynamic_cast< MCFBlock * >( block );
-  if( ! MCFB )
-   throw( std::invalid_argument(
-		         "MCFSolver:set_Block: block must be a MCFBlock" ) );
-
-  if( f_Block ) {  // there was another Block attached before
-   f_Block->unregister_Solver( this );  // this Solver looks elsewhere now
-   v_mod.clear();  /* any outstanding Modification was for the old Block,
-		    * hence it is irrelevant now. */
-   }
+  if( block == f_Block )  // actually doing nothing
+   return;                // cowardly and silently return
 
   Solver::set_Block( block );  // attach to the new Block
 
-  // load the new MCFBlock into the :MCFClass object
-  MCFC::LoadNet( MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		 MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		 MCFB->get_U().size() ? MCFB->get_U().data() : nullptr ,
-		 MCFB->get_C().size() ? MCFB->get_C().data() : nullptr ,
-		 MCFB->get_B().size() ? MCFB->get_B().data() : nullptr ,
-		 MCFB->get_SN().data() , MCFB->get_EN().data() );
-  MCFC::PreProcess();
+  if( block ) {  // this is not just resetting everything
+   auto MCFB = dynamic_cast< MCFBlock * >( block );
+   if( ! MCFB )
+    throw( std::invalid_argument(
+		         "MCFSolver:set_Block: block must be a MCFBlock" ) );
 
-  // TODO: maybe log it
+   // load the new MCFBlock into the :MCFClass object
+   MCFC::LoadNet( MCFB->get_NNodes() , MCFB->get_NArcs() ,
+		  MCFB->get_NNodes() , MCFB->get_NArcs() ,
+		  MCFB->get_U().size() ? MCFB->get_U().data() : nullptr ,
+		  MCFB->get_C().size() ? MCFB->get_C().data() : nullptr ,
+		  MCFB->get_B().size() ? MCFB->get_B().data() : nullptr ,
+		  MCFB->get_SN().data() , MCFB->get_EN().data() );
+   MCFC::PreProcess();
 
+   // TODO: maybe log it
+   }
   }  // end( set_Block )
 
 /*--------------------------------------------------------------------------*/
@@ -295,8 +293,10 @@ public:
   // then (try to) solve the MCF
   this->MCFC::SolveMCF();
 
-  // now give out the result
-  return( MCFstatus_2_sol_type[ this->MCFC::MCFGetStatus() ] );
+  // now give out the result: note that the vector MCFstatus_2_sol_type[]
+  // starts from 0 whereas the first value of MCFStatus is -1 (= kUnSolved),
+  // hence the returned status has to be shifted by + 1
+  return( MCFstatus_2_sol_type[ this->MCFC::MCFGetStatus() + 1 ] );
   }
 
 /*@} -----------------------------------------------------------------------*/
@@ -596,7 +596,7 @@ protected:
 
 /*--------------------------------------------------------------------------*/
 
- };   // end( class MCFSolver )
+ };  // end( class MCFSolver )
 
 /*@}  end( group( Solver_CLASSES ) ) ---------------------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -631,7 +631,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
    {
     const auto tmod = std::dynamic_pointer_cast<GroupModification>( mod );
     if( tmod ) {
-     for( auto submod : tmod->v_sub_Modifications )
+     for( const auto & submod : tmod->v_sub_Modifications )
       guts_of_poM( submod );
 
      return;
@@ -709,7 +709,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
      // have to InINF-terminate the vector of indices (damn!)
      MCFBlock::Vec_Index nmsI( tmod->f_nms.size() + 1 );
      *copy( tmod->f_nms.begin() , tmod->f_nms.end() , nmsI.begin() ) =
-                                                        Inf<MCFBlock::Index>();
+                                                       Inf<MCFBlock::Index>();
      switch( tmod->f_type ) {
       case( MCFBlockMod::eChgCost ): {
        MCFBlock::Vec_CNumber NCost( tmod->f_nms.size() );

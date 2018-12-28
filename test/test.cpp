@@ -100,7 +100,9 @@
 /*-------------------------------- MACROS ----------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-#define solver_name( snm ) "MCFSolver<" #snm ">"
+#define arg_2_str( s ) #s
+
+#define solver_name( snm ) "MCFSolver<" arg_2_str( snm ) ">"
 
 /*--------------------------------------------------------------------------*/
 /*-------------------------------- USING -----------------------------------*/
@@ -241,7 +243,6 @@ static inline void load( char * fn )
   iFile.seekg( 0 );       // rewind the file
 
   iFile >> *oMCFB;        // load the MCFBlock
-
   }
  catch( exception &e ) {
   cerr << "MCFClass: " << e.what() << endl;
@@ -280,8 +281,6 @@ static inline bool SolveMCF( void )
    default:                       cout << "      Error!";
    }
 
-  cout << endl;
-
   // solve the MCFBlock- - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // before actually solving, if modifications are not made on the MCFBlock
   // then exploit the FakeSolver to map them
@@ -304,10 +303,10 @@ static inline bool SolveMCF( void )
    modlist.clear();  // clear the processed Modification
    }
 
-  cout << "MCFBlock = ";
+  cout << " ~ MCFBlock = ";
   Solver * slvr = (sMCFB->get_registered_solvers()).front();
   int rtrn = slvr->compute( false );
-  if( ( rtrn > Solver::kUnEval ) && ( rtrn <= Solver::kOK ) ) {
+  if( ( rtrn >= Solver::kOK ) && ( rtrn < Solver::kError ) ) {
    cout << slvr->get_ub() << endl;
    return( true );
    }
@@ -460,7 +459,7 @@ int main( int argc , char **argv )
  // first solver call - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- cout << "First call:\t\t ";
+ cout << "First call: ";
  cout.setf( ios::scientific, ios::floatfield );
  cout << setprecision( 6 );
 

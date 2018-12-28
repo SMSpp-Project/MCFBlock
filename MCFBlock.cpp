@@ -181,8 +181,8 @@ void MCFBlock::load( std::istream &input )
  U.resize( tm );
  B.resize( NNodes );
 
- for( auto el : B )  // all deficits are 0
-  el = 0;            // unless otherwise stated
+ for( auto & el : B )  // all deficits are 0
+  el = 0;              // unless otherwise stated
 
  // read problem data - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -519,7 +519,7 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
 
   assert( E.size() == get_NNodes() );  // ... which must exist
 
-  for( auto cnst : E )
+  for( const auto & cnst : E )
    if( cnst.rel_viol() > feps )
     return( false );
   }
@@ -557,7 +557,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
 					     get_static_constraints()[ 1 ] );
   if( nnc ) {
-   for( auto & cnst : *nnc )
+   for( const auto & cnst : *nnc )
     if( cnst.rel_viol() > feps )
      return( false );
    }
@@ -565,7 +565,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					     get_static_constraints()[ 1 ] );
    assert( lbc );
-   for( auto & cnst : *lbc )
+   for( const auto & cnst : *lbc )
     if( cnst.rel_viol() > feps )
      return( false );
    }
@@ -1009,7 +1009,7 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     MCFB->nest_channel( par2chnl( iPM ) );  // nest the channel for PM
     MCFB->nest_channel( par2chnl( iPA ) );  // nest the channel for PA
 
-    for( auto submod : tmod->v_sub_Modifications )
+    for( const auto & submod : tmod->v_sub_Modifications )
      guts_of_mfM( submod );
 
     MCFB->un_nest_channel( par2chnl( iPM ) );  // un-nest the channel for PM
@@ -2521,7 +2521,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
  {
   const auto tmod = std::dynamic_pointer_cast<GroupModification>( mod );
   if( tmod ) {
-   for( auto submod : tmod->v_sub_Modifications )
+   for( const auto & submod : tmod->v_sub_Modifications )
     guts_of_add_Modification( submod );
    return;
    }
@@ -2541,7 +2541,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
 
    switch( tmod->f_type ) {
     case( FunctionModVars::RemoveVar ):
-     for( auto var : tmod->v_vars )
+     for( const auto & var : tmod->v_vars )
       C[ p2i( var ) ] = 0;
      break;
      
@@ -2550,7 +2550,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
      const auto cp = lfo->get_v_var();
 
      if( lfo->get_num_active_var() == get_NArcs() ) {  // "dense" objective
-      for( auto var : tmod->v_vars ) {
+      for( const auto & var : tmod->v_vars ) {
        c_Index i = p2i( var );
        C[ i ] = cp[ i ].second;
        }
