@@ -270,16 +270,7 @@ static inline bool SolveMCF( void )
  try {
   // solve the MCFClass- - - - - - - - - - - - - - - - - - - - - - - - - - - -
   mcf->SolveMCF();
-  cout << "MCFClass = ";
-  switch( mcf->MCFGetStatus() ) {
-   case( MCFClass::kOK ):         cout << mcf->MCFGetFO();
-                                  break;
-   case( MCFClass::kUnfeasible ): cout << "        +INF";
-                                  break;
-   case( MCFClass::kUnbounded ):  cout << "        -INF";
-                                  break;
-   default:                       cout << "      Error!";
-   }
+  auto stat = mcf->MCFGetStatus();
 
   // solve the MCFBlock- - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // before actually solving, if modifications are not made on the MCFBlock
@@ -303,14 +294,49 @@ static inline bool SolveMCF( void )
    modlist.clear();  // clear the processed Modification
    }
 
-  cout << " ~ MCFBlock = ";
   Solver * slvr = (sMCFB->get_registered_solvers()).front();
   int rtrn = slvr->compute( false );
-  if( ( rtrn >= Solver::kOK ) && ( rtrn < Solver::kError ) ) {
-   cout << slvr->get_ub() << endl;
-   return( true );
+
+  if( ( stat == MCFClass::kOK ) &&
+      ( rtrn >= Solver::kOK ) && ( rtrn < Solver::kError ) ) {
+   auto fo1 = mcf->MCFGetFO();
+   auto fo2 = slvr->get_ub();
+   if( abs( fo1 - fo2 ) / max( double( 1 ) , abs( max( fo1 , fo2 ) ) )
+       <= 1e-8 ) {
+    cout << "OK(f)" << endl;
+    return( true );
+    }
    }
 
+  if( ( stat == MCFClass::kUnfeasible ) &&
+      ( rtrn == Solver::kInfeasible ) ) {
+    cout << "OK(e)" << endl;
+    return( true );
+    }
+
+  if( ( stat == MCFClass::kUnbounded ) &&
+      ( rtrn == Solver::kUnbounded ) ) {
+    cout << "OK(u)" << endl;
+    return( true );
+    }
+
+  cout << "MCFClass = ";
+  switch( mcf->MCFGetStatus() ) {
+   case( MCFClass::kOK ):         cout << mcf->MCFGetFO();
+                                  break;
+   case( MCFClass::kUnfeasible ): cout << "        +INF";
+                                  break;
+   case( MCFClass::kUnbounded ):  cout << "        -INF";
+                                  break;
+   default:                       cout << "      Error!";
+   }
+
+  cout << " ~ MCFBlock = ";
+  if( ( rtrn >= Solver::kOK ) && ( rtrn < Solver::kError ) ) {
+   cout << slvr->get_ub() << endl;
+   return( false );
+   }
+  
   switch( rtrn ) {
    case( Solver::kInfeasible ):   cout << "        +INF";
                                   break;
@@ -341,20 +367,22 @@ int main( int argc , char **argv )
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  long int seed = 1;
+ double p_change = 0.2;
  MCFClass::Index n_change = 10;
  MCFClass::Index n_repeat = 10;
  int optns = 0;
  int mode = 0;
 
  switch( argc ) {
-  case( 7 ): Str2Sthg( argv[ 6 ] , seed );
+  case( 8 ): Str2Sthg( argv[ 7 ] , seed );
+  case( 7 ): Str2Sthg( argv[ 6 ] , p_change );
   case( 6 ): Str2Sthg( argv[ 5 ] , n_change );
   case( 5 ): Str2Sthg( argv[ 4 ] , n_repeat );
   case( 4 ): Str2Sthg( argv[ 3 ] , optns );
   case( 3 ): Str2Sthg( argv[ 2 ] , mode );
   case( 2 ): break;
   default: cerr <<
-	   "Usage: MCFSolve <input file> [mode optns #repeats #changes seed"
+	   "Usage: MCFSolve <input file> [mode optns #rounds #chng %chng seed"
 		<< endl <<
 	   "       mode: 0 = only one, 1 = orig -> solve, 2 = solve -> orig"
 		<< endl <<
@@ -488,7 +516,7 @@ int main( int argc , char **argv )
 
   // change costs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= 0.2 ) {  // ... but only in 20% of the cases
+  if( drand48() <= p_change ) {
    MCFBlock::Index tochange = max( double( 1 ) , drand48() * n_change );
    cout << tochange << " cost";
 
@@ -536,7 +564,7 @@ int main( int argc , char **argv )
 
   // change capacities- - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= 0.2 ) {  // ... but only in 20% of the cases
+  if( drand48() <= p_change ) {
    MCFBlock::Index tochange = max( double( 1 ) , drand48() * n_change );
    cout << tochange << " capacit";
 
@@ -580,7 +608,7 @@ int main( int argc , char **argv )
 
   // change deficits- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= 0.2 ) {  // ... but only in 20% of the cases
+  if( drand48() <= p_change ) {
    cout << "2 deficits - ";
 
    MCFClass::Index posn;
@@ -627,33 +655,35 @@ int main( int argc , char **argv )
 
   // closing arcs- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= 0.2 ) {  // ... but only in 20% of the cases
-   MCFBlock::Index tochange = max( min( MCFBlock::Index( opened / 2 ) ,
-					MCFBlock::Index( drand48() * n_change
-							 ) ) ,
-				   MCFBlock::Index( 1 ) );
-                                   // and at most half of the open ones
-   cout << tochange << " close - ";
+  if( drand48() <= p_change ) {
+   // at most half of the open ones
+   MCFBlock::Index tochange = min( MCFBlock::Index( opened / 2 ) ,
+				   MCFBlock::Index( drand48() * n_change ) );
+   if( tochange ) {
+    cout << tochange << " close - ";
 
-   MCFBlock::Vec_Index nms( tochange );
-   for( int i = 0 ; i < tochange ; i++ ) {
-    MCFBlock::Index pos = drand48() * opened;
-    MCFBlock::Index arc = open[ pos ];
-    open[ pos ] = open[ --opened ];
-    open[ opened ] = arc;
-    nms[ i ] = arc;
-    mcf->CloseArc( arc );
+    MCFBlock::Vec_Index nms( tochange );
+    for( int i = 0 ; i < tochange ; i++ ) {
+     MCFBlock::Index pos = drand48() * opened;
+     if( pos >= opened )
+      pos = opened - 1;
+     MCFBlock::Index arc = open[ pos ];
+     open[ pos ] = open[ --opened ];
+     open[ opened ] = arc;
+     nms[ i ] = arc;
+     mcf->CloseArc( arc );
+     }
+
+    mMCFB->close_arcs( std::move( nms ) );
     }
-
-   mMCFB->close_arcs( std::move( nms ) );
    }
 
   // re-opening arcs - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= 0.2 ) {  // ... but only in 20% of the cases
+  if( drand48() <= p_change ) {
+   // at most half of the closed ones
    MCFBlock::Index tochange = min( MCFBlock::Index( ( m - opened ) / 2 ) ,
 				   MCFBlock::Index( drand48() * n_change ) );
-   // and at most half of the closed ones
 
    if( tochange ) {
     cout << tochange << " open - ";
@@ -661,6 +691,8 @@ int main( int argc , char **argv )
     MCFBlock::Vec_Index nms( tochange );
     for( int i = 0 ; i < tochange ; i++ ) {
      MCFBlock::Index pos = drand48() * ( m - opened );
+     if( opened + pos >= m )
+      pos = m - opened - 1;
      MCFBlock::Index arc = open[ opened + pos ];
      open[ opened + pos ] = open[ opened ];
      open[ opened++ ] = arc;
