@@ -2687,13 +2687,18 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
 inline ModParam MCFBlock::make_amod_param( c_ModParam issueAMod ,
 					   c_Index num )
 {
- if( issue_pmod( issueAMod ) ) {
+ if( issue_mod( issueAMod ) ) {
   ChnlName chnl = par2chnl( issueAMod );
   if( num > 1 ) {            // more than one Modification have to be issued
     if( chnl )               // and a channel is provided
      nest_channel( chnl );   // nest the channel
     else                     // sent to default channel
-     chnl = open_channel();  // open a new channel
+     chnl = open_channel( nullptr , eNoBlck );  /* open a new channel:
+                                                 * this creates a
+     * GroupModification, which is flagged as "eNoBlck" because it is
+     * the "abstract Modification" corresponding to a "physical Modification"
+     * already issued and therefore it must not generate any other
+     * "physical Modification"/ */
    }
 
   return( make_par( eNoBlck , chnl ) );

@@ -1435,11 +1435,18 @@ public:
 /*--------------------------------------------------------------------------*/
 /*-------------------------- CLASS MCFBlockMod -----------------------------*/
 /*--------------------------------------------------------------------------*/
-/// derived class from BlockMod for "simple" modifications to a MCFBlock
-/** Derived class from BlockMod to describe "simple" modifications to a
- *  MCFBlock, which is "everything changed". */
+/// derived class from Modification for "simple" modifications to a MCFBlock
+/** Derived class from Modification to describe "simple" modifications to a
+ *  MCFBlock, which is "everything changed". Note that it is derived from
+ *  Modification rather than, say, BlockMod (which has the same structure)
+ *  because this is a class of "physical Modification". This means that any
+ *  MCFBlockMod refers to changes in the "physical representation" of the
+ *  MCFBlock; the corresponding changes in the "abstract representation" of
+ *  the MCFBlock are dealt with by means of "abstract Modification", i.e.,
+ *  derived classes from AModification (as is BlockMod, which is why
+ *  MCFBlockMod cannot derive from BlockMod). */
 
-class MCFBlockMod : public BlockMod
+class MCFBlockMod : public Modification
 {
 /*----------------------- PUBLIC PART OF THE CLASS -------------------------*/
 
@@ -1462,12 +1469,17 @@ class MCFBlockMod : public BlockMod
 
 /*---------------------- CONSTRUCTOR & DESTRUCTOR --------------------------*/
 
- MCFBlockMod( MCFBlock *fblock ) : BlockMod( fblock ) {}
+ MCFBlockMod( MCFBlock *fblock ) : f_Block( fblock ) {}
  ///< constructor: takes the MCFBlock
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
  virtual ~MCFBlockMod() { }   ///< destructor, does nothing
+
+/*---------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
+
+ MCFBlock *f_Block;
+             ///< pointer to the MCFBlock to which the MCFBlockMod refers
 
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
