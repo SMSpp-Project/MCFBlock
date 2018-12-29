@@ -1706,7 +1706,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
       else
        ccp[ chgv++ ] = std::make_pair( xi , *ncit );
 
-     C[ *ncit ] = *ncit;
+     C[ *nit ] = *ncit;
      }
 
    c_Index nmod = ( addv > 0 ) + ( rmvv > 0 ) + ( chgv > 0 );
@@ -1723,7 +1723,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   for( ; ncit < ncstp ; ++ncit , ++nit )
-   C[ *ncit ] = *ncit;
+   C[ *nit ] = *ncit;
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -1918,9 +1918,9 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
    throw( std::logic_error( "cannot change rhs" ) );
 
   for( ; ncit < ncstp ; ++ncit , ++nit ) {
-   if( U[ *ncit ] != *ncit ) {
-    U[ *ncit ] = *ncit;
-    (*lbc)[ *ncit ].set_rhs( *ncit , ampar );
+   if( U[ *nit ] != *ncit ) {
+    U[ *nit ] = *ncit;
+    (*lbc)[ *nit ].set_rhs( *ncit , ampar );
     }
    }
 
