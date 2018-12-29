@@ -503,7 +503,7 @@ int main( int argc , char **argv )
     cout << " - ";
     }
    else {
-    for( MCFBlock::Index i = 0 ; i < n_change ; i++ )
+    for( MCFBlock::Index i = 0 ; i < tochange ; i++ )
      newcsts[ i ] = c_min +
                           MCFBlock::CNumber( drand48() * ( c_max - c_min ) );
 
@@ -552,7 +552,7 @@ int main( int argc , char **argv )
     if( drand48() <= 0.5 ) {
      MCFBlock::Index strt = drand48() * ( m - tochange );
      MCFBlock::Index stp = strt + tochange;
-     for( MCFBlock::Index i = 0 ; i < n_change ; i++ )
+     for( MCFBlock::Index i = 0 ; i < tochange ; i++ )
       newcaps[ i ] = mcf->MCFUCap( i + strt ) * rndfctr();
      mcf->ChgUCaps( newcaps.data() , nullptr , strt , stp );
      mMCFB->chg_ucaps( newcaps.begin() , strt , stp );
