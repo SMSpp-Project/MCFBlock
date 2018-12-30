@@ -704,6 +704,32 @@ int main( int argc , char **argv )
     }
    }
 
+  // when the modified MCFBlock is not the solved one, pass the - - - - - - -
+  // Modification from one to the other
+
+  if( mode ) {             // use two MCFBlock
+
+   auto fS = dynamic_cast<FakeSolver *>(
+			       ( mMCFB->get_registered_solvers() ).front() );
+   assert( fS );
+   auto ML = fS->get_Modification_list();
+
+   if( mMCFB == oMCFB ) {  // modify the original, solve the R3
+     while( ~ML.empty() ) {
+      auto mod = ML.front();
+      ML.pop_front();
+      mMCFB->map_forward_Modification( sMCFB , mod );
+     }
+    }
+   else {                  // modify the R3, solve the original
+     while( ~ML.empty() ) {
+      auto mod = ML.front();
+      ML.pop_front();
+      sMCFB->map_back_Modification( mMCFB , mod );
+     }
+    }
+   }
+  
   // finally, re-solve the problems- - - - - - - - - - - - - - - - - - - - -
   // yet, if the problem is either unfeasible or unbounded, re-load it in
   // both MCFClass and MCFBlock
