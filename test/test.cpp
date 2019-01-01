@@ -301,8 +301,8 @@ static inline bool SolveMCF( void )
       ( rtrn >= Solver::kOK ) && ( rtrn < Solver::kError ) ) {
    auto fo1 = mcf->MCFGetFO();
    auto fo2 = slvr->get_ub();
-   if( abs( fo1 - fo2 ) / max( double( 1 ) , abs( max( fo1 , fo2 ) ) )
-       <= 1e-8 ) {
+   if( abs( fo1 - fo2 )
+       <= 1e-9 *  max( double( 1 ) , abs( max( fo1 , fo2 ) ) ) ) {
     cout << "OK(f)" << endl;
     return( true );
     }
@@ -311,13 +311,13 @@ static inline bool SolveMCF( void )
   if( ( stat == MCFClass::kUnfeasible ) &&
       ( rtrn == Solver::kInfeasible ) ) {
     cout << "OK(e)" << endl;
-    return( true );
+    return( false );
     }
 
   if( ( stat == MCFClass::kUnbounded ) &&
       ( rtrn == Solver::kUnbounded ) ) {
     cout << "OK(u)" << endl;
-    return( true );
+    return( false );
     }
 
   cout << "MCFClass = ";
