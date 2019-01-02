@@ -120,6 +120,8 @@ using namespace SMSpp_di_unipi_it;
 /*------------------------------- GLOBALS ----------------------------------*/
 /*--------------------------------------------------------------------------*/
 
+int mode = 0;      // what is modified, what is solved
+
 MCFBlock * oMCFB;  // original MCFBlock
 MCFBlock * dMCFB;  // "derived" (i.e., R3B) MCFBlock
 MCFBlock * sMCFB;  // MCFBlock that is solved
@@ -243,6 +245,11 @@ static inline void load( char * fn )
   iFile.seekg( 0 );       // rewind the file
 
   iFile >> *oMCFB;        // load the MCFBlock
+
+  if( mode & 4 ) {
+   oMCFB->generate_static_constraints();
+   oMCFB->generate_objective();
+   }
   }
  catch( exception &e ) {
   cerr << "MCFClass: " << e.what() << endl;
@@ -279,7 +286,7 @@ static inline bool SolveMCF( void )
   if( sMCFB != mMCFB ) {
    FakeSolver * fs = dynamic_cast<FakeSolver *>(
 				  (mMCFB->get_registered_solvers()).front() );
-   assert( ! fs );
+   assert( fs );
    Lst_sp_Mod & modlist = fs->get_Modification_list();
 
    if( mMCFB == oMCFB ) {  // modify the original, solve the R3
@@ -371,7 +378,6 @@ int main( int argc , char **argv )
  MCFClass::Index n_change = 10;
  MCFClass::Index n_repeat = 10;
  int optns = 0;
- int mode = 0;
 
  switch( argc ) {
   case( 8 ): Str2Sthg( argv[ 7 ] , seed );
@@ -385,6 +391,8 @@ int main( int argc , char **argv )
 	   "Usage: MCFSolve <input file> [mode optns #rounds #chng %chng seed"
 		<< endl <<
 	   "       mode: 0 = only one, 1 = orig -> solve, 2 = solve -> orig"
+		<< endl <<
+	   "             +4 = abstract orig, +8 = abstract solve"
 		<< endl <<
 	   "       optns: bit 0 = re-optimize, other bits MCF-specific" 
 		<< endl <<
@@ -422,17 +430,22 @@ int main( int argc , char **argv )
 
  load( argv[ 1 ] );
 
- if( mode ) {                     // also use an R3 MCFBlock = copy
+ if( mode & 3 ) {                 // also use an R3 MCFBlock = copy
   dMCFB = dynamic_cast<MCFBlock *>( oMCFB->get_R3_Block() );  // construct it
   assert( dMCFB );
 
-  if( mode == 1 ) {               // modify the original, solve the R3
+  if( ( mode & 3 ) == 1 ) {       // modify the original, solve the R3
    mMCFB = oMCFB;
    sMCFB = dMCFB;
    }
   else {                          // modify the R3, solve the original
    mMCFB = dMCFB;
    sMCFB = oMCFB;
+   }
+
+  if( mode & 8 ) {
+   dMCFB->generate_static_constraints();
+   dMCFB->generate_objective();
    }
 
   // attach a FakeSolver to the modified one to syphoon off Modification
@@ -706,8 +719,12 @@ int main( int argc , char **argv )
 
   // when the modified MCFBlock is not the solved one, pass the - - - - - - -
   // Modification from one to the other
+  // note that "abstract" Modification are issued with the "eNoBlck" setting
+  // to avoid that they generate a "physical" Modification; this is clearly
+  // useless, as the "physical" Modification corresponding to the "abstract"
+  // one must already be in the Modification queue of the FakeSolver
 
-  if( mode ) {             // use two MCFBlock
+  if( mode & 3 ) {        // use two MCFBlock
 
    auto fS = dynamic_cast<FakeSolver *>(
 			       ( mMCFB->get_registered_solvers() ).front() );
@@ -718,14 +735,16 @@ int main( int argc , char **argv )
      while( ~ML.empty() ) {
       auto mod = ML.front();
       ML.pop_front();
-      mMCFB->map_forward_Modification( sMCFB , mod );
+      mMCFB->map_forward_Modification( sMCFB , mod , nullptr ,
+				       eNoBlck , eNoBlck );
      }
     }
    else {                  // modify the R3, solve the original
      while( ~ML.empty() ) {
       auto mod = ML.front();
       ML.pop_front();
-      sMCFB->map_back_Modification( mMCFB , mod );
+      sMCFB->map_back_Modification( mMCFB , mod , nullptr ,
+				    eNoBlck , eNoBlck );
      }
     }
    }

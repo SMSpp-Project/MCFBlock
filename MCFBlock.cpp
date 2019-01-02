@@ -410,7 +410,7 @@ void MCFBlock::generate_static_constraints( Configuration *stcc )
 
  for( Index i = 0 ; i < get_NNodes() ; ++i ) {
   E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) ,
-					   0 , true ) );
+					   0 , true ) , eNoBlck );
   E[ i ].set_Block( this );
   }
 
@@ -501,10 +501,10 @@ void MCFBlock::generate_objective( Configuration *objc )
     }
   }
 
- c.set_function( new LinearFunction( std::move( p ) , 0 , true ) );
+ c.set_function( new LinearFunction( std::move( p ) , 0 , true ) , eNoBlck );
  c.set_Block( this );
 
- set_objective( c );
+ set_objective( c , eNoMod );
 
  }  // end( MCFBlock::generate_objective )
 
@@ -555,17 +555,17 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   assert( E.size() );  // ... which must exist
 
   auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
   if( nnc ) {
-   for( const auto & cnst : *nnc )
+   for( const auto & cnst : **nnc )
     if( cnst.rel_viol() > feps )
      return( false );
    }
   else {
    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
    assert( lbc );
-   for( const auto & cnst : *lbc )
+   for( const auto & cnst : **lbc )
     if( cnst.rel_viol() > feps )
      return( false );
    }
@@ -601,12 +601,12 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
   assert( ! get_objective().empty() );  // ... which must exist
-  auto obj = boost::any_cast<FRealObjective *>( get_objective() );
+  auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
   assert( obj );
   #ifdef NDEBUG
-   auto lfo = static_cast<const LinearFunction *>( obj->get_function() );
+   auto lfo = static_cast<const LinearFunction *>( (*obj)->get_function() );
   #else
-   auto lfo = dynamic_cast<const LinearFunction *>( obj->get_function() );
+   auto lfo = dynamic_cast<const LinearFunction *>( (*obj)->get_function() );
    assert( lfo );
   #endif
   auto obj_it = lfo->begin();
@@ -685,21 +685,21 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
   assert( ! get_objective().empty() );  // ... which must exist
-  auto obj = boost::any_cast<FRealObjective *>( get_objective() );
+  auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
   assert( obj );
   #ifdef NDEBUG
-   auto lfo = static_cast<const LinearFunction *>( obj->get_function() );
+  auto lfo = static_cast<const LinearFunction *>( (*obj)->get_function() );
   #else
-   auto lfo = dynamic_cast<const LinearFunction *>( obj->get_function() );
+  auto lfo = dynamic_cast<const LinearFunction *>( (*obj)->get_function() );
    assert( lfo );
   #endif
   auto obj_it = lfo->begin();
 
   auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
 
   auto lbc = nnc ? nullptr : boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
 
 
   for( Index i = 0 , h = 0 ; i < SN.size() ; ++i ) {
@@ -710,7 +710,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
     }
 
    c_FNumber xi = x[ i ].get_value();
-   c_FNumber UBi = nnc ? (*nnc)[ i ].get_rhs() : (*lbc)[ i ].get_rhs();
+   c_FNumber UBi = nnc ? (**nnc)[ i ].get_rhs() : (**lbc)[ i ].get_rhs();
 
    if( UBi >= Inf<RowConstraint::RHSValue>() ) {
     if( ( xi > feps ) && ( RCi < - ceps ) )
@@ -885,17 +885,17 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
     E[ i ].set_dual( MCFB->E[ i ].get_dual() );
 
    auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					      get_static_constraints()[ 1 ] );
+					    & get_static_constraints()[ 1 ] );
    if( nnc ) {
     for( Index i = 0 ; i < get_NArcs() ; ++i )
-     (*nnc)[ i ].set_dual( MCFB->get_rc( i ) );
+     (**nnc)[ i ].set_dual( MCFB->get_rc( i ) );
     }
    else {
     auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					      get_static_constraints()[ 1 ] );
+					    & get_static_constraints()[ 1 ] );
     assert( lbc );
     for( Index i = 0 ; i < get_NArcs() ; ++i )
-     (*lbc)[ i ].set_dual( MCFB->get_rc( i ) );
+     (**lbc)[ i ].set_dual( MCFB->get_rc( i ) );
     }
    }
 
@@ -941,17 +941,17 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
     MCFB->E[ i ].set_dual( E[ i ].get_dual() );
 
    auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
    if( nnc ) {
     for( Index i = 0 ; i < get_NArcs() ; ++i )
-     MCFB->set_rc( (*nnc)[ i ].get_dual() , i );
+     MCFB->set_rc( (**nnc)[ i ].get_dual() , i );
     }
    else {
     auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
     assert( lbc );
     for( Index i = 0 ; i < get_NArcs() ; ++i )
-     MCFB->set_rc( (*lbc)[ i ].get_dual() , i );
+     MCFB->set_rc( (**lbc)[ i ].get_dual() , i );
     }
    }
 
@@ -1022,7 +1022,7 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
   // MCFBlockRngdMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   /* Note: in the following we can assume that C, B and U are nonempty. This
      is because they can be empty only if they are so when the object is
-     loaded. But if a Modification has neenm issued they are no longer empty
+     loaded. But if a Modification has been issued they are no longer empty
      (a Modification changin nothing from the "empty" state is not issued). */
   {
    const auto tmod = std::dynamic_pointer_cast<MCFBlockRngdMod>( mod );
@@ -1076,8 +1076,6 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     * vector, but the original vector in mod has to be preserved. Otherwise
     * the names vector is not "consumed", so no copy is needed. */
 
-   Vec_Index && nms = MCFB->issue_pmod( iPM ) ? Vec_Index( tmod->f_nms )
-                                              : std::move( tmod->f_nms );
    if( tmod ) {
     switch( tmod->f_type ) {
      case( MCFBlockMod::eChgCost ): {
@@ -1085,7 +1083,13 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       for( Index i = 0 ; i < NCost.size() ; i++ )
        NCost[ i ] = C[ tmod->f_nms[ i ] ];
 
-      MCFB->chg_costs( NCost.begin() , std::move( nms ) , iPM , iPA );
+      if( MCFB->issue_pmod( iPM ) )
+       MCFB->chg_costs( NCost.begin() ,
+			std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+      else
+       MCFB->chg_costs( NCost.begin() ,
+			std::move( tmod->f_nms ) , iPM , iPA );
+
       break;
       }
      case( MCFBlockMod::eChgCaps ): {
@@ -1093,7 +1097,12 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       for( Index i = 0 ; i < NCap.size() ; i++ )
        NCap[ i ] = U[ tmod->f_nms[ i ] ];
 
-      MCFB->chg_ucaps( NCap.begin() , std::move( nms ) , iPM , iPA );
+      if( MCFB->issue_pmod( iPM ) )
+       MCFB->chg_ucaps( NCap.begin() ,
+			std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+      else
+       MCFB->chg_ucaps( NCap.begin() ,
+			std::move( tmod->f_nms ) , iPM , iPA );
       break;
       }
      case( MCFBlockMod::eChgDfct ): {
@@ -1101,14 +1110,25 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       for( Index i = 0 ; i < NDfct.size() ; i++ )
        NDfct[ i ] = B[ tmod->f_nms[ i ] ];
 
-      MCFB->chg_dfcts( NDfct.begin() , std::move( nms ) , iPM , iPA );
+      if( MCFB->issue_pmod( iPM ) )
+       MCFB->chg_dfcts( NDfct.begin() ,
+			std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+      else
+       MCFB->chg_dfcts( NDfct.begin() ,
+			std::move( tmod->f_nms ) , iPM , iPA );
       break;
       }
      case( MCFBlockMod::eOpenArc ):
-       MCFB->open_arcs( std::move( nms ) , iPM , iPA );
+      if( MCFB->issue_pmod( iPM ) )
+       MCFB->open_arcs( std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+      else
+       MCFB->open_arcs( std::move( tmod->f_nms ) , iPM , iPA );
       break;
      case( MCFBlockMod::eCloseArc ):
-      MCFB->close_arcs( std::move( nms ) , iPM , iPA );
+      if( MCFB->issue_pmod( iPM ) )
+       MCFB->close_arcs( std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+      else
+       MCFB->close_arcs( std::move( tmod->f_nms ) , iPM , iPA );
       break;
      default:
       throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
@@ -1278,6 +1298,7 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
   {
    const auto tmod = std::dynamic_pointer_cast<VariableMod>( mod );
    if( tmod ) {
+    //!!   std::cout << "idx = " << p2i( tmod->f_variable ) << std::endl;
     // ensure that no "physical modification" is issued
     MCFB->x[ p2i( tmod->f_variable ) ].set_state( tmod->f_state , iPA );
     return;
@@ -1399,16 +1420,16 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stp )
 	 );
 
  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
  if( nnc )
   for( Index i = 0 ; i < stp - std::min( strt , get_NArcs() ) ; ++i )
-   RC[ i ] = (*nnc)[ strt + i ].get_dual();
+   RC[ i ] = (**nnc)[ strt + i ].get_dual();
  else {
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
   assert( lbc );
   for( Index i = 0 ; i < stp - std::min( strt , get_NArcs() ) ; ++i )
-   RC[ i ] = (*lbc)[ strt + i ].get_dual();
+   RC[ i ] = (**lbc)[ strt + i ].get_dual();
   }
  }  // end( MCFBlock::get_rc( interval ) )
 
@@ -1421,16 +1442,16 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
 	 );
 
  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
  if( nnc )
   for( Index i = 0 ; i < nms.size() ; ++i )
-   RC[ i ] = (*nnc)[ nms[ i ] ].get_dual();
+   RC[ i ] = (**nnc)[ nms[ i ] ].get_dual();
  else {
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
   assert( lbc );
   for( Index i = 0 ; i < nms.size() ; ++i )
-   RC[ i ] = (*lbc)[ nms[ i ] ].get_dual();
+   RC[ i ] = (**lbc)[ nms[ i ] ].get_dual();
   }
  
  }  // end( MCFBlock::get_rc( subset ) )
@@ -1838,11 +1859,11 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					    get_static_constraints()[ 1 ] );
+					  & get_static_constraints()[ 1 ] );
   if( ! lbc )
    throw( std::logic_error( "cannot change rhs" ) );
 
-  for( auto lbit = lbc->begin() + strt ; ncit < ncstp ;
+  for( auto lbit = (*lbc)->begin() + strt ; ncit < ncstp ;
        ++ncit , ++uit , ++lbit )
    if( *uit != *ncit ) {
     *uit = *ncit;
@@ -1913,14 +1934,14 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					    get_static_constraints()[ 1 ] );
+					  & get_static_constraints()[ 1 ] );
   if( ! lbc )
    throw( std::logic_error( "cannot change rhs" ) );
 
   for( ; ncit < ncstp ; ++ncit , ++nit ) {
    if( U[ *nit ] != *ncit ) {
     U[ *nit ] = *ncit;
-    (*lbc)[ *nit ].set_rhs( *ncit , ampar );
+    (**lbc)[ *nit ].set_rhs( *ncit , ampar );
     }
    }
 
@@ -1966,11 +1987,11 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
   // in the meantime, if so instructed also issue abstract Modification
 
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					    get_static_constraints()[ 1 ] );
+					  & get_static_constraints()[ 1 ] );
   if( ! lbc )
    throw( std::logic_error( "cannot change rhs" ) );
 
-  (*lbc)[ arc ].set_rhs( NCap , issueAMod );
+  (**lbc)[ arc ].set_rhs( NCap , issueAMod );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2467,19 +2488,19 @@ void MCFBlock::guts_of_destructor( void )
 
  if( get_static_constraints().size() ) {
   auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
   if( nnc ) {
-   for( auto & cnst : *nnc )  // first clear all the Constraint
+   for( auto & cnst : **nnc )  // first clear all the Constraint
     cnst.clear();
-   delete nnc;                // then delete them
+   delete *nnc;                // then delete them
    }
   else {
    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
    assert( lbc );
-   for( auto & cnst : *lbc )  // first clear all the Constraint
+   for( auto & cnst : **lbc )  // first clear all the Constraint
     cnst.clear();
-   delete lbc;                // then delete them
+   delete *lbc;                // then delete them
    }
   }
 
@@ -2494,6 +2515,7 @@ void MCFBlock::guts_of_destructor( void )
  // explicitly clear static Constraint and Variable
  reset_static_constraints();
  reset_static_variables();
+ reset_objective();
 
  x.clear();
 
@@ -2729,27 +2751,27 @@ inline void MCFBlock::unmake_amod_param( c_ModParam oldiAM ,
 inline MCFBlock::Index MCFBlock::bound_number( Constraint * const Cnst )
 {
  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
  if( nnc ) {
   auto cp = static_cast<NNConstraint * const>( Cnst );
   #ifndef NDEBUG
-   if( ( cp < &( nnc->front() ) ) || ( cp > &( nnc->back() ) ) )
+  if( ( cp < &( (*nnc)->front() ) ) || ( cp > &( (*nnc)->back() ) ) )
     throw( std::invalid_argument( "illegal bound Constraint pointer" ) );
   #endif
 
-  return( std::distance( cp , &( nnc->front() ) ) );
+  return( std::distance( cp , &( (*nnc)->front() ) ) );
   }
 
  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
+					   & get_static_constraints()[ 1 ] );
  assert( lbc );
  auto cp = static_cast<LB0Constraint * const>( Cnst );
  #ifndef NDEBUG
-  if( ( cp < &( lbc->front() ) ) || ( cp > &( lbc->back() ) ) )
+ if( ( cp < &( (*lbc)->front() ) ) || ( cp > &( (*lbc)->back() ) ) )
    throw( std::invalid_argument( "illegal bound Constraint pointer" ) );
  #endif
 
- return( std::distance( cp , &( lbc->front() ) ) );
+ return( std::distance( cp , &( (*lbc)->front() ) ) );
  }
 
 /*--------------------------------------------------------------------------*/
@@ -2822,18 +2844,18 @@ void MCFSolution::write( Block * const block )
    MCFB->E[ i ].set_dual( v_pi[ i ] );
 
   auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-				       MCFB->get_static_constraints()[ 1 ] );
+				     & MCFB->get_static_constraints()[ 1 ] );
   if( nnc )
    for( MCFBlock::Index i = 0 ; i < MCFB->get_NArcs() ; ++i )
-    (*nnc)[ i ].set_dual( MCFB->C[ i ] - v_pi[ MCFB->SN[ i ] ]
-		                       + v_pi[ MCFB->EN[ i ] ] );
+    (**nnc)[ i ].set_dual( MCFB->C[ i ] - v_pi[ MCFB->SN[ i ] ]
+			                + v_pi[ MCFB->EN[ i ] ] );
   else {
    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-				       MCFB->get_static_constraints()[ 1 ] );
+				     & MCFB->get_static_constraints()[ 1 ] );
    assert( lbc );
    for( MCFBlock::Index i = 0 ; i < MCFB->get_NArcs() ; ++i )
-    (*lbc)[ i ].set_dual( MCFB->C[ i ] - v_pi[ MCFB->SN[ i ] ]
-		                       + v_pi[ MCFB->EN[ i ] ] );
+    (**lbc)[ i ].set_dual( MCFB->C[ i ] - v_pi[ MCFB->SN[ i ] ]
+		                        + v_pi[ MCFB->EN[ i ] ] );
    }
   }
  }  // end( MCFSolution::write )
