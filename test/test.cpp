@@ -247,7 +247,7 @@ static inline void load( char * fn )
   iFile >> *oMCFB;        // load the MCFBlock
 
   if( mode & 4 ) {
-   oMCFB->generate_static_constraints();
+   oMCFB->generate_abstract_constraints();
    oMCFB->generate_objective();
    }
   }
@@ -444,7 +444,7 @@ int main( int argc , char **argv )
    }
 
   if( mode & 8 ) {
-   dMCFB->generate_static_constraints();
+   dMCFB->generate_abstract_constraints();
    dMCFB->generate_objective();
    }
 

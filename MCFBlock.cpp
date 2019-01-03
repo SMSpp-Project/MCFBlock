@@ -137,7 +137,7 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
- generate_static_variables();
+ generate_abstract_variables();
 
  // throw Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -147,7 +147,7 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::load( std::istream &input )
+void MCFBlock::load( std::istream &input , c_ModParam issueMod )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
@@ -278,12 +278,23 @@ void MCFBlock::load( std::istream &input )
  
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
- generate_static_variables();
+ generate_abstract_variables();
 
  // issue Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ // note that concerns_Block is always false, even in the "abstract"
+ // Modification as the MCFBlock knows already that it has been reloaded
 
- Block::add_Modification( std::make_shared<MCFBlockMod>( this ) );
+ if( issue_mod( issueMod ) ) {
+  // Block::add_Modification( std::make_shared<MCFBlockMod>( this ) ,
+  //                          Observer::par2chnl( issueMod ) );
+  // actually, there is no need to throw the "physical" MCFBlockMod because
+  // the "abstract" BlockMod can happily do the same job
 
+  Block::add_Modification( std::make_shared<BlockMod>( this ,
+						       BlockMod::eReSetAll ,
+						       false ) ,
+			   Observer::par2chnl( issueMod ) );
+  }
  }  // end( MCFBlock::load( istream ) )
 
 /*--------------------------------------------------------------------------*/
@@ -338,17 +349,13 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
- generate_static_variables();
-
- // throw Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
- Block::add_Modification( std::make_shared<MCFBlockMod>( this ) );
+ generate_abstract_variables();
 
  }  // end( MCFBlock::deserialize )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::generate_static_variables( Configuration *stvv )
+void MCFBlock::generate_abstract_variables( Configuration *stvv )
 {
  if( x.size() == get_NArcs() )  // the variables are there already
   return;                       // nothing to do
@@ -361,11 +368,11 @@ void MCFBlock::generate_static_variables( Configuration *stvv )
 
  add_static_variable( x );
 
- }  // end( MCFBlock::generate_static_variables )
+ }  // end( MCFBlock::generate_abstract_variables )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::generate_static_constraints( Configuration *stcc )
+void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 {
  if( E.size() == get_NNodes() )  // the constraints are there already
   return;                        // nothing to do
@@ -410,8 +417,8 @@ void MCFBlock::generate_static_constraints( Configuration *stcc )
 
  for( Index i = 0 ; i < get_NNodes() ; ++i ) {
   E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) ,
-					   0 , true ) , eNoBlck );
-  E[ i ].set_Block( this );
+					   0 , true ) );
+  E[ i ].set_Block( this );  // this is done last ==> no Modification
   }
 
  add_static_constraint( E );
@@ -434,21 +441,24 @@ void MCFBlock::generate_static_constraints( Configuration *stcc )
 
  if( useNN ) {
   auto LU = new std::vector<NNConstraint>( SN.size() );
-  for( Index i = 0 ; i < SN.size() ; ++i )
-   (*LU)[ i ].set_variable( & x[ i ] , eNoMod );
+  for( Index i = 0 ; i < SN.size() ; ++i ) {
+   (*LU)[ i ].set_variable( & x[ i ] );
+   (*LU)[ i ].set_Block( this );  // this is done last ==> no Modification
+   }
     
   add_static_constraint( *LU );
   }
  else {
   auto LU = new std::vector<LB0Constraint>( SN.size() );
   for( Index i = 0 ; i < SN.size() ; ++i ) {
-   (*LU)[ i ].set_variable( & x[ i ] , eNoMod );
-   (*LU)[ i ].set_rhs( U[ i ] , eNoMod );
+   (*LU)[ i ].set_variable( & x[ i ] );
+   (*LU)[ i ].set_rhs( U[ i ] );
+   (*LU)[ i ].set_Block( this );  // this is done last ==> no Modification
    }
 
   add_static_constraint( *LU );
   }
- }  // end( MCFBlock::generate_static_constraints )
+ }  // end( MCFBlock::generate_abstract_constraints )
 
 /*--------------------------------------------------------------------------*/
 
@@ -501,10 +511,10 @@ void MCFBlock::generate_objective( Configuration *objc )
     }
   }
 
- c.set_function( new LinearFunction( std::move( p ) , 0 , true ) , eNoBlck );
+ c.set_function( new LinearFunction( std::move( p ) , 0 , true ) );
  c.set_Block( this );
 
- set_objective( c , eNoMod );
+ set_objective( c , eNoMod );  // this is done last ==> no Modification
 
  }  // end( MCFBlock::generate_objective )
 
@@ -1141,12 +1151,26 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
   // MCFBlockMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // note: this is checked after the previous two because they derive from
   // MCFBlockMod, and hence the std::dynamic_pointer_cast<> would suceed
+  /*
   {
    const auto tmod = std::dynamic_pointer_cast<MCFBlockMod>( mod );
    if( tmod ) {
-    // this is the "nuclear option": the MCFBlock has been re-loaded
+     this is the "nuclear option": the MCFBlock has been re-loaded
     MCFB->load( get_NNodes() , EN , SN , U , C , B );
     return;
+    }
+   }
+  */
+  {
+   const auto tmod = std::dynamic_pointer_cast<BlockMod>( mod );
+   if( tmod ) {
+    if( tmod->f_type == BlockMod::eReSetAll ) {
+     // this is the "nuclear option": the MCFBlock has been re-loaded
+     MCFB->load( get_NNodes() , EN , SN , U , C , B );
+     return;
+     }
+
+    throw( std::invalid_argument( "Unexpected BlockMod" ) );
     }
    }
 
