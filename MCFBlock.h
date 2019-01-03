@@ -1544,7 +1544,7 @@ class MCFBlockRngdMod : public MCFBlockMod
    case( eOpenArc ): output << "open arcs "; break;
    default:          output << "close arcs ";
    }
-  output << "[ " << f_strt << ", " << f_stop << " ]" << std::endl;
+  output << "[ " << f_strt << ", " << f_stop - 1 << " ]" << std::endl;
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1601,7 +1601,7 @@ class MCFBlockSbstMod : public MCFBlockMod
    case( eOpenArc ): output << "open arcs "; break;
    default:          output << "close arcs ";
    }
-  output << "(# " << f_nms.size() << " )" << std::endl;
+  output << "(# " << f_nms.size() << ")" << std::endl;
   }
 
 /*--------------------------------------------------------------------------*/

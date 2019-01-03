@@ -734,6 +734,7 @@ int main( int argc , char **argv )
    if( mMCFB == oMCFB ) {  // modify the original, solve the R3
      while( ~ML.empty() ) {
       auto mod = ML.front();
+      std::cout << *mod << std::endl;
       ML.pop_front();
       mMCFB->map_forward_Modification( sMCFB , mod , nullptr ,
 				       eNoBlck , eNoBlck );

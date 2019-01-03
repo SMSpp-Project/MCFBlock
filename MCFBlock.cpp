@@ -511,10 +511,12 @@ void MCFBlock::generate_objective( Configuration *objc )
     }
   }
 
- c.set_function( new LinearFunction( std::move( p ) , 0 , true ) );
+ // ensure no Modification is issued: this may happen in case a MCFBlock
+ // is re-loaded, so that set_objective( c ) had already been called
+ c.set_function( new LinearFunction( std::move( p ) , 0 , true ) , eNoMod );
  c.set_Block( this );
 
- set_objective( c , eNoMod );  // this is done last ==> no Modification
+ set_objective( c , eNoMod );
 
  }  // end( MCFBlock::generate_objective )
 
@@ -1322,7 +1324,6 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
   {
    const auto tmod = std::dynamic_pointer_cast<VariableMod>( mod );
    if( tmod ) {
-    //!!   std::cout << "idx = " << p2i( tmod->f_variable ) << std::endl;
     // ensure that no "physical modification" is issued
     MCFB->x[ p2i( tmod->f_variable ) ].set_state( tmod->f_state , iPA );
     return;
@@ -1486,6 +1487,8 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
 
 void MCFBlock::add_Modification( sp_Mod mod , ChnlName chnl )
 {
+ //!! std::cout << *mod << std::endl;
+
  Block::add_Modification( mod , chnl );
 
  if( ! mod->concerns_Block() )
@@ -2495,8 +2498,8 @@ void MCFBlock::print( std::ostream &output ) const
 
 inline MCFBlock::Index MCFBlock::p2i( Variable * const var )
 {
- return( std::distance( static_cast< ColVariable * const >( var ) ,
-			&x[ 0 ] ) );
+ return( std::distance( &x[ 0 ] , static_cast< ColVariable * const >( var ) )
+	 );
  }
 
 /*--------------------------------------------------------------------------*/
@@ -2556,7 +2559,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
 
     Note that here we extensively exploit the fact that
 
-        std::distance( & x[ i ] , & x[ 0 ] ) = i
+        std::distance(  & x[ 0 ] , & x[ i ] ) = i
 
     because all Variable belong to the same std::vector (array), and similarly
     for the Constraint, in order to efficiently retrieve the index "i" in the
@@ -2744,7 +2747,7 @@ inline ModParam MCFBlock::make_amod_param( c_ModParam issueAMod ,
      * GroupModification, which is flagged as "eNoBlck" because it is
      * the "abstract Modification" corresponding to a "physical Modification"
      * already issued and therefore it must not generate any other
-     * "physical Modification"/ */
+     * "physical Modification" */
    }
 
   return( make_par( eNoBlck , chnl ) );
@@ -2783,7 +2786,7 @@ inline MCFBlock::Index MCFBlock::bound_number( Constraint * const Cnst )
     throw( std::invalid_argument( "illegal bound Constraint pointer" ) );
   #endif
 
-  return( std::distance( cp , &( (*nnc)->front() ) ) );
+  return( std::distance( &( (*nnc)->front() ) , cp ) );
   }
 
  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
@@ -2795,7 +2798,7 @@ inline MCFBlock::Index MCFBlock::bound_number( Constraint * const Cnst )
    throw( std::invalid_argument( "illegal bound Constraint pointer" ) );
  #endif
 
- return( std::distance( cp , &( (*lbc)->front() ) ) );
+ return( std::distance( &( (*lbc)->front() ) , cp ) );
  }
 
 /*--------------------------------------------------------------------------*/
@@ -2807,7 +2810,7 @@ inline MCFBlock::Index MCFBlock::const_number( FRowConstraint * const Cnst )
    throw( std::invalid_argument( "illegal flow Constraint pointer" ) );
  #endif
 
- return( std::distance( Cnst , &( E.front() ) ) );
+ return( std::distance( &( E.front() ) , Cnst ) );
  }
 
 /*--------------------------------------------------------------------------*/
