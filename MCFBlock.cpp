@@ -104,7 +104,7 @@ SMSpp_insert_in_factory_cpp_1( MCFBlock );
 
 void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 		     c_Vec_FNumber & pU , c_Vec_CNumber & pC ,
-		     c_Vec_FNumber & pB )
+		     c_Vec_FNumber & pB , c_ModParam issueMod )
 {
  // sanity checks - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -141,7 +141,10 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 
  // throw Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- Block::add_Modification( std::make_shared<MCFBlockMod>( this ) );
+ if( issue_mod( issueMod ) )
+  Block::add_Modification(
+            std::make_shared<BlockMod>( this , BlockMod::eReSetAll , false ) ,
+	    Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::load( memory ) )
 
@@ -290,10 +293,9 @@ void MCFBlock::load( std::istream &input , c_ModParam issueMod )
   // actually, there is no need to throw the "physical" MCFBlockMod because
   // the "abstract" BlockMod can happily do the same job
 
-  Block::add_Modification( std::make_shared<BlockMod>( this ,
-						       BlockMod::eReSetAll ,
-						       false ) ,
-			   Observer::par2chnl( issueMod ) );
+  Block::add_Modification(
+            std::make_shared<BlockMod>( this , BlockMod::eReSetAll , false ) ,
+	    Observer::par2chnl( issueMod ) );
   }
  }  // end( MCFBlock::load( istream ) )
 
@@ -1014,6 +1016,8 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
      method of either MCFB, for a "physical Modification", or of the "abstract
      representation" of MCFB for an "abstract Modification". */
 
+  //!! std::cout << *mod << std::endl;
+  
   // GroupModification - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   {
    const auto tmod = std::dynamic_pointer_cast<GroupModification>( mod );

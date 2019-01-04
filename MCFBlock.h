@@ -309,11 +309,16 @@ public:
   * The number m of arcs of the graph need not be explicitly provided because
   * it is the length of pEn and sEn; while pU and pC can be empty, they cannot
   * (unless the graph is empty of arcs). Conversely, n must be explicitly
-  * provided because the only n-vector is pB, which can be empty. */
+  * provided because the only n-vector is pB, which can be empty.
+  *
+  * Like load( std::istream & ), if there is any Solver attached to this
+  * Block then a BlockMod is issued with eReSetAll, which is why the
+  * issueMod param is provided: the default value for is eNoBlck, as the
+  * MCFBlock "already knows that it has been re-loaded". */
 
  virtual void load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 		    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
-		    c_Vec_FNumber & pB = {} );
+		    c_Vec_FNumber & pB = {} , c_ModParam issueMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
 

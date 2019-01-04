@@ -279,9 +279,13 @@ static inline bool SolveMCF( void )
   mcf->SolveMCF();
   auto stat = mcf->MCFGetStatus();
 
-  // solve the MCFBlock- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  // before actually solving, if modifications are not made on the MCFBlock
-  // then exploit the FakeSolver to map them
+  // when the modified MCFBlock is not the solved one, pass the - - - - - - -
+  // Modification from one to the other
+  // note that also "abstract" Modification (if any) are issued with the
+  // "eNoBlck" setting to avoid that they generate a "physical" Modification;
+  // this is clearly useless, as the "physical" Modification corresponding to
+  // the "abstract" one must already be in the Modification queue of the
+  // FakeSolver
 
   if( sMCFB != mMCFB ) {
    FakeSolver * fs = dynamic_cast<FakeSolver *>(
@@ -291,16 +295,19 @@ static inline bool SolveMCF( void )
 
    if( mMCFB == oMCFB ) {  // modify the original, solve the R3
     for( auto mod : modlist )
-     oMCFB->map_forward_Modification( dMCFB , mod );
+     oMCFB->map_forward_Modification( dMCFB , mod , nullptr ,
+				      eNoBlck , eNoBlck );
     }
    else {                  // modify the R3, solve the original
     for( auto mod : modlist )
-     oMCFB->map_back_Modification( dMCFB , mod );
+     oMCFB->map_back_Modification( dMCFB , mod , nullptr ,
+				   eNoBlck , eNoBlck );
     }
 
    modlist.clear();  // clear the processed Modification
    }
 
+  // solve the MCFBlock- - - - - - - - - - - - - - - - - - - - - - - - - - - -
   Solver * slvr = (sMCFB->get_registered_solvers()).front();
   int rtrn = slvr->compute( false );
 
@@ -374,25 +381,31 @@ int main( int argc , char **argv )
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  long int seed = 1;
- double p_change = 0.2;
+ int wchg = 31;
+ double p_change = 0.4;
  MCFClass::Index n_change = 10;
- MCFClass::Index n_repeat = 10;
- int optns = 0;
+ MCFClass::Index n_repeat = 40;
+ int optns = 1;
 
  switch( argc ) {
-  case( 8 ): Str2Sthg( argv[ 7 ] , seed );
-  case( 7 ): Str2Sthg( argv[ 6 ] , p_change );
-  case( 6 ): Str2Sthg( argv[ 5 ] , n_change );
-  case( 5 ): Str2Sthg( argv[ 4 ] , n_repeat );
-  case( 4 ): Str2Sthg( argv[ 3 ] , optns );
-  case( 3 ): Str2Sthg( argv[ 2 ] , mode );
+  case( 9 ): Str2Sthg( argv[ 8 ] , optns );
+  case( 8 ): Str2Sthg( argv[ 7 ] , p_change );
+  case( 7 ): Str2Sthg( argv[ 6 ] , n_change );
+  case( 6 ): Str2Sthg( argv[ 5 ] , n_repeat );
+  case( 5 ): Str2Sthg( argv[ 4 ] , wchg );
+  case( 4 ): Str2Sthg( argv[ 3 ] , mode );
+  case( 3 ): Str2Sthg( argv[ 2 ] , seed );
   case( 2 ): break;
-  default: cerr <<
-	   "Usage: MCFSolve <input file> [mode optns #rounds #chng %chng seed"
+ default: cerr << "Usage: " << argv[ 0 ] <<
+	   " <dmx file> [seed mode wchg #rounds #chng %chng optns]"
 		<< endl <<
 	   "       mode: 0 = only one, 1 = orig -> solve, 2 = solve -> orig"
 		<< endl <<
 	   "             +4 = abstract orig, +8 = abstract solve"
+		<< endl <<
+           "       wchg: what to change, coded bit-wise "
+		<< endl <<
+           "             0 = cost, 1 = cap, 2 = dfct, 3 = o.arc, 4 = c.arc"
 		<< endl <<
 	   "       optns: bit 0 = re-optimize, other bits MCF-specific" 
 		<< endl <<
@@ -529,7 +542,7 @@ int main( int argc , char **argv )
 
   // change costs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= p_change ) {
+  if( ( wchg & 1 ) && ( drand48() <= p_change ) ) {
    MCFBlock::Index tochange = max( double( 1 ) , drand48() * n_change );
    cout << tochange << " cost";
 
@@ -577,7 +590,7 @@ int main( int argc , char **argv )
 
   // change capacities- - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= p_change ) {
+  if( ( wchg & 2 ) && ( drand48() <= p_change ) ) {
    MCFBlock::Index tochange = max( double( 1 ) , drand48() * n_change );
    cout << tochange << " capacit";
 
@@ -621,7 +634,7 @@ int main( int argc , char **argv )
 
   // change deficits- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= p_change ) {
+  if( ( wchg & 4 ) && ( drand48() <= p_change ) ) {
    cout << "2 deficits - ";
 
    MCFClass::Index posn;
@@ -668,7 +681,7 @@ int main( int argc , char **argv )
 
   // closing arcs- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= p_change ) {
+  if( ( wchg & 8 ) && ( drand48() <= p_change ) ) {
    // at most half of the open ones
    MCFBlock::Index tochange = min( MCFBlock::Index( opened / 2 ) ,
 				   MCFBlock::Index( drand48() * n_change ) );
@@ -693,7 +706,7 @@ int main( int argc , char **argv )
 
   // re-opening arcs - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( drand48() <= p_change ) {
+  if( ( wchg & 16 ) && ( drand48() <= p_change ) ) {
    // at most half of the closed ones
    MCFBlock::Index tochange = min( MCFBlock::Index( ( m - opened ) / 2 ) ,
 				   MCFBlock::Index( drand48() * n_change ) );
@@ -717,39 +730,6 @@ int main( int argc , char **argv )
     }
    }
 
-  // when the modified MCFBlock is not the solved one, pass the - - - - - - -
-  // Modification from one to the other
-  // note that "abstract" Modification are issued with the "eNoBlck" setting
-  // to avoid that they generate a "physical" Modification; this is clearly
-  // useless, as the "physical" Modification corresponding to the "abstract"
-  // one must already be in the Modification queue of the FakeSolver
-
-  if( mode & 3 ) {        // use two MCFBlock
-
-   auto fS = dynamic_cast<FakeSolver *>(
-			       ( mMCFB->get_registered_solvers() ).front() );
-   assert( fS );
-   auto ML = fS->get_Modification_list();
-
-   if( mMCFB == oMCFB ) {  // modify the original, solve the R3
-     while( ~ML.empty() ) {
-      auto mod = ML.front();
-      std::cout << *mod << std::endl;
-      ML.pop_front();
-      mMCFB->map_forward_Modification( sMCFB , mod , nullptr ,
-				       eNoBlck , eNoBlck );
-     }
-    }
-   else {                  // modify the R3, solve the original
-     while( ~ML.empty() ) {
-      auto mod = ML.front();
-      ML.pop_front();
-      sMCFB->map_back_Modification( mMCFB , mod , nullptr ,
-				    eNoBlck , eNoBlck );
-     }
-    }
-   }
-  
   // finally, re-solve the problems- - - - - - - - - - - - - - - - - - - - -
   // yet, if the problem is either unfeasible or unbounded, re-load it in
   // both MCFClass and MCFBlock
