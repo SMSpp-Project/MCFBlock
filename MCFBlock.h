@@ -682,7 +682,17 @@ public:
 
 /*--------------------------------------------------------------------------*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
-  */
+  *
+  * IMPORTANT NOTE: map_forward_Modification() does *not* map (i.e., basically
+  * ignores) "abstract" Modification with concerns_Block() == false, on the
+  * grounds that this is an "abstract" Modification (of whatever type)
+  * corresponding to a "physical" one that will also be mapped; thus, the
+  * effect of the map is already performed by the "physical" one, possibly
+  * more efficiently, weird side effects are avoided. "Abstract" Modification
+  * with concerns_Block() == true are still mapped: there may be "duplicate"
+  * "physical" ones for them that will, which is a waste, but it is not easy
+  * to avoid this short fo bunching the two together, which would be possible
+  * but it is not currently done. */
 
  virtual void map_forward_Modification( Block *R3B , sp_Mod mod ,
 					Configuration *r3bc = nullptr ,
@@ -692,7 +702,10 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
-  */
+  *
+  * The current implementation of map_back_Modification() actually uses
+  * map_forward_Modification() in reverse, so see the comments to the latter
+  * method. */
 
  virtual void map_back_Modification( Block *R3B , sp_Mod mod ,
 				     Configuration *r3bc = nullptr ,
@@ -1031,6 +1044,15 @@ public:
  * been done already, and this is just not possible for a "physical"
  * Modification.
  *
+ * IMPORTANT NOTE: the current implementation of all these methods issues (at
+ * most) *two separate* Modification, a "physical" and an "abstract" one. The
+ * latter may be a GroupModification bunching together related abstract
+ * Modification, but the two Modification are nonetheless separate. A
+ * different approach could be to issue a single GroupModification with inside
+ * both the "physical" and the "abstract" one (the latter possibly itself a
+ * GroupModification). This may allow a more efficient handling of
+ * Modification by ensuring that the two are always received together, but at
+ * the cost of a more intricate code that is best avoided for now.
  *  @{ */
 
  /// change the costs of a contiguous interval of arcs

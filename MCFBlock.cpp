@@ -1180,6 +1180,14 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     }
    }
 
+  // terminate if abstract- - - - - - - - - - - - - - - - - - - - - - - - - -
+  // this is an "abstract" Modification (of whatever type) corresponding to
+  // a "physical" one: ignore it, on the assumption that the "physical" one
+  // will also be mapped
+
+  if( ! mod->concerns_Block() )
+   return;
+
   // LinearFunctionModSbst- - - - - - - - - - - - - - - - - - - - - - - - - -
   {
    const auto tmod = std::dynamic_pointer_cast<LinearFunctionModSbst>( mod );
@@ -1329,7 +1337,9 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
    const auto tmod = std::dynamic_pointer_cast<VariableMod>( mod );
    if( tmod ) {
     // ensure that no "physical modification" is issued
-    MCFB->x[ p2i( tmod->f_variable ) ].set_state( tmod->f_state , iPA );
+    auto ind = p2i( tmod->f_variable );
+    MCFB->x[ ind ].set_value( x[ ind ].get_value() );
+    MCFB->x[ ind ].set_state( tmod->f_state , iPA );
     return;
     }
    }
@@ -2164,10 +2174,9 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
   if( ! ordered )
    std::sort( nms.begin() , nms.end() );
 
-  auto mod = std::make_shared<MCFBlockSbstMod>( this ,
-                                  MCFBlockMod::eChgDfct , std::move( nms ) );
-
-  Block::add_Modification( mod , Observer::par2chnl( issueMod ) );
+  Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
+                                 MCFBlockMod::eChgDfct , std::move( nms ) ) ,
+			   Observer::par2chnl( issueMod ) );
   }
  }  // end( MCFBlock::chg_dfcts( subset ) )
 
@@ -2205,10 +2214,10 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( stop >= get_NArcs() )
-  stop = get_NArcs();
+   stop = get_NArcs();
 
  if( stop <= strt )  // nothing to change
-  return;             // cowardly (and silently) return
+  return;            // cowardly (and silently) return
 
  Index ndiff = 0;
  for( Index i = strt ; i < stop ; ++i )
@@ -2272,8 +2281,6 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
    }
 
  unmake_amod_param( issueAMod , ampar , ndiff );
-
- // TODO: eliminate from nms the "fake" changes
 
  if( issue_pmod( issueMod ) ) {  // issue "physical Modification" - - - - - -
   // ensure the names are ordered even if they were not so originally
@@ -2569,6 +2576,11 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     for the Constraint, in order to efficiently retrieve the index "i" in the
     "phisical representarion" out of pointers in the "abstract
     representation". */
+
+ // TODO: for GroupModification examine the thing in details to recognise
+ //       structures, like a bunch of VariableMod corresponding to a set of
+ //       arc opening/closures, and react in an optimized way, like with a
+ //       single call to [open/close]_arcs() as opposed a single one
 
  // GroupModification - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  {

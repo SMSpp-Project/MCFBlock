@@ -294,14 +294,18 @@ static inline bool SolveMCF( void )
    Lst_sp_Mod & modlist = fs->get_Modification_list();
 
    if( mMCFB == oMCFB ) {  // modify the original, solve the R3
-    for( auto mod : modlist )
+    for( auto mod : modlist ) {
+     //!! std::cout << *mod << std::endl;
      oMCFB->map_forward_Modification( dMCFB , mod , nullptr ,
 				      eNoBlck , eNoBlck );
+     }
     }
    else {                  // modify the R3, solve the original
-    for( auto mod : modlist )
+    for( auto mod : modlist ) {
+     //!! std::cout << *mod << std::endl;
      oMCFB->map_back_Modification( dMCFB , mod , nullptr ,
 				   eNoBlck , eNoBlck );
+     }
     }
 
    modlist.clear();  // clear the processed Modification
@@ -710,7 +714,6 @@ int main( int argc , char **argv )
    // at most half of the closed ones
    MCFBlock::Index tochange = min( MCFBlock::Index( ( m - opened ) / 2 ) ,
 				   MCFBlock::Index( drand48() * n_change ) );
-
    if( tochange ) {
     cout << tochange << " open - ";
 
