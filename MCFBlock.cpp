@@ -142,9 +142,8 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
  // throw Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  if( issue_mod( issueMod ) )
-  Block::add_Modification(
-            std::make_shared<BlockMod>( this , BlockMod::eReSetAll , false ) ,
-	    Observer::par2chnl( issueMod ) );
+  Block::add_Modification( std::make_shared<NBModification>( this ) ,
+			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::load( memory ) )
 
@@ -293,9 +292,8 @@ void MCFBlock::load( std::istream &input , c_ModParam issueMod )
   // actually, there is no need to throw the "physical" MCFBlockMod because
   // the "abstract" BlockMod can happily do the same job
 
-  Block::add_Modification(
-            std::make_shared<BlockMod>( this , BlockMod::eReSetAll , false ) ,
-	    Observer::par2chnl( issueMod ) );
+  Block::add_Modification( std::make_shared<NBModification>( this ) ,
+			   Observer::par2chnl( issueMod ) );
   }
  }  // end( MCFBlock::load( istream ) )
 
@@ -1168,15 +1166,11 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
    }
   */
   {
-   const auto tmod = std::dynamic_pointer_cast<BlockMod>( mod );
+   const auto tmod = std::dynamic_pointer_cast<NBModification>( mod );
    if( tmod ) {
-    if( tmod->f_type == BlockMod::eReSetAll ) {
-     // this is the "nuclear option": the MCFBlock has been re-loaded
-     MCFB->load( get_NNodes() , EN , SN , U , C , B );
-     return;
-     }
-
-    throw( std::invalid_argument( "Unexpected BlockMod" ) );
+    // this is the "nuclear option": the MCFBlock has been re-loaded
+    MCFB->load( get_NNodes() , EN , SN , U , C , B );
+    return;
     }
    }
 

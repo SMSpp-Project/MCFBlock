@@ -769,19 +769,17 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
     }
    */
    {
-    const auto tmod = std::dynamic_pointer_cast<BlockMod>( mod );
+    const auto tmod = std::dynamic_pointer_cast<NBModification>( mod );
     if( tmod ) {
-     if( tmod->f_type == BlockMod::eReSetAll ) {
-      // this is the "nuclear option": the MCFBlock has been re-loaded
-      MCFC::LoadNet( MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		     MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		     MCFB->get_U().size() ? MCFB->get_U().data() : nullptr ,
-		     MCFB->get_C().size() ? MCFB->get_C().data() : nullptr ,
-		     MCFB->get_B().size() ? MCFB->get_B().data() : nullptr ,
-		     MCFB->get_SN().data() , MCFB->get_EN().data() );
-      MCFC::PreProcess();
-      return;
-      }
+     // this is the "nuclear option": the MCFBlock has been re-loaded
+     MCFC::LoadNet( MCFB->get_NNodes() , MCFB->get_NArcs() ,
+		    MCFB->get_NNodes() , MCFB->get_NArcs() ,
+		    MCFB->get_U().size() ? MCFB->get_U().data() : nullptr ,
+		    MCFB->get_C().size() ? MCFB->get_C().data() : nullptr ,
+		    MCFB->get_B().size() ? MCFB->get_B().data() : nullptr ,
+		    MCFB->get_SN().data() , MCFB->get_EN().data() );
+     MCFC::PreProcess();
+     return;
      }
     }
 
