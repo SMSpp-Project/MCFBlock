@@ -244,43 +244,29 @@ static inline void load( char * fn )
   iFile.clear();
   iFile.seekg( 0 );       // rewind the file
 
-  iFile >> *oMCFB;        // load the MCFBlock
+  /* load the MCFBlock. Usually the "original" one is loaded, unless
+   * mode == 2 (==> original solved, R3 modified) *and* the R3 has been
+   * constructed already, in which case the R3 is loaded. This is perhaps
+   * stretching the concept of "R3Block" close to the breaking point, but
+   * in this case it works because the R3B is a copy *and* always the same
+   * instance is loaded. */
+  if( ( ( mode & 3 ) == 2 ) && dMCFB ) {
+   iFile >> *dMCFB;
 
-  if( mode & 4 ) {
-   oMCFB->generate_abstract_constraints();
-   oMCFB->generate_objective();
-   }
-
-  if( mode & 3 ) {          // also use an R3 MCFBlock = copy
-   delete( dMCFB );         // first delete it, in case it was there already
-                            // then (re-) construct it
-   dMCFB = dynamic_cast<MCFBlock *>( oMCFB->get_R3_Block() );
-   assert( dMCFB );         // excess of caution (we know it is)
-
-   if( ( mode & 3 ) == 1 ) {  // modify the original, solve the R3
-    mMCFB = oMCFB;
-    sMCFB = dMCFB;
-    }
-   else {                     // modify the R3, solve the original
-    mMCFB = dMCFB;
-    sMCFB = oMCFB;
-    }
-
-   if( mode & 8 ) {
+   if( mode & 8 ) {  // if so instructed, generate abstract representation
     dMCFB->generate_abstract_constraints();
     dMCFB->generate_objective();
     }
-
-   // attach a FakeSolver to the modified one to syphoon off Modification
-   mMCFB->register_Solver( Solver::new_Solver( "FakeSolver" ) );
    }
-  else                      // just use one MCFBlock
-   sMCFB = mMCFB = oMCFB;
+  else {
+   iFile >> *oMCFB;
 
-  /* if it's not there already,  attach a "true" MCFSolver to the one that
-   * is actually solved */
-  if( ! (sMCFB->get_registered_solvers()).front() )
-   sMCFB->register_Solver( Solver::new_Solver( solver_name( MCFC ) ) );
+   if( mode & 4 ) {  // if so instructed, generate abstract representation
+    oMCFB->generate_abstract_constraints();
+    oMCFB->generate_objective();
+    }
+   }
+
   }
  catch( exception &e ) {
   cerr << "MCFClass: " << e.what() << endl;
@@ -477,6 +463,28 @@ int main( int argc , char **argv )
  // load the instance - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  load( argv[ 1 ] );
+
+ if( mode & 3 ) {            // also use an R3 MCFBlock = copy
+  dMCFB = dynamic_cast<MCFBlock *>( oMCFB->get_R3_Block() );  // construct it
+  assert( dMCFB );           // excess of caution (we know it is)
+
+  if( ( mode & 3 ) == 1 ) {  // modify the original, solve the R3
+   mMCFB = oMCFB;
+   sMCFB = dMCFB;
+   }
+  else {                     // modify the R3, solve the original
+   mMCFB = dMCFB;
+   sMCFB = oMCFB;
+   }
+
+  // attach a FakeSolver to the modified one to syphoon off Modification
+  mMCFB->register_Solver( Solver::new_Solver( "FakeSolver" ) );
+  }
+ else                        // just use one MCFBlock
+  sMCFB = mMCFB = oMCFB;
+
+ //  attach a "true" MCFSolver to the one that is actually solved
+ sMCFB->register_Solver( Solver::new_Solver( solver_name( MCFC ) ) );
 
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

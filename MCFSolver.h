@@ -749,25 +749,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
      }
     }
 
-   // MCFBlockMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   // note: this is checked after the previous two because they derive from
-   // MCFBlockMod, and hence the std::dynamic_pointer_cast<> would suceed
-   /*
-   {
-    const auto tmod = std::dynamic_pointer_cast<MCFBlockMod>( mod );
-    if( tmod ) {
-      this is the "nuclear option": the MCFBlock has been re-loaded
-     MCFC::LoadNet( MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		    MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		    MCFB->get_U().size() ? MCFB->get_U().data() : nullptr ,
-		    MCFB->get_C().size() ? MCFB->get_C().data() : nullptr ,
-		    MCFB->get_B().size() ? MCFB->get_B().data() : nullptr ,
-		    MCFB->get_SN().data() , MCFB->get_EN().data() );
-     MCFC::PreProcess();
-     return;
-     }
-    }
-   */
+   // NBModification- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    {
     const auto tmod = std::dynamic_pointer_cast<NBModification>( mod );
     if( tmod ) {
