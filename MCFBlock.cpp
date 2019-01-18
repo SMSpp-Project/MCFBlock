@@ -1152,23 +1152,13 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     }
    }
 
-  // MCFBlockMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  // note: this is checked after the previous two because they derive from
-  // MCFBlockMod, and hence the std::dynamic_pointer_cast<> would suceed
-  /*
-  {
-   const auto tmod = std::dynamic_pointer_cast<MCFBlockMod>( mod );
-   if( tmod ) {
-     this is the "nuclear option": the MCFBlock has been re-loaded
-    MCFB->load( get_NNodes() , EN , SN , U , C , B );
-    return;
-    }
-   }
-  */
+  // NBModification- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   {
    const auto tmod = std::dynamic_pointer_cast<NBModification>( mod );
    if( tmod ) {
     // this is the "nuclear option": the MCFBlock has been re-loaded
+    // one should check that the Block is this MCFBlock, but it cannot
+    // be otherwise, can it?
     MCFB->load( get_NNodes() , EN , SN , U , C , B );
     return;
     }
