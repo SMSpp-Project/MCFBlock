@@ -266,7 +266,6 @@ static inline void load( char * fn )
     oMCFB->generate_objective();
     }
    }
-
   }
  catch( exception &e ) {
   cerr << "MCFClass: " << e.what() << endl;

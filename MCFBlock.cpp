@@ -1556,7 +1556,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
 
  Vec_CNumber_it cit = C.begin() + strt;
 
- if( ! get_objective().empty() ) {
+ if( not_dry_run( issueAMod ) && ( ! get_objective().empty()  ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification(s)
 
@@ -1677,7 +1677,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
 
  c_Vec_Index_it nit = nms.begin();
 
- if( ! get_objective().empty() ) {
+ if( not_dry_run( issueAMod ) && ( ! get_objective().empty()  ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -1799,7 +1799,7 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
  if( C[ arc ] == NCost )
   return;
 
- if( ! get_objective().empty() ) {
+ if( not_dry_run( issueAMod ) && ( ! get_objective().empty()  ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -1877,7 +1877,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
  ncit = NCap;
  uit = U.begin() + strt;
 
- if( ! E.empty() ) {
+ if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -1952,7 +1952,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
  ncit = NCap;
  nit = nms.begin();
 
- if( ! E.empty() ) {
+ if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -2007,7 +2007,7 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
 
  U[ arc ] = NCap;  // change the physical representation- - - - - - - - - - -
 
- if( ! E.empty() ) {
+ if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -2063,7 +2063,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
  ndit = NDfct;
  bit = B.begin() + strt;
 
- if( ! E.empty() ) {
+ if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -2132,7 +2132,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
  ndit = NDfct;
  nit = nms.begin();
 
- if( ! E.empty() ) {
+ if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -2180,7 +2180,7 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
 
  B[ nde ] = NDfct;  // change the physical representation - - - - - - - - - -
 
- if( ! E.empty() )
+ if( not_dry_run( issueAMod ) && ( ! E.empty() ) )
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
   E[ nde ].set_both( NDfct , issueAMod );
@@ -2197,6 +2197,11 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
 void MCFBlock::close_arcs( c_Index strt , Index stop ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
+ // since the physical and abstract representation are the same if the
+ // abstract one need not be changed, then nothing at all has to be done
+ if( ! not_dry_run( issueAMod ) )
+  return;
+
  if( stop >= get_NArcs() )
    stop = get_NArcs();
 
@@ -2238,6 +2243,11 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
+ // since the physical and abstract representation are the same if the
+ // abstract one need not be changed, then nothing at all has to be done
+ if( ! not_dry_run( issueAMod ) )
+  return;
+
  assert( nms.size() <= get_NArcs() );
 
  Index ndiff = 0;
@@ -2283,6 +2293,11 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
 void MCFBlock::close_arc( c_Index arc ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
+ // since the physical and abstract representation are the same if the
+ // abstract one need not be changed, then nothing at all has to be done
+ if( ! not_dry_run( issueAMod ) )
+  return;
+
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -2308,6 +2323,11 @@ void MCFBlock::close_arc( c_Index arc ,
 void MCFBlock::open_arcs( c_Index strt , Index stop ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
+ // since the physical and abstract representation are the same if the
+ // abstract one need not be changed, then nothing at all has to be done
+ if( ! not_dry_run( issueAMod ) )
+  return;
+
  if( stop >= get_NArcs() )
   stop = get_NArcs();
 
@@ -2347,6 +2367,11 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
 void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
+ // since the physical and abstract representation are the same if the
+ // abstract one need not be changed, then nothing at all has to be done
+ if( ! not_dry_run( issueAMod ) )
+  return;
+
  assert( nms.size() <= get_NArcs() );
 
  Index ndiff = 0;
@@ -2392,6 +2417,11 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
 void MCFBlock::open_arc( c_Index arc ,
 			 c_ModParam issueMod , c_ModParam issueAMod )
 {
+ // since the physical and abstract representation are the same if the
+ // abstract one need not be changed, then nothing at all has to be done
+ if( ! not_dry_run( issueAMod ) )
+  return;
+
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 

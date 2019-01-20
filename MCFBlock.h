@@ -1053,6 +1053,14 @@ public:
  * GroupModification). This may allow a more efficient handling of
  * Modification by ensuring that the two are always received together, but at
  * the cost of a more intricate code that is best avoided for now.
+ *
+ * Note: the methods accept the eDryRun value for the issueAMod parameter for
+ * the "abstract" representation. This allows to re-use them within MCFBlock
+ * itself when reacting to abstract Modification, where the  "abstract"
+ * representation has been changed already. However, the eDryRun value is not
+ * allowed (it is ignored) for the issuePMod parameter for the "physical"
+ * representation, as there is no reasonable use for this. Basically, this
+ * makes eDryRun equivalent to eNoMod.
  *  @{ */
 
  /// change the costs of a contiguous interval of arcs
