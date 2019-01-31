@@ -312,13 +312,11 @@ public:
   * provided because the only n-vector is pB, which can be empty.
   *
   * Like load( std::istream & ), if there is any Solver attached to this
-  * Block then a BlockMod is issued with eReSetAll, which is why the
-  * issueMod param is provided: the default value for is eNoBlck, as the
-  * MCFBlock "already knows that it has been re-loaded". */
+  * MCFBlock then a NBModification (the "nuclear option") is issued. */
 
  virtual void load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 		    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
-		    c_Vec_FNumber & pB = {} , c_ModParam issueMod = eNoBlck );
+		    c_Vec_FNumber & pB = {} );
 
 /*--------------------------------------------------------------------------*/
 
@@ -330,18 +328,33 @@ public:
  virtual void generate_abstract_variables( Configuration *stvv = nullptr )
   override final;
 
+ /// generate the abstract variables of the MCF
+ /** Method that generates the abstract variables of the MCF. These are the a
+  * std::vector< ColVariable > with exactly m entries, the entry a = 0, ...,
+  *  m - 1 corresponding to the flow on arc ( SN[ a ] , EN[ a ] ). */
+
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the static constraint of the MCF
- /** Method that generates the static constraint of the MCF. These are the
-  * flow conservation equations and the bound constraints. The latter have
-  * fixed 0 LHS and a generic RHS, which can be Inf<Fnumber>(). If *all* the
-  * RHS are +Infty, it is possible to use a std::vector<NNConstraint> to
-  * represent them instead of a std::vector<LB0Constraint>. The parameter
-  * stcc is used to decide if this is done: if
+ /** Method that generates the static constraint of the MCF. These are the:
+  *
+  * - the flow conservation equations, a std::vector<FRowConstraint> with
+  *   exactly n entries, the entry i = 0, ..., n - 1 being the flow
+  *   conservation of the node i;
+  *
+  * - the bound constraints, a std::vector< some derived class from
+  *   OneVarConstraint > with exactly m entries, the entry a = 0, ..., m - 1
+  *   being the bound constraints of the ColVariable x[ a ] corresponding to
+  *   the flow on arc ( SN[ a ] , EN[ a ] ).
+  *
+  * The latter OneVarConstraint have fixed 0 LHS and a generic RHS, which can
+  * be Inf<Fnumber>(). If *all* the RHS are +Infty, it is possible to use a
+  * std::vector<NNConstraint> to represent them instead of a
+  * std::vector<LB0Constraint>. The parameter stcc is used to decide if this
+  * is done: if
   *
   * - all the RHS are +Infty;
   *
-   * - either stcc is not nullptr and it is a SimpleConfiguration<int>;
+  * - either stcc is not nullptr and it is a SimpleConfiguration<int>;
   *
   * - or f_BlockConfig is not nullptr,
   *   f_BlockConfig->f_static_constraints_Configuration is not nullptr,
@@ -354,21 +367,22 @@ public:
   * changing the static Constraint and this is not allowed. Indeed,
   * NNConstraint throws exception if one tries to change its RHS (and LHS as
   * well, but this also NNConstraint does). Hence, if the abstract Constraint
-  * are constructed, changing the RHS is not allowed. */
+  * are constructed, changing the RHS is not allowed.
+  *
+  * Note that changing *all* the other parts of any of the FRowConstraint,
+  * such as the coefficients of the LinearFunction inside, is not allowed:
+  * the MCFBlock will throw exception while processing the corresponding
+  * "abstract" Modification. */
  
  virtual void generate_abstract_constraints( Configuration *stcc = nullptr )
   override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the objective of the MCF
- /** Method that generates objectivet of the MCF. Although this would seem to
-  * be an exceedingly simple object, there is still a nontrivial decision to
-  * be made about it, i.e., whether it is represented as a "sparse"
+ /** Method that generates the objective of the MCF. Although this would seem
+  * to be an exceedingly simple object, there is still a nontrivial decision
+  * to be made about it, i.e., whether it is represented as a "sparse"
   * LinearFunction or a "dense" one. This is governed by objc: if
-  * flow conservation equations and the bound constraints. The latter have
-  * fixed 0 LHS and a generic RHS, which can be Inf<Fnumber>(), in this case,
-  * it is possible to use NNConstraint to represent them instead of
-  * LB0Constraint. The parameter stcc is used to decide if this is done: if
   *
   * - either objc is not nullptr and it is a SimpleConfiguration<double>;
   *
@@ -399,7 +413,14 @@ public:
   * "naturally" nonzero, then the Objective will be "dense" no matter what the
   * value of sprs is. Although this may seem obvious, this also means that the
   * Objective will remain "dense" even if later on many coefficients become
-  * zero. */
+  * zero.
+  *
+  * IMPORTANT NOTE: ALLOWING SPARSE Objective MAKES IT INORDINATELY MORE
+  * DIFFICULT TO REACT TO ABSTRACT Modification, WHILE ITS ACTUAL IMPACT ON
+  * PERFORMANCES IS VERY DOUBIOUS. THEREFORE, THE SUPPORT FOR IT IS ONLY
+  * HALF-BAKED, AND WHATEVER THERE IS IS CURRENTLY COMMENTED OUT. DEVELOPMENT
+  * OF THIS FEATURE WILL ONLY BE RESUMED IF CLEAR PROOF OF ITS WORTHINESS
+  * IS ACHIEVED. */
 
  virtual void generate_objective( Configuration *objc = nullptr )
   override final;
@@ -1410,10 +1431,12 @@ public:
   * any order, while the DIMACS file requires all node information to appear
   * before all arc information. Also, capacities of arcs can be set to
   * +Inf<FNumber>() by putting "INF", "Inf" or "inf" in the file (actually,
-  * any string starting with "I" or "i" where these would be expected. */
+  * any string starting with "I" or "i" where these would be expected.
+  *
+  * Like load( memory ), if there is any Solver attached to this MCFBlock
+  * then a NBModification (the "nuclear option") is issued. */
 
- virtual void load( std::istream &input , c_ModParam issueMod = eNoBlck )
-  override final;
+ virtual void load( std::istream &input ) override final;
 
 /*@}------------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/

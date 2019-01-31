@@ -104,7 +104,7 @@ SMSpp_insert_in_factory_cpp_1( MCFBlock );
 
 void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 		     c_Vec_FNumber & pU , c_Vec_CNumber & pC ,
-		     c_Vec_FNumber & pB , c_ModParam issueMod )
+		     c_Vec_FNumber & pB )
 {
  // sanity checks - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -140,16 +140,16 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
  generate_abstract_variables();
 
  // throw Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ // note: this is a NBModification, the "nuclear option"
 
- if( issue_mod( issueMod ) )
-  Block::add_Modification( std::make_shared<NBModification>( this ) ,
-			   Observer::par2chnl( issueMod ) );
+ if( anyone_there() )
+  add_Modification( std::make_shared<NBModification>( this ) );
 
  }  // end( MCFBlock::load( memory ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::load( std::istream &input , c_ModParam issueMod )
+void MCFBlock::load( std::istream &input )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
@@ -283,18 +283,11 @@ void MCFBlock::load( std::istream &input , c_ModParam issueMod )
  generate_abstract_variables();
 
  // issue Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
- // note that concerns_Block is always false, even in the "abstract"
- // Modification as the MCFBlock knows already that it has been reloaded
+ // note: this is a NBModification, the "nuclear option"
 
- if( issue_mod( issueMod ) ) {
-  // Block::add_Modification( std::make_shared<MCFBlockMod>( this ) ,
-  //                          Observer::par2chnl( issueMod ) );
-  // actually, there is no need to throw the "physical" MCFBlockMod because
-  // the "abstract" BlockMod can happily do the same job
+ if( anyone_there() )
+  add_Modification( std::make_shared<NBModification>( this ) );
 
-  Block::add_Modification( std::make_shared<NBModification>( this ) ,
-			   Observer::par2chnl( issueMod ) );
-  }
  }  // end( MCFBlock::load( istream ) )
 
 /*--------------------------------------------------------------------------*/
@@ -350,6 +343,12 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
  generate_abstract_variables();
+
+ // issue Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ // note: this is a NBModification, the "nuclear option"
+
+ if( anyone_there() )
+  add_Modification( std::make_shared<NBModification>( this ) );
 
  }  // end( MCFBlock::deserialize )
 
@@ -496,7 +495,7 @@ void MCFBlock::generate_objective( Configuration *objc )
     p[ i ].second = C[ i ];
     }
   else
-   for( Index i = 0 ; i < C.size() ; ++i ) {
+   for( Index i = 0 ; i < get_NArcs() ; ++i ) {
     p[ i ].first = &x[ i ];
     p[ i ].second = 0;
     }
@@ -2618,39 +2617,90 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
     throw( std::invalid_argument( "Modification to non-Objective" ) );
 
-   switch( tmod->f_type ) {
-    case( FunctionModVars::RemoveVar ):
-     for( const auto & var : tmod->v_vars )
-      C[ p2i( var ) ] = 0;
-     break;
+   if( tmod->v_vars.size() == 1 ) {  // changing just one cost
+    auto var = tmod->v_vars.front();
+    switch( tmod->f_type ) {
+     case( FunctionModVars::RemoveVar ):
+      chg_cost( 0 , p2i( var ) , eNoBlck , eDryRun );
+      break;
      
-    case( FunctionModVars::AddVar ):
-    case( C05FunctionModVarsRngd::SomeEntriesChange ): {
-     const auto cp = lfo->get_v_var();
-
-     if( lfo->get_num_active_var() == get_NArcs() ) {  // "dense" objective
-      for( const auto & var : tmod->v_vars ) {
-       c_Index i = p2i( var );
-       C[ i ] = cp[ i ].second;
-       }
+     case( FunctionModVars::AddVar ):
+     case( C05FunctionModVarsRngd::SomeEntriesChange ): {
+      const auto cp = lfo->get_v_var();
+      c_Index i = ( lfo->get_num_active_var() == get_NArcs() ?
+		    p2i( var ) :  lfo->is_active( var ) );
+      chg_cost( cp[ i ].second , i , eNoBlck , eDryRun );
+      break;
       }
-     else {                                            // "sparse" objective
-      Vec_Index map;
-      /* Note: map_active() requires all the Variable in v_var to be there,
-         but since this AMod has (hopefully) "just been issued" they should
-         indeed be there. */
-      lfo->map_active( tmod->v_vars , map );
-      for( auto idx : map )
-       C[ p2i( cp[ idx ].first ) ] = cp[ idx ].second;
-      }
-     break;
+     default:
+      throw( std::invalid_argument( "illegal Modification type" ) );
      }
-    default:
-     throw( std::invalid_argument( "illegal Modification type" ) );
+    }
+   else {                            // changing many costs at once
+    Vec_CNumber nC( tmod->v_vars.size() );
+    Vec_Index nI( tmod->v_vars.size() );
+    Index i = 0;
+   
+    switch( tmod->f_type ) {
+     case( FunctionModVars::RemoveVar ):
+      for( const auto & var : tmod->v_vars ) {
+       nC[ i ] = 0;
+       nI[ i++ ] = p2i( var );
+       }
+      break;
+     
+     case( FunctionModVars::AddVar ):
+     case( C05FunctionModVarsRngd::SomeEntriesChange ): {
+      const auto cp = lfo->get_v_var();
+
+      if( lfo->get_num_active_var() == get_NArcs() ) {  // "dense" objective
+       for( const auto & var : tmod->v_vars ) {
+        nI[ i ] = p2i( var );
+        nC[ i ] = cp[ nI[ i ] ].second;
+        i++;
+        }
+       }
+      else {                                            // "sparse" objective
+       Vec_Index map;
+       /* Note: map_active() requires all the Variable in v_var to be there,
+          but since this AMod has (hopefully) "just been issued" they should
+          indeed be there. */
+       lfo->map_active( tmod->v_vars , map );
+       for( auto idx : map ) {
+        nI[ i ] = p2i( cp[ idx ].first );
+        nC[ i++ ] = cp[ idx ].second;
+        }
+       }
+      break;
+      }
+     default:
+      throw( std::invalid_argument( "illegal Modification type" ) );
+     }
+
+    {
+     /*!!
+    // check if the variables are contiguos
+    bool contg = true;
+    Index i = nI.front();
+    for( Index j = 1 ; j < nI.size() ; ++j )
+     if( nI[ j ] != i + 1 ) {
+      contg = false;
+      break;
+      }
+     else
+      i = nI[ j ];
+
+    if( contg )
+     chg_costs( nC , nI.front() , nI.back() + 1 , eNoBlck , eDryRun );
+    else
+     chg_costs( nC , std::move( nI ) , true , eNoBlck , eDryRun );
+     }
+     !!*/
     }
 
    return;
    }
+  }
   }
 
  // LinearFunctionModRngd - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2665,12 +2715,36 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
     throw( std::invalid_argument( "Modification to non-Objective" ) );
 
-   switch( tmod->f_type ) {
-    case( FunctionModVars::RemoveVar ): {
-     /* Note: here we set to 0 the coefficient of all variables comprised
-        between f_strt and f_stop, regardless to the fact that they are
-        "active" or not - because if they are not, the coefficient is 0
-        anyway. */
+   if( tmod->f_strt && tmod->f_stop &&
+       ( std::distance( tmod->f_strt , tmod->f_stop ) == 1 ) ) {
+           // changing just one cost
+
+    switch( tmod->f_type ) {
+     case( FunctionModVars::RemoveVar ):
+      chg_cost( 0 , p2i( tmod->f_strt ) , eNoBlck , eDryRun );
+      break;
+     
+     case( FunctionModVars::AddVar ):
+     case( C05FunctionModVarsRngd::SomeEntriesChange ): {
+      const auto cp = lfo->get_v_var();
+      c_Index i = ( lfo->get_num_active_var() == get_NArcs() ?
+		    p2i( tmod->f_strt ) :  lfo->is_active( tmod->f_strt ) );
+      chg_cost( cp[ i ].second , i , eNoBlck , eDryRun );
+      break;
+      }
+     default:
+      throw( std::invalid_argument( "illegal Modification type" ) );
+     }
+    }
+   else {  // changing many costs at once
+    Vec_CNumber nC( tmod->f_stop - tmod->f_strt + 1 );
+
+    switch( tmod->f_type ) {
+     case( FunctionModVars::RemoveVar ): {
+      /* Note: here we set to 0 the coefficient of all variables comprised
+	 between f_strt and f_stop, regardless to the fact that they are
+	 "active" or not - because if they are not, the coefficient is 0
+	 anyway. */
      const auto stop = tmod->f_stop ? p2i( tmod->f_stop ) : get_NArcs();
      for( auto i = tmod->f_strt ? p2i( tmod->f_strt ) : 0 ; i < stop ; ++i )
       C[ i ] = 0;
@@ -2688,8 +2762,8 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
       }
      else {                             // "sparse" objective
       /* Note: we expect is_active() to return "finite" values, because both
-         f_strt and f_stop (if not nullptr) should be active Variable, in that
-         this AMod has (hopefully) "just been issued". */
+	 f_strt and f_stop (if not nullptr) should be active Variable, in that
+	 this AMod has (hopefully) "just been issued". */
       istrt = tmod->f_strt ? lfo->is_active( tmod->f_strt ) : 0;
       istop = tmod->f_stop ? lfo->is_active( tmod->f_stop ) : cp.size();
       }
@@ -2702,7 +2776,10 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     default:
      throw( std::invalid_argument( "illegal Modification type" ) );
     }
+   }
 
+
+   
    return;
    }
   }

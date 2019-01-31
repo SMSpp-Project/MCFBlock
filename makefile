@@ -5,12 +5,12 @@
 #   makefile of MCFBlock / MCFSolver                                         #
 #                                                                            #
 #   The makefile takes in input the -I directives for all the external       #
-#   libraries needed by MCFBlock / MCFSolver [MCFBkIIC]. This is *not*       #
-#   copied into $(MCFBkINC); those -I directives will have to be added to    #
-#   the compile commands by whatever "main" makefile is using this. In the   #
-#   same way, any external library and the corresponding -L< libdirs > will  #
-#   have to be added to the final linking command by  whatever "main"        #
-#   makefile is using this.                                                  #
+#   libraries needed by MCFBlock / MCFSolver, i.e., core SMS++ and           #
+#   MCFClass. These are *not* copied into $(MCFBkINC): adding those -I       #
+#   directives to the compile commands will have to done by whatever "main"  #
+#   makefile is using this. Analogously, any external library and the        #
+#   corresponding -L< libdirs > will have to be added to the final linking   #
+#   command by  whatever "main" makefile is using this.                      #
 #                                                                            #
 #   Note that, conversely, $(SMS++INC) is also assumed to include any        #
 #   -I directive corresponding to external libraries needed by SMS++, at     #
@@ -21,8 +21,8 @@
 #           $(SW)          = compiler options                                #
 #           $(SMS++INC)    = the -I$( core SMS++ directory )                 #
 #           $(SMS++OBJ)    = the core SMS++ library                          #
-#           $(libMCFClINC) = the -I$( MCF library )                          #
-#           $(libMCFClOBJ) = the MCF library                                 #
+#           $(libMCFClINC) = the -I$( MCFClass library )                     #
+#           $(libMCFClOBJ) = the MCFClass library                            #
 #           $(MCFBkSDR)  = the directory where the source is                 #
 #                                                                            #
 #   Output: $(MCFBkOBJ) = the final object(s) / library                      #
@@ -53,7 +53,7 @@ MCFBkH   = $(MCFBkSDR)MCFBlock.h $(MCFBkSDR)MCFSolver.h
 clean::
 	rm -f $(MCFBkOBJ) $(MCFBkSDR)*~
 
-# dependencies: every .o from its .C + every recursively included .h- - - - -
+# dependencies: every .o from its .cpp + every recursively included .h- - - -
 
 $(MCFBkSDR)MCFBlock.o: $(MCFBkSDR)MCFBlock.cpp $(MCFBkSDR)MCFBlock.h \
 	$(SMS++OBJ)
