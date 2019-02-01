@@ -11,9 +11,9 @@
  * closures. The same operations are performed on the two solvers, and the
  * results are compared.
  *
- * \version 1.00
+ * \version 1.50
  *
- * \date 01 - 10 - 2018
+ * \date 01 - 02 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -421,7 +421,9 @@ int main( int argc , char **argv )
 		<< endl <<
 	   "       mode: 0 = only one, 1 = orig -> solve, 2 = solve -> orig"
 		<< endl <<
-	   "             +4 = abstract orig, +8 = abstract solve"
+	   "             +4 = abstract orig, +8 = abstract solve,"
+		<< endl <<
+ 	   "             +16 = also change abstract representation"
 		<< endl <<
            "       wchg: what to change, coded bit-wise "
 		<< endl <<
@@ -444,6 +446,8 @@ int main( int argc , char **argv )
 	   return( 1 );
   }
 
+ if( mode & 16 )  // if the abstract representations are changed
+  mode |= 12;     // ensure they exist in the first place
 
  // construction and loading of the objects - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -451,8 +455,6 @@ int main( int argc , char **argv )
  // construct MCFClass- - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  CreateProb( optns );
-
- //mcf->SetMCFTime();  // do timing
 
  // construct MCFBlocks/MCFSolvers- - - - - - - - - - - - - - - - - - - - - -
 
@@ -566,7 +568,20 @@ int main( int argc , char **argv )
     MCFBlock::Index arc = MCFBlock::Index( drand48() * ( m - 1 ) );
 
     mcf->ChgCost( arc , newcst );
-    mMCFB->chg_cost( newcst , arc );
+
+    if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+     // change via abstract representation
+     cout << "(a)";
+     auto obj = boost::any_cast<FRealObjective *>( mMCFB->get_objective() );
+     assert( obj );
+     auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
+     assert( lf );
+     LinearFunction::v_coeff nc = { newcst };
+     lf->modify_coefficients( nc.begin() , arc , arc + 1 );
+     }
+    else  // change via call to chg_* method
+     mMCFB->chg_cost( newcst , arc );
+
     cout << " - ";
     }
    else {
@@ -579,8 +594,20 @@ int main( int argc , char **argv )
      MCFBlock::Index strt = drand48() * ( m - tochange );
      MCFBlock::Index stp = strt + tochange;
      mcf->ChgCosts( newcsts.data() , nullptr , strt , stp );
-     mMCFB->chg_costs( newcsts.begin() , strt , stp );
-     cout << "s(r) - ";
+
+     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+      // change via abstract representation
+      cout << "s(r,a) - ";
+      auto obj = boost::any_cast<FRealObjective *>( mMCFB->get_objective() );
+      assert( obj );
+      auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
+      assert( lf );
+      lf->modify_coefficients( newcsts.begin() , strt , stp );
+      }
+     else {  // change via call to chg_* method
+      mMCFB->chg_costs( newcsts.begin() , strt , stp );
+      cout << "s(r) - ";
+      }
      }
     else {
      MCFBlock::Vec_Index nms( m + 1 );
@@ -595,8 +622,20 @@ int main( int argc , char **argv )
      *end = OPTtypes_di_unipi_it::Inf<MCFClass::Index>();
      mcf->ChgCosts( newcsts.data() , nms.data() );
      nms.resize( tochange );
-     mMCFB->chg_costs( newcsts.begin() , std::move( nms ) , true );
-     cout << "s(s) - ";
+
+     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+      // change via abstract representation
+      cout << "s(s,a) - ";
+      auto obj = boost::any_cast<FRealObjective *>( mMCFB->get_objective() );
+      assert( obj );
+      auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
+      assert( lf );
+      lf->modify_coefficients( newcsts.begin() , nms );
+      }
+     else {  // change via call to chg_* method
+      mMCFB->chg_costs( newcsts.begin() , std::move( nms ) , true );
+      cout << "s(s) - ";
+      }
      }
     }
    }  // end( if( change costs ) )
@@ -611,19 +650,42 @@ int main( int argc , char **argv )
     MCFBlock::Index arc = MCFBlock::Index( drand48() * ( m - 1 ) );
     MCFBlock::CNumber newcap = mcf->MCFUCap( arc ) * rndfctr();
     mcf->ChgUCap( arc , newcap );
-    mMCFB->chg_ucap( newcap , arc );
-    cout << "y - ";
+
+    if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+     // change via abstract representation
+     cout << "y(a) - ";
+     auto bnd = boost::any_cast<std::vector<LB0Constraint> *>(
+				    (mMCFB->get_static_constraints())[ 1 ] );
+     assert( bnd );
+     (*bnd)[ arc ].set_rhs( newcap );
+     }
+    else {  // change via call to chg_* method
+     mMCFB->chg_ucap( newcap , arc );
+     cout << "y - ";
+     }
     }
    else
     // in 50% of the cases do a ranged change, in the others a sparse change
     if( drand48() <= 0.5 ) {
      MCFBlock::Index strt = drand48() * ( m - tochange );
      MCFBlock::Index stp = strt + tochange;
-     for( MCFBlock::Index i = 0 ; i < tochange ; i++ )
+     for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
       newcaps[ i ] = mcf->MCFUCap( i + strt ) * rndfctr();
      mcf->ChgUCaps( newcaps.data() , nullptr , strt , stp );
-     mMCFB->chg_ucaps( newcaps.begin() , strt , stp );
-     cout << "ies(r) - ";
+
+     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+      // change via abstract representation
+      cout << "ies(a,r) - ";
+      auto bnd = boost::any_cast<std::vector<LB0Constraint> *>(
+				    (mMCFB->get_static_constraints())[ 1 ] );
+      assert( bnd );
+      for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
+       (*bnd)[ i + strt ].set_rhs( newcaps[ i ] );
+      }
+     else {  // change via call to chg_* method
+      mMCFB->chg_ucaps( newcaps.begin() , strt , stp );
+      cout << "ies(r) - ";
+      }
      }
     else {
      MCFBlock::Vec_Index nms( m + 1 );
@@ -638,17 +700,29 @@ int main( int argc , char **argv )
      auto end = nms.begin() + tochange;
      sort( nms.begin() , end );
      *end = OPTtypes_di_unipi_it::Inf<MCFClass::Index>();
-     mcf->ChgUCaps( newcsts.data() , nms.data() );
+     mcf->ChgUCaps( newcaps.data() , nms.data() );
      nms.resize( tochange );
-     mMCFB->chg_ucaps( newcsts.begin() , std::move( nms ) , true );
-     cout << "ies(s) - ";
+
+     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+      // change via abstract representation
+      cout << "ies(a,s) - ";
+      auto bnd = boost::any_cast<std::vector<LB0Constraint> *>(
+				    (mMCFB->get_static_constraints())[ 1 ] );
+      assert( bnd );
+      for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
+       (*bnd)[ nms[ i ] ].set_rhs( newcaps[ i ] );
+      }
+     else {  // change via call to chg_* method
+      mMCFB->chg_ucaps( newcaps.begin() , std::move( nms ) , true );
+      cout << "ies(s) - ";
+      }
      }
    }  // end( if( change capacities ) )
 
   // change deficits- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   if( ( wchg & 4 ) && ( drand48() <= p_change ) ) {
-   cout << "2 deficits - ";
+   cout << "2 deficits";
 
    MCFClass::Index posn;
    MCFClass::Index negn;
@@ -687,8 +761,22 @@ int main( int argc , char **argv )
 
    mcf->ChgDfct( posn , posd );
    mcf->ChgDfct( negn , negd );
-   mMCFB->chg_dfct( posd , posn );
-   mMCFB->chg_dfct( negd , negn );
+
+   if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+    // change via abstract representation
+    cout << "(a)";
+    auto flw = boost::any_cast<std::vector<FRowConstraint> *>(
+				    (mMCFB->get_static_constraints())[ 0 ] );
+    assert( flw );
+    (*flw)[ posn ].set_both( posd );
+    (*flw)[ negn ].set_both( negd );
+    }
+   else {  // change via call to chg_* method
+    mMCFB->chg_dfct( posd , posn );
+    mMCFB->chg_dfct( negd , negn );
+    }
+
+   cout << " - ";
 
    }  // end( change deficits )
 
@@ -699,10 +787,10 @@ int main( int argc , char **argv )
    MCFBlock::Index tochange = min( MCFBlock::Index( opened / 2 ) ,
 				   MCFBlock::Index( drand48() * n_change ) );
    if( tochange ) {
-    cout << tochange << " close - ";
+    cout << tochange << " close";
 
     MCFBlock::Vec_Index nms( tochange );
-    for( int i = 0 ; i < tochange ; i++ ) {
+    for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
      MCFBlock::Index pos = drand48() * opened;
      if( pos >= opened )
       pos = opened - 1;
@@ -713,7 +801,19 @@ int main( int argc , char **argv )
      mcf->CloseArc( arc );
      }
 
-    mMCFB->close_arcs( std::move( nms ) );
+    if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+     // change via abstract representation
+     cout << "(a)";
+     auto x = boost::any_cast<std::vector<ColVariable> *>(
+				      (mMCFB->get_static_variables())[ 0 ] );
+     assert( x );
+     for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
+      (*x)[ nms[ i ] ].set_state( Variable::kFixed );
+     }
+    else  // change via call to chg_* method
+     mMCFB->close_arcs( std::move( nms ) );
+
+    cout << " - ";
     }
    }
 
@@ -724,7 +824,7 @@ int main( int argc , char **argv )
    MCFBlock::Index tochange = min( MCFBlock::Index( ( m - opened ) / 2 ) ,
 				   MCFBlock::Index( drand48() * n_change ) );
    if( tochange ) {
-    cout << tochange << " open - ";
+    cout << tochange << " open";
 
     MCFBlock::Vec_Index nms( tochange );
     for( int i = 0 ; i < tochange ; i++ ) {
@@ -738,7 +838,19 @@ int main( int argc , char **argv )
      mcf->OpenArc( arc );
      } 
 
-    mMCFB->open_arcs( std::move( nms ) );
+    if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
+     // change via abstract representation
+     cout << "(a)";
+     auto x = boost::any_cast<std::vector<ColVariable> *>(
+				      (mMCFB->get_static_variables())[ 0 ] );
+     assert( x );
+     for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
+      (*x)[ nms[ i ] ].set_state( Variable::kFree );
+     }
+    else  // change via call to chg_* method
+     mMCFB->open_arcs( std::move( nms ) );
+
+    cout << " - ";
     }
    }
 

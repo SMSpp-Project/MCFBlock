@@ -2230,37 +2230,38 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
 void MCFBlock::close_arcs( c_Index strt , Index stop ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
- // since the physical and abstract representation are the same if the
- // abstract one need not be changed, then nothing at all has to be done
- if( ! not_dry_run( issueAMod ) )
-  return;
-
  if( stop >= get_NArcs() )
    stop = get_NArcs();
 
  if( stop <= strt )  // nothing to change
   return;            // cowardly (and silently) return
 
- Index ndiff = 0;
- for( Index i = strt ; i < stop ; ++i )
-  if( x[ i ].get_state() != Variable::kFixed )
-   ndiff++;
+ // since the physical and abstract representation are the same, anything
+ // that has to do with the abstract representation is skipped in the
+ // "dry run" case; but the "phisical Modification" is issued anyway
 
- if( ! ndiff )
-  return;
+ if( not_dry_run( issueAMod ) ) {
+  Index ndiff = 0;
+  for( Index i = strt ; i < stop ; ++i )
+   if( x[ i ].get_state() != Variable::kFixed )
+    ndiff++;
 
- // the physical and abstract representation are the same - - - - - - - - - -
- // change both (doh!), and if so instructed also issue abstract Modification
+  if( ! ndiff )
+   return;
 
- c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  // the physical and abstract representation are the same- - - - - - - - - -
+  // change both (doh!), and if so instructed also issue abstract Modification
 
- for( Index i = strt ; i < stop ; ++i )
-  if( x[ i ].get_state() != Variable::kFixed ) {
-   x[ i ].set_value( 0 );
-   x[ i ].set_state( Variable::kFixed , ampar );
-   }
+  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
- unmake_amod_param( issueAMod , ampar , ndiff );
+  for( Index i = strt ; i < stop ; ++i )
+   if( x[ i ].get_state() != Variable::kFixed ) {
+    x[ i ].set_value( 0 );
+    x[ i ].set_state( Variable::kFixed , ampar );
+    }
+
+  unmake_amod_param( issueAMod , ampar , ndiff );
+  }
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -2276,38 +2277,39 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
- // since the physical and abstract representation are the same if the
- // abstract one need not be changed, then nothing at all has to be done
- if( ! not_dry_run( issueAMod ) )
-  return;
-
  assert( nms.size() <= get_NArcs() );
 
- Index ndiff = 0;
- for( auto i : nms ) {
-  #ifndef NDEBUG
-   if( i >= get_NArcs() )
-    throw( std::invalid_argument( "invalid arc name" ) );
-  #endif
-  if( x[ i ].get_state() != Variable::kFixed )
-   ndiff++;
-  }
+ // since the physical and abstract representation are the same, anything
+ // that has to do with the abstract representation is skipped in the
+ // "dry run" case; but the "phisical Modification" is issued anyway
 
- if( ! ndiff )
-  return;
-
- // the physical and abstract representation are the same - - - - - - - - - -
- // change both (doh!), and if so instructed also issue abstract Modification
-
- c_ModParam ampar = make_amod_param( issueAMod , ndiff );
-
- for( auto i : nms )
-  if( x[ i ].get_state() != Variable::kFixed ) {
-   x[ i ].set_value( 0 );
-   x[ i ].set_state( Variable::kFixed , ampar );
+ if( not_dry_run( issueAMod ) ) {
+  Index ndiff = 0;
+  for( auto i : nms ) {
+   #ifndef NDEBUG
+    if( i >= get_NArcs() )
+     throw( std::invalid_argument( "invalid arc name" ) );
+   #endif
+   if( x[ i ].get_state() != Variable::kFixed )
+    ndiff++;
    }
 
- unmake_amod_param( issueAMod , ampar , ndiff );
+  if( ! ndiff )
+   return;
+
+  // the physical and abstract representation are the same- - - - - - - - - -
+  // change both (doh!), and if so instructed also issue abstract Modification
+
+  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+
+  for( auto i : nms )
+   if( x[ i ].get_state() != Variable::kFixed ) {
+    x[ i ].set_value( 0 );
+    x[ i ].set_state( Variable::kFixed , ampar );
+    }
+
+  unmake_amod_param( issueAMod , ampar , ndiff );
+  }
 
  if( issue_pmod( issueMod ) ) {  // issue "physical Modification" - - - - - -
   // ensure the names are ordered even if they were not so originally
@@ -2326,23 +2328,24 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
 void MCFBlock::close_arc( c_Index arc ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- // since the physical and abstract representation are the same if the
- // abstract one need not be changed, then nothing at all has to be done
- if( ! not_dry_run( issueAMod ) )
-  return;
-
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
- if( x[ arc ].get_state() == Variable::kFixed )
-  return;
+ // since the physical and abstract representation are the same, anything
+ // that has to do with the abstract representation is skipped in the
+ // "dry run" case; but the "phisical Modification" is issued anyway
 
- x[ arc ].set_value( 0 );
+ if( not_dry_run( issueAMod ) ) {
+  if( x[ arc ].get_state() == Variable::kFixed )
+   return;
 
- // the physical and abstract representation are the same - - - - - - - - - -
- // change both (doh!), and if so instructed also issue abstract Modification
+  x[ arc ].set_value( 0 );
 
- x[ arc ].set_state( Variable::kFixed , issueAMod );
+  // the physical and abstract representation are the same- - - - - - - - - -
+  // change both (doh!), and if so instructed also issue abstract Modification
+
+  x[ arc ].set_state( Variable::kFixed , issueAMod );
+  }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
@@ -2356,35 +2359,36 @@ void MCFBlock::close_arc( c_Index arc ,
 void MCFBlock::open_arcs( c_Index strt , Index stop ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- // since the physical and abstract representation are the same if the
- // abstract one need not be changed, then nothing at all has to be done
- if( ! not_dry_run( issueAMod ) )
-  return;
-
  if( stop >= get_NArcs() )
   stop = get_NArcs();
 
  if( stop <= strt )  // nothing to change
   return;            // cowardly (and silently) return
 
- Index ndiff = 0;
- for( Index i = strt ; i < stop ; ++i )
-  if( x[ i ].get_state() == Variable::kFixed )
-   ndiff++;
+ // since the physical and abstract representation are the same, anything
+ // that has to do with the abstract representation is skipped in the
+ // "dry run" case; but the "phisical Modification" is issued anyway
 
- if( ! ndiff )
-  return;
+ if( not_dry_run( issueAMod ) ) {
+  Index ndiff = 0;
+  for( Index i = strt ; i < stop ; ++i )
+   if( x[ i ].get_state() == Variable::kFixed )
+    ndiff++;
 
- // the physical and abstract representation are the same - - - - - - - - - -
- // change both (doh!), and if so instructed also issue abstract Modification
+  if( ! ndiff )
+   return;
 
- c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  // the physical and abstract representation are the same- - - - - - - - - -
+  // change both (doh!), and if so instructed also issue abstract Modification
 
- for( Index i = strt ; i < stop ; ++i )
-  if( x[ i ].get_state() == Variable::kFixed )
-   x[ i ].set_state( ColVariable::kContinuous , ampar );
+  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
- unmake_amod_param( issueAMod , ampar , ndiff );
+  for( Index i = strt ; i < stop ; ++i )
+   if( x[ i ].get_state() == Variable::kFixed )
+    x[ i ].set_state( ColVariable::kContinuous , ampar );
+
+  unmake_amod_param( issueAMod , ampar , ndiff );
+  }
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -2400,36 +2404,37 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
 void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- // since the physical and abstract representation are the same if the
- // abstract one need not be changed, then nothing at all has to be done
- if( ! not_dry_run( issueAMod ) )
-  return;
-
  assert( nms.size() <= get_NArcs() );
 
- Index ndiff = 0;
- for( auto i : nms ) {
-  #ifndef NDEBUG
-   if( i >= get_NArcs() )
-    throw( std::invalid_argument( "invalid arc name" ) );
-  #endif
-  if( x[ i ].get_state() == Variable::kFixed )
-   ndiff++;
+ // since the physical and abstract representation are the same, anything
+ // that has to do with the abstract representation is skipped in the
+ // "dry run" case; but the "phisical Modification" is issued anyway
+
+ if( not_dry_run( issueAMod ) ) {
+  Index ndiff = 0;
+  for( auto i : nms ) {
+   #ifndef NDEBUG
+    if( i >= get_NArcs() )
+     throw( std::invalid_argument( "invalid arc name" ) );
+   #endif
+   if( x[ i ].get_state() == Variable::kFixed )
+    ndiff++;
+   }
+
+  if( ! ndiff )
+   return;
+
+  // the physical and abstract representation are the same- - - - - - - - - -
+  // change both (doh!), and if so instructed also issue abstract Modification
+
+  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+
+  for( auto i : nms )
+   if( x[ i ].get_state() == Variable::kFixed )
+    x[ i ].set_state( ColVariable::kContinuous , ampar );
+
+  unmake_amod_param( issueAMod , ampar , ndiff );
   }
-
- if( ! ndiff )
-  return;
-
- // the physical and abstract representation are the same - - - - - - - - - -
- // change both (doh!), and if so instructed also issue abstract Modification
-
- c_ModParam ampar = make_amod_param( issueAMod , ndiff );
-
- for( auto i : nms )
-  if( x[ i ].get_state() == Variable::kFixed )
-   x[ i ].set_state( ColVariable::kContinuous , ampar );
-
- unmake_amod_param( issueAMod , ampar , ndiff );
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -2450,24 +2455,22 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
 void MCFBlock::open_arc( c_Index arc ,
 			 c_ModParam issueMod , c_ModParam issueAMod )
 {
- // since the physical and abstract representation are the same if the
- // abstract one need not be changed, then nothing at all has to be done
- if( ! not_dry_run( issueAMod ) )
-  return;
-
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
- if( arc >= get_NArcs() )
-  throw( std::invalid_argument( "invalid arc name" ) );
+ // since the physical and abstract representation are the same, anything
+ // that has to do with the abstract representation is skipped in the
+ // "dry run" case; but the "phisical Modification" is issued anyway
 
- if( x[ arc ].get_state() != Variable::kFixed )
-  return;
+ if( not_dry_run( issueAMod ) ) {
+  if( x[ arc ].get_state() != Variable::kFixed )
+   return;
 
- // the physical and abstract representation are the same - - - - - - - - - -
- // change both (doh!), and if so instructed also issue abstract Modification
+  // the physical and abstract representation are the same- - - - - - - - - -
+  // change both (doh!), and if so instructed also issue abstract Modification
 
- x[ arc ].set_state( ColVariable::kContinuous , issueAMod );
+  x[ arc ].set_state( ColVariable::kContinuous , issueAMod );
+  }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
@@ -2695,18 +2698,17 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     throw( std::invalid_argument( "Unsupported Modification to Objective" ) );
 
    c_Index strt = tmod->f_strt ? p2i( tmod->f_strt ) : 0;
-   c_Index stop = tmod->f_stop ? p2i( tmod->f_strt ) : get_NArcs();
+   c_Index stop = tmod->f_stop ? p2i( tmod->f_stop ) : get_NArcs();
    c_Index num = stop - strt + 1;
 
    if( num == 1 )  // changing just one cost
     chg_cost( (lfo->get_v_var())[ strt ].second , strt , eNoBlck , eDryRun );
-   else {  // changing many costs at once
-    
+   else {          // changing many costs at once
     Vec_CNumber nC( num );
     const auto cp = lfo->get_v_var();
 
     for( Index i = 0 ; i < num ; ++i )
-     C[ i ] = cp[ strt + i ].second;
+     nC[ i ] = cp[ strt + i ].second;
 
     chg_costs( nC.begin() , strt , stop , eNoBlck , eDryRun );
     }
