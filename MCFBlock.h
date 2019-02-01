@@ -420,7 +420,12 @@ public:
   * PERFORMANCES IS VERY DOUBIOUS. THEREFORE, THE SUPPORT FOR IT IS ONLY
   * HALF-BAKED, AND WHATEVER THERE IS IS CURRENTLY COMMENTED OUT. DEVELOPMENT
   * OF THIS FEATURE WILL ONLY BE RESUMED IF CLEAR PROOF OF ITS WORTHINESS
-  * IS ACHIEVED. */
+  * IS ACHIEVED.
+  *
+  * The consequence is that, currently, THE ONLY Modification POSSIBLE TO THE
+  * Objective ARE CHANGING THE COEFFICIENTS: DELETING Variable (AND,
+  * THEREFORE, ADDING THEM) IS NOT ALLOWED, the MCFBlock will throw exception
+  * while processing the corresponding "abstract" Modification. */
 
  virtual void generate_objective( Configuration *objc = nullptr )
   override final;
@@ -476,6 +481,7 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the upper bound of arc i (0 <= i < get_NArcs())
+
  inline FNumber get_U( c_Index i ) const { return( U.size() ? U[ i ] :
 						   Inf<FNumber>() ); }
 
