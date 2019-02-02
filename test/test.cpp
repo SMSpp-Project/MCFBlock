@@ -312,15 +312,13 @@ static inline bool SolveMCF( void )
    if( mMCFB == oMCFB ) {  // modify the original, solve the R3
     for( auto mod : modlist ) {
      //!! std::cout << *mod << std::endl;
-     oMCFB->map_forward_Modification( dMCFB , mod , nullptr ,
-				      eNoBlck , eNoBlck );
+     oMCFB->map_forward_Modification( dMCFB , mod );
      }
     }
    else {                  // modify the R3, solve the original
     for( auto mod : modlist ) {
      //!! std::cout << *mod << std::endl;
-     oMCFB->map_back_Modification( dMCFB , mod , nullptr ,
-				   eNoBlck , eNoBlck );
+     oMCFB->map_back_Modification( dMCFB , mod );
      }
     }
 

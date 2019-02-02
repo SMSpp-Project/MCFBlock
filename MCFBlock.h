@@ -710,18 +710,35 @@ public:
 /*--------------------------------------------------------------------------*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
   *
-  * IMPORTANT NOTE: map_forward_Modification() does *not* map (i.e., basically
-  * ignores) "abstract" Modification with concerns_Block() == false, on the
-  * grounds that this is an "abstract" Modification (of whatever type)
-  * corresponding to a "physical" one that will also be mapped; thus, the
-  * effect of the map is already performed by the "physical" one, possibly
-  * more efficiently, weird side effects are avoided. "Abstract" Modification
-  * with concerns_Block() == true are still mapped: there may be "duplicate"
-  * "physical" ones for them that will, which is a waste, but it is not easy
-  * to avoid this short fo bunching the two together, which would be possible
-  * but it is not currently done. */
+  * IMPORTANT NOTE: map_forward_Modification() only maps "physical"
+  * Modification. The point is that if any part of the "abstract
+  * representation" of MCFBlock is changed, the corresponding "abstract"
+  * Modification is intercepted in add_Modification() and a "physical"
+  * Modification is also issued. Hence, for any change in MCFBlock there
+  * will always be both Modification "in flight", and therefore there is
+  * no need (and good reasons not) to map both.
+  *
+  * In particular, the method handles the following Modification:
+  *
+  * - GroupModification
+  *
+  * - MCFBlockRngdMod
+  *
+  * - MCFBlockSbstMod
+  *
+  * - NBModification
+  *
+  * Any other Modification is ignored (and false is returned).
+  *
+  * Note that for GroupModification, true is returned only if all the
+  * inner Modification of the GroupModification return true.
+  *
+  * Note that if the issueAMod param is eModBlck, then it is "downgraded" to
+  * eNoBlck: the method directly does "physical" changes, hence there is no
+  * reason for it to issue "abstract" Modification with concerns_Block() ==
+  * true. */
 
- virtual void map_forward_Modification( Block *R3B , sp_Mod mod ,
+ virtual bool map_forward_Modification( Block *R3B , sp_Mod mod ,
 					Configuration *r3bc = nullptr ,
 					c_ModParam issuePMod = eNoBlck ,
 					c_ModParam issueAMod = eModBlck )
@@ -734,7 +751,7 @@ public:
   * map_forward_Modification() in reverse, so see the comments to the latter
   * method. */
 
- virtual void map_back_Modification( Block *R3B , sp_Mod mod ,
+ virtual bool map_back_Modification( Block *R3B , sp_Mod mod ,
 				     Configuration *r3bc = nullptr ,
 				     c_ModParam issuePMod = eNoBlck ,
 				     c_ModParam issueAMod = eModBlck )
@@ -1007,7 +1024,19 @@ public:
   * The version of MCFBlock has to intercept any "abstract Modification" that
   * modifies the "abstract representation" of the MCFBlock, and "translate"
   * them into both changes of the actual data structures and corresponding
-  * "physical Modification".
+  * "physical Modification". These Modification are those for which
+  * Modification::concerns_Block() is true. Note, however, that before sending
+  * the Modification to the Solver and/or the father Block, the
+  * concerns_Block() value is set to false. This is because once it is passed
+  * through this method, the "abstract Modification" has "already done its
+  * duty" of providing the information to the MCFBlock, and this must not be
+  * repeated. In particular, this would be an issue if the Modification would
+  * be [map_forward or map_back]-ed, because inside of this method a "physical
+  * Modification" doing the same job is surely issued. That Modification would
+  * also be [map_forward or map_back]-ed, together with the original "abstract
+  * Modification" that would pass again through this method (in the other
+  * MCFBlock), which would mean that the "physical Modification" would be
+  * issued twice.
   *
   * The following "abstract Modification" are handled:
   *

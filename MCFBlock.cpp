@@ -973,7 +973,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
+bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 					 Configuration *r3bc ,
 					 c_ModParam issuePMod ,
 					 c_ModParam issueAMod )
@@ -991,7 +991,10 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     cannot be any GroupModification in it. */
 
  ModParam iPM = issuePMod;
- ModParam iPA = issueAMod;
+ ModParam iPA = make_par( std::min( ModParam( eNoBlck ) ,
+				    par2mod( issueAMod ) ) ,
+			  par2chnl( issueAMod ) );
+
  const auto tmod = std::dynamic_pointer_cast<GroupModification>( mod );
  if( tmod ) {  // if the channels are the default ones, open new ones
   if( ! par2chnl( issuePMod ) )
@@ -1006,7 +1009,7 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     which allows recursive calls. Note the need to explicitly capture
     "this" to use fields/methods of the class. */
 
- std::function< void( sp_Mod )> guts_of_mfM;
+ std::function< bool( sp_Mod )> guts_of_mfM;
  guts_of_mfM = [ this , & guts_of_mfM , & MCFB , & iPM , & iPA ]( sp_Mod mod
 								  ) {
   // process Modification- - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1025,13 +1028,15 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     MCFB->nest_channel( par2chnl( iPM ) );  // nest the channel for PM
     MCFB->nest_channel( par2chnl( iPA ) );  // nest the channel for PA
 
+    bool ok = true;
     for( const auto & submod : tmod->v_sub_Modifications )
-     guts_of_mfM( submod );
+     if( ! guts_of_mfM( submod ) )
+      ok = false;
 
     MCFB->un_nest_channel( par2chnl( iPM ) );  // un-nest the channel for PM
     MCFB->un_nest_channel( par2chnl( iPA ) );  // un-nest the channel for PA
 
-    return;
+    return( ok );
     }
    }
 
@@ -1080,7 +1085,7 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
      default:
       throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
      }
-    return;
+    return( true );
     }
    }
 
@@ -1150,7 +1155,7 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
      }
 
-    return;
+    return( true );
     }
    }
 
@@ -1161,215 +1166,33 @@ void MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     // this is the "nuclear option": the MCFBlock has been re-loaded
     // one should check that the Block is this MCFBlock, but it cannot
     // be otherwise, can it?
+
     MCFB->load( get_NNodes() , EN , SN , U , C , B );
-    return;
+    return( true );
     }
    }
 
-  // terminate if abstract- - - - - - - - - - - - - - - - - - - - - - - - - -
-  // this is an "abstract" Modification (of whatever type) corresponding to
-  // a "physical" one: ignore it, on the assumption that the "physical" one
-  // will also be mapped
-
-  if( ! mod->concerns_Block() )
-   return;
-
-  // LinearFunctionModSbst- - - - - - - - - - - - - - - - - - - - - - - - - -
-  {
-   const auto tmod = std::dynamic_pointer_cast<LinearFunctionModSbst>( mod );
-   if( tmod ) {
-    if( MCFB->get_objective().empty() )  // abstract representation not there
-     return;                             // no need to do anything
-
-    if( get_objective().empty() )
-     throw( std::invalid_argument( "Modification to non-constructed Objective"
-				   ) );
-
-    auto lfo = static_cast<LinearFunction * const>( tmod->f_function );
-    if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
-     throw( std::invalid_argument( "Modification to non-Objective" ) );
-
-    auto lf3o = static_cast<LinearFunction * const>( MCFB->c.get_function() );
-
-    if( tmod->f_type != C05FunctionModVarsRngd::SomeEntriesChange )
-     throw( std::invalid_argument( "Unsupported Modification to Objective" )
-	    );
-
-    LinearFunction::v_coeff_pair pairs( tmod->v_vars.size() );
-    for( Index i = 0 ; i < pairs.size() ; ++i ) {
-     c_Index hi = p2i( (tmod->v_vars)[ i ] );
-     pairs[ i ].first = &( MCFB->x[ hi ] );
-     pairs[ i ].second = C[ hi ];
-     }
-
-    lf3o->modify_coefficients( std::move( pairs ) , true , iPA );
-
-    /*!!
-    if( tmod->f_type == FunctionModVars::RemoveVar ) {
-     // "translate" the set of Variable names
-     Vec_p_Var n_v_var( tmod->v_vars.size() );
-     for( Index i = 0 ; i < n_v_var.size() ; ++i )
-      n_v_var[ i ] = &( MCFB->x[ p2i( tmod->v_vars[ i ] ) ] );
-
-     // for removals, that's all that is needed
-     lf3o->remove_variables( std::move( n_v_var ) , true , iPA );
-     return;
-     }
-
-    // for additions and modifications, construct the pairs
-    LinearFunction::v_coeff_pair pairs( tmod->v_vars.size() );
-    for( Index i = 0 ; i < pairs.size() ; ++i ) {
-     c_Index hi = p2i( (tmod->v_vars)[ i ] );
-     pairs[ i ].first = &( MCFB->x[ hi ] );
-     pairs[ i ].second = C[ hi ];
-     }
-
-    switch( tmod->f_type ) {
-     case( FunctionModVars::AddVar ):
-      lf3o->add_variables( std::move( pairs ) , true , iPA ); break;
-     case( C05FunctionModVarsRngd::SomeEntriesChange ):
-      lf3o->modify_coefficients( std::move( pairs ) , true , iPA ); break;
-      break;
-     default:
-      throw( std::invalid_argument( "illegal Modification type" ) );
-     }
-     !!*/
-
-   return;
-   }
-  }
-
-  // LinearFunctionModRngd- - - - - - - - - - - - - - - - - - - - - - - - - -
-  // note: there is nothing in LinearFunction issuing this kind of
-  // Modification with type AddVar, so this case need not be handled
-  {
-   auto tmod = std::dynamic_pointer_cast<LinearFunctionModRngd>( mod );
-   if( tmod ) {
-    if( MCFB->get_objective().empty() )  // abstract representation not there
-     return;                             // no need to do anything
-
-    /*!!
-    if( ( tmod->f_type != FunctionModVars::RemoveVar ) &&
-	( tmod->f_type != C05FunctionModVarsRngd::SomeEntriesChange ) )
-	!!*/
-    if( tmod->f_type != C05FunctionModVarsRngd::SomeEntriesChange )
-     throw( std::invalid_argument( "Unsupported Modification to Objective" )
-	    );
-
-    if( get_objective().empty() )
-     throw( std::invalid_argument( "Modification to non-constructed Objective"
-				   ) );
-
-    auto lfo = static_cast<LinearFunction * const>( tmod->f_function );
-    if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
-     throw( std::invalid_argument( "Modification to non-Objective" ) );
-
-    // deal with the "dense modification" case (simpler) first
-    auto lf3o = static_cast<LinearFunction * const>( MCFB->c.get_function() );
-
-    /*!!
-    if( ( tmod->f_type == C05FunctionModVarsRngd::SomeEntriesChange ) &&
-      ( lf3o->get_num_active_var() == get_NArcs() ) ) !!*/ {
-     c_Index istrt = tmod->f_strt ? p2i( tmod->f_strt ) : 0;
-     c_Index istop = tmod->f_stop ? p2i( tmod->f_stop ) : get_NArcs();
-     lf3o->modify_coefficients( C.begin() + istrt , istrt , istop , iPA );
-     return;
-     }
-
-    /*!!
-    // "translate" the two Variable names
-    const Variable * const strt = tmod->f_strt ?
-                                &( MCFB->x[ p2i( tmod->f_strt ) ] ) : nullptr;
-    const Variable * const stop = tmod->f_stop ?
-                                &( MCFB->x[ p2i( tmod->f_stop ) ] ) : nullptr;
- 
-    c_Index istrt = strt ? lf3o->is_active( strt ) : 0;
-    if( istrt >= lf3o->get_num_active_var() )
-     throw( std::invalid_argument( "strt is not an active Variable" ) );
-
-    Index istop;
-    if( stop ) {
-     istop = lf3o->is_active( stop );
-     if( istop >= lf3o->get_num_active_var() )
-      throw( std::invalid_argument( "stop is not an active Variable" ) );
-     }
-    else
-     istop = lf3o->get_num_active_var();
-
-    // for removals, that's all that is needed
-    if( tmod->f_type == FunctionModVars::RemoveVar )
-     lf3o->remove_variables( istrt , istop , iPA );
-    else {
-     // for modifications, construct the vector of coefficients
-     LinearFunction::v_coeff NCoef( istop - istrt );
-     for( Index i = 0 ; i < NCoef.size() ; ++i )
-      NCoef[ i ] = C[ MCFB->p2i( lf3o->get_active_var( i + istrt ) ) ];
-
-     lf3o->modify_coefficients( NCoef.begin() , istrt , istop , iPA );
-     }
-
-    return;
-    !!*/
-    }
-   }
-
-  // RowConstraintMod - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  {
-   const auto tmod = std::dynamic_pointer_cast<RowConstraintMod>( mod );
-   if( tmod ) {
-    if( ! MCFB->E.size() )  // abstract representation not there
-     return;                // no need to do anything
-
-    if( tmod->f_type == RowConstraintMod::eChgRHS ) {
-     const auto cp = static_cast<BoxConstraint * const>( tmod->f_constraint );
-
-     // ensure that no "physical modification" is issued
-     MCFB->chg_ucap( cp->get_rhs() , bound_number( cp ) , eNoMod , iPA );
-     return;
-     }
-
-    if( tmod->f_type == RowConstraintMod::eChgBTS ) {
-     auto cp = static_cast<FRowConstraint * const>( tmod->f_constraint );
-
-     // ensure that no "physical modification" is issued
-     MCFB->chg_dfct( cp->get_rhs() , const_number( cp ) , eNoMod , iPA );
-     return;
-     }
-
-    throw( std::invalid_argument( "illegal Modification to Constraint" ) );
-    }
-   }
-
-  // VariableMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  {
-   const auto tmod = std::dynamic_pointer_cast<VariableMod>( mod );
-   if( tmod ) {
-    // ensure that no "physical modification" is issued
-    auto ind = p2i( tmod->f_variable );
-    MCFB->x[ ind ].set_value( x[ ind ].get_value() );
-    MCFB->x[ ind ].set_state( tmod->f_state , iPA );
-    return;
-    }
-   }
-
-  throw( std::invalid_argument( "unsupported Modification to MCFBlock" ) );
+  return( false );
 
   };  // end( guts_of_mfM )- - - - - - - - - - - - - - - - - - - - - - - - - -
       // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  // finally, call the "guts of"- - - - - - - - - - - - - - - - - - - - - - - -
 
- guts_of_mfM( mod );  // now the actual call
+ bool ok = guts_of_mfM( mod );  // now the actual call
 
  if( tmod ) {  // now close the opened channels, if any
   if( iPM != issuePMod ) MCFB->close_channel( par2chnl( iPM ) );
   if( iPA != issueAMod ) MCFB->close_channel( par2chnl( iPA ) );
   }
+
+ return( ok );
+
  }  // end( MCFBlock::map_forward_Modification )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::map_back_Modification( Block *R3B , sp_Mod mod ,
+bool MCFBlock::map_back_Modification( Block *R3B , sp_Mod mod ,
 				      Configuration *r3bc ,
 				      c_ModParam issuePMod ,
 				      c_ModParam issueAMod )
@@ -1382,7 +1205,8 @@ void MCFBlock::map_back_Modification( Block *R3B , sp_Mod mod ,
  if( ! MCFB )
   throw( std::invalid_argument( "R3B is not a MCFBlock" ) );
 
- MCFB->map_forward_Modification( this , mod , r3bc , issuePMod , issueAMod );
+ return( MCFB->map_forward_Modification( this , mod , r3bc , issuePMod ,
+					 issueAMod ) );
 
  }  // end( MCFBlock::map_back_Modification )
 
@@ -1511,12 +1335,12 @@ void MCFBlock::add_Modification( sp_Mod mod , ChnlName chnl )
 {
  //!! std::cout << *mod << std::endl;
 
+ if( mod->concerns_Block() ) {
+  mod->concerns_Block( false );
+  guts_of_add_Modification( mod );
+  }
+
  Block::add_Modification( mod , chnl );
-
- if( ! mod->concerns_Block() )
-  return;
-
- guts_of_add_Modification( mod );
  }
 
 /*--------------------------------------------------------------------------*/
@@ -1667,8 +1491,9 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
-  while( ncit < ncstp )
-   *(cit++) = *(ncit++);
+  if( not_dry_run( issueMod ) )
+   while( ncit < ncstp )
+    *(cit++) = *(ncit++);
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -1798,8 +1623,9 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
-  for( ; ncit < ncstp ; ++ncit , ++nit )
-   C[ *nit ] = *ncit;
+  if( not_dry_run( issueMod ) )
+   for( ; ncit < ncstp ; ++ncit , ++nit )
+    C[ *nit ] = *ncit;
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -1864,7 +1690,8 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
-  C[ arc ] = NCost;
+  if( not_dry_run( issueMod ) )
+   C[ arc ] = NCost;
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
@@ -1932,8 +1759,9 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
-  while( ncit < ncstp )
-   *(uit++) = *(ncit++);
+  if( not_dry_run( issueMod ) )
+   while( ncit < ncstp )
+    *(uit++) = *(ncit++);
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -2007,8 +1835,9 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
-  while( ncit < ncstp )
-   U[ *(nit++) ] = *(ncit++);
+  if( not_dry_run( issueMod ) )
+   while( ncit < ncstp )
+    U[ *(nit++) ] = *(ncit++);
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -2038,7 +1867,8 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
  if( U[ arc ] == NCap )
   return;
 
- U[ arc ] = NCap;  // change the physical representation- - - - - - - - - - -
+ if( not_dry_run( issueMod ) )
+  U[ arc ] = NCap;  // only change the physical representation - - - - - - -
 
  if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
@@ -2112,8 +1942,9 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
-  while( ndit < ndstp )
-   *(bit++) = *(ndit++);
+  if( not_dry_run( issueMod ) )
+   while( ndit < ndstp )
+    *(bit++) = *(ndit++);
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -2181,8 +2012,9 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
-  while( ndit < ndstp )
-   B[ *(nit++) ] = *(ndit++);
+  if( not_dry_run( issueMod ) )
+   while( ndit < ndstp )
+    B[ *(nit++) ] = *(ndit++);
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -2211,7 +2043,8 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
  if( B[ nde ] == NDfct )
   return;
 
- B[ nde ] = NDfct;  // change the physical representation - - - - - - - - - -
+ if( not_dry_run( issueMod ) )
+  B[ nde ] = NDfct;  // change the physical representation- - - - - - - - - -
 
  if( not_dry_run( issueAMod ) && ( ! E.empty() ) )
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
@@ -2775,7 +2608,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     throw( std::invalid_argument(
 			     "Modification to Variable of another Block" ) );
 
-   if( xi->get_state() == Variable::kFixed )
+   if( tmod->f_state == Variable::kFixed )
     close_arc( i ,  eNoBlck , eDryRun );
    else
     open_arc( i ,  eNoBlck , eDryRun );
