@@ -456,15 +456,26 @@ int main( int argc , char **argv )
 
  CreateProb( optns );
 
- // construct MCFBlocks/MCFSolvers- - - - - - - - - - - - - - - - - - - - - -
+ // construct the "original" MCFBlock - - - - - - - - - - - - - - - - - - - -
 
- // construct the "original" one
  oMCFB = dynamic_cast<MCFBlock *>( Block::new_Block( "MCFBlock" ) );
  assert( oMCFB );
 
- if( mode & 3 ) {            // also use an R3 MCFBlock = copy
-  dMCFB = dynamic_cast<MCFBlock *>( oMCFB->get_R3_Block() );  // construct it
+ // load the instance - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ load( argv[ 1 ] );
+
+ // if so instructed, construct the R3 MCFBlock = copy- - - - - - - - - - - -
+
+ if( mode & 3 ) {
+  dMCFB = dynamic_cast<MCFBlock *>( oMCFB->get_R3_Block() );
   assert( dMCFB );           // excess of caution (we know it is)
+
+  if( ( mode & 8 ) && dMCFB ) {
+   // if so instructed, also generate abstract representation for dMCFB
+   dMCFB->generate_abstract_constraints();
+   dMCFB->generate_objective();
+   }
 
   if( ( mode & 3 ) == 1 ) {  // modify the original, solve the R3
    mMCFB = oMCFB;
@@ -483,11 +494,9 @@ int main( int argc , char **argv )
 
  //  attach a "true" MCFSolver to the one that is actually solved
  sMCFB->register_Solver( Solver::new_Solver( solver_name( MCFC ) ) );
-
- // load the instance - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ 
+ // compute min/max cost & max deficit- - - - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
- load( argv[ 1 ] );
 
  MCFClass::cIndex n = mcf->MCFn();
  MCFClass::cIndex m = mcf->MCFm();
@@ -495,9 +504,6 @@ int main( int argc , char **argv )
  cout << ", n = " << n << ", m = " << m << endl;
  if( n_change > m )
   n_change = m;
-
- // compute min/max cost & max deficit- - - - - - - - - - - - - - - - - - - -
- // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  MCFClass::CNumber c_max = - OPTtypes_di_unipi_it::Inf<MCFClass::CNumber>();
                                                         // max cost
@@ -807,8 +813,10 @@ int main( int argc , char **argv )
      auto x = boost::any_cast<std::vector<ColVariable> *>(
 				      (mMCFB->get_static_variables())[ 0 ] );
      assert( x );
-     for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
+     for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
       (*x)[ nms[ i ] ].set_state( Variable::kFixed );
+      (*x)[ nms[ i ] ].set_value( 0 );
+      }
      }
     else  // change via call to chg_* method
      mMCFB->close_arcs( std::move( nms ) );
