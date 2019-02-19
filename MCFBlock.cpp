@@ -884,7 +884,7 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
    throw( std::invalid_argument( "incompatible flow size" ) );
 
   for( Index i = 0 ; i < get_NArcs() ; ++i )
-   if( x[ i ].get_state() != Variable::kFixed )
+   if( ! x[ i ].is_fixed() )
     x[ i ].set_value( MCFB->x[ i ].get_value() );
   }
 
@@ -940,7 +940,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
    throw( std::invalid_argument( "incompatible flow size" ) );
 
   for( Index i = 0 ; i < get_NArcs() ; ++i )
-   if( MCFB->x[ i ].get_state() != Variable::kFixed )
+   if( ! MCFB->x[ i ].is_fixed() )
     MCFB->x[ i ].set_value( x[ i ].get_value() );
   }
 
@@ -2076,7 +2076,7 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
   for( Index i = strt ; i < stop ; ++i )
-   if( x[ i ].get_state() != Variable::kFixed )
+   if( ! x[ i ].is_fixed() )
     ndiff++;
 
   if( ! ndiff )
@@ -2088,9 +2088,9 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   for( Index i = strt ; i < stop ; ++i )
-   if( x[ i ].get_state() != Variable::kFixed ) {
+   if( ! x[ i ].is_fixed() ) {
     x[ i ].set_value( 0 );
-    x[ i ].set_state( Variable::kFixed , ampar );
+    x[ i ].is_fixed( true , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2123,7 +2123,7 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
     if( i >= get_NArcs() )
      throw( std::invalid_argument( "invalid arc name" ) );
    #endif
-   if( x[ i ].get_state() != Variable::kFixed )
+   if( ! x[ i ].is_fixed() )
     ndiff++;
    }
 
@@ -2136,9 +2136,9 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   for( auto i : nms )
-   if( x[ i ].get_state() != Variable::kFixed ) {
+   if( ! x[ i ].is_fixed() ) {
     x[ i ].set_value( 0 );
-    x[ i ].set_state( Variable::kFixed , ampar );
+    x[ i ].is_fixed( true , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2169,7 +2169,7 @@ void MCFBlock::close_arc( c_Index arc ,
  // "dry run" case; but the "phisical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  if( x[ arc ].get_state() == Variable::kFixed )
+  if( x[ arc ].is_fixed() )
    return;
 
   x[ arc ].set_value( 0 );
@@ -2177,7 +2177,7 @@ void MCFBlock::close_arc( c_Index arc ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  x[ arc ].set_state( Variable::kFixed , issueAMod );
+  x[ arc ].is_fixed( true , issueAMod );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2205,7 +2205,7 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
   for( Index i = strt ; i < stop ; ++i )
-   if( x[ i ].get_state() == Variable::kFixed )
+   if( x[ i ].is_fixed() )
     ndiff++;
 
   if( ! ndiff )
@@ -2217,8 +2217,8 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   for( Index i = strt ; i < stop ; ++i )
-   if( x[ i ].get_state() == Variable::kFixed )
-    x[ i ].set_state( ColVariable::kContinuous , ampar );
+   if( x[ i ].is_fixed() )
+    x[ i ].is_fixed( false , ampar );
 
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
@@ -2250,7 +2250,7 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
     if( i >= get_NArcs() )
      throw( std::invalid_argument( "invalid arc name" ) );
    #endif
-   if( x[ i ].get_state() == Variable::kFixed )
+   if( x[ i ].is_fixed() )
     ndiff++;
    }
 
@@ -2263,8 +2263,8 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   for( auto i : nms )
-   if( x[ i ].get_state() == Variable::kFixed )
-    x[ i ].set_state( ColVariable::kContinuous , ampar );
+   if( x[ i ].is_fixed() )
+    x[ i ].is_fixed( false , ampar );
 
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
@@ -2296,13 +2296,13 @@ void MCFBlock::open_arc( c_Index arc ,
  // "dry run" case; but the "phisical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  if( x[ arc ].get_state() != Variable::kFixed )
+  if( ! x[ arc ].is_fixed() )
    return;
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  x[ arc ].set_state( ColVariable::kContinuous , issueAMod );
+  x[ arc ].is_fixed( false , issueAMod );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2602,13 +2602,14 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    auto xi = dynamic_cast<ColVariable * const>( tmod->f_variable );
    if( ! xi )
     throw( std::logic_error( "Modification to wrong type of Variable" ) );
+   if( xi->get_type() != ColVariable::kContinuous )
+    throw( std::logic_error( "changing type of flow Variable not allowed" ) );
    
    auto i = std::distance( &(x.front()) , xi );
    if( ( i < 0 ) || ( i >= get_NArcs() ) )
     throw( std::invalid_argument(
 			     "Modification to Variable of another Block" ) );
-
-   if( tmod->f_state == Variable::kFixed )
+   if( xi->is_fixed() )
     close_arc( i ,  eNoBlck , eDryRun );
    else
     open_arc( i ,  eNoBlck , eDryRun );
@@ -2746,7 +2747,7 @@ void MCFSolution::write( Block * const block )
    throw( std::invalid_argument( "incompatible flow size" ) );
 
   for( MCFBlock::Index i = 0 ; i < v_x.size() ; ++i )
-   if( MCFB->x[ i ].get_state() != Variable::kFixed )
+   if( ! MCFB->x[ i ].is_fixed() )
     MCFB->x[ i ].set_value( v_x[ i ] );
   }
 

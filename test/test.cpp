@@ -11,9 +11,9 @@
  * closures. The same operations are performed on the two solvers, and the
  * results are compared.
  *
- * \version 1.50
+ * \version 1.60
  *
- * \date 01 - 02 - 2019
+ * \date 19 - 02 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -444,6 +444,11 @@ int main( int argc , char **argv )
 	   return( 1 );
   }
 
+ if( ( mode & 3 ) == 3 ) {
+  std::cerr << "Wrong mode (must be 0, 1 or 2)" << std::endl;
+  exit( 1 );
+  }
+  
  if( mode & 16 )  // if the abstract representations are changed
   mode |= 12;     // ensure they exist in the first place
 
@@ -812,8 +817,8 @@ int main( int argc , char **argv )
 				      (mMCFB->get_static_variables())[ 0 ] );
      assert( x );
      for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
-      (*x)[ nms[ i ] ].set_state( Variable::kFixed );
       (*x)[ nms[ i ] ].set_value( 0 );
+      (*x)[ nms[ i ] ].is_fixed( true );
       }
      }
     else  // change via call to chg_* method
@@ -851,7 +856,7 @@ int main( int argc , char **argv )
 				      (mMCFB->get_static_variables())[ 0 ] );
      assert( x );
      for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
-      (*x)[ nms[ i ] ].set_state( Variable::kFree );
+      (*x)[ nms[ i ] ].is_fixed( false );
      }
     else  // change via call to chg_* method
      mMCFB->open_arcs( std::move( nms ) );
