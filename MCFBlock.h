@@ -5,9 +5,9 @@
  * Header file for the *concrete* class MCFBlock, which implements the Block
  * concept [see Block.h] for (linear) Min-Cost Flow problems.
  *
- * \version 0.10
+ * \version 0.11
  *
- * \date 07 - 07 - 2016
+ * \date 23 - 02 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -667,6 +667,11 @@ public:
   * - otherwise, everything (both the primal and the dual solution) is
   *   mapped.
   *
+  * The same format applies verbatim to the case of primal or dual unbounded
+  * rays (negative-cost unbounded cycles and cuts, respectively), although
+  * one would expect only one of these to be found (but both may
+  * theoretically do).
+  *
   * Note that R3B may not contain some or all of the required solution, if
   * the corresponding Variable/Constraint have not been constructed yet:
   * this throws an exception. */ 
@@ -697,6 +702,11 @@ public:
   *
   * - otherwise, everything (both the primal and the dual solution) is
   *   mapped.
+  *
+  * The same format applies verbatim to the case of primal or dual unbounded
+  * rays (negative-cost unbounded cycles and cuts, respectively), although
+  * one would expect only one of these to be found (but both may
+  * theoretically do).
   *
   * Note that the current MCFBlock may not contain some or all of the
   * required solution, if the corresponding Variable/Constraint have not
@@ -783,6 +793,11 @@ public:
   *
   * - otherwise, everything (both the primal and the dual solution) is
   *   mapped.
+  *
+  * The same format applies verbatim to the case of primal or dual unbounded
+  * rays (negative-cost unbounded cycles and cuts, respectively), although
+  * one would expect only one of these to be found (but both may
+  * theoretically do).
   *
   * Note that MCFBlock may not contain some or all of the required solution,
   * if the corresponding Variable/Constraint have not been constructed yet:
