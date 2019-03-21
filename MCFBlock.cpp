@@ -4,9 +4,9 @@
 /** @file
  * Implementation of the MCFBlock class.
  *
- * \version 0.20
+ * \version 0.30
  *
- * \date 30 - 08 - 2018
+ * \date 21 - 03 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -240,9 +240,12 @@ void MCFBlock::load( std::istream &input )
     if( U[ i ] < LB )
      throw( std::invalid_argument( "lower bound > upper bound" ) );
 
-    U[ i ] -= LB;
-    B[ SN[ i ] - 1 ] += LB;
-    B[ EN[ i ] - 1 ] -= LB;
+    if( LB > 0 ) {
+     if( U[ i ] < Inf<MCFBlock::FNumber>() )
+      U[ i ] -= LB;
+     B[ SN[ i ] - 1 ] += LB;
+     B[ EN[ i ] - 1 ] -= LB;
+     }
     i++;
     break; 
 
@@ -362,8 +365,10 @@ void MCFBlock::generate_abstract_variables( Configuration *stvv )
  assert( x.size() == 0 );       // this should only happen once
 
  x.resize( SN.size() );
- for( auto & var : x )
+ for( auto & var : x ) {
+  var.is_positive( true , eNoBlck );
   var.set_Block( this );
+  }
 
  add_static_variable( x );
 
@@ -423,40 +428,29 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
  add_static_constraint( E );
 
  // generate the bound constraints- - - - - - - - - - - - - - - - - - - - - -
+ // if upper bounds are not there, the LB0Constraint can be skipped entirely
+ // if the Configuration agrees
 
- bool useNN = ( U.size() == 0 );
- // use NNConstraint rather than BoxConstraint
-
- if( useNN ) {  // doing that is possible, if the Configuration agrees
+ if( U.size() == 0 ) {
   auto tstcc = dynamic_cast<SimpleConfiguration<int> *>( stcc );
 
   if( ( ! tstcc ) && f_BlockConfig &&
       f_BlockConfig->f_static_constraints_Configuration )
    tstcc = dynamic_cast<SimpleConfiguration<int> *>(
 			 f_BlockConfig->f_static_constraints_Configuration );
-  if( tstcc )
-   useNN = ( tstcc->f_value != 0 );
+  if( tstcc && ( tstcc->f_value != 0 ) )
+   return;
   }
 
- if( useNN ) {
-  auto LU = new std::vector<NNConstraint>( SN.size() );
-  for( Index i = 0 ; i < SN.size() ; ++i ) {
-   (*LU)[ i ].set_variable( & x[ i ] );
-   (*LU)[ i ].set_Block( this );  // this is done last ==> no Modification
-   }
-    
-  add_static_constraint( *LU );
+ auto LU = new std::vector<LB0Constraint>( SN.size() );
+ for( Index i = 0 ; i < SN.size() ; ++i ) {
+  (*LU)[ i ].set_variable( & x[ i ] , eNoBlck );
+  (*LU)[ i ].set_rhs( U[ i ] , eNoBlck );
+  (*LU)[ i ].set_Block( this );  // this is done last ==> no Modification
   }
- else {
-  auto LU = new std::vector<LB0Constraint>( SN.size() );
-  for( Index i = 0 ; i < SN.size() ; ++i ) {
-   (*LU)[ i ].set_variable( & x[ i ] );
-   (*LU)[ i ].set_rhs( U[ i ] );
-   (*LU)[ i ].set_Block( this );  // this is done last ==> no Modification
-   }
 
-  add_static_constraint( *LU );
-  }
+ add_static_constraint( *LU );
+
  }  // end( MCFBlock::generate_abstract_constraints )
 
 /*--------------------------------------------------------------------------*/
@@ -568,14 +562,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
 
   assert( E.size() );  // ... which must exist
 
-  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					   & get_static_constraints()[ 1 ] );
-  if( nnc ) {
-   for( const auto & cnst : **nnc )
-    if( cnst.rel_viol() > feps )
-     return( false );
-   }
-  else {
+  if( get_static_constraints().size() > 1 ) {
    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					   & get_static_constraints()[ 1 ] );
    assert( lbc );
@@ -583,6 +570,10 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
     if( cnst.rel_viol() > feps )
      return( false );
    }
+  else
+   for( const auto & var : x )
+    if( ! var.is_feasible() )
+     return( false );  
   }
  else
   // do it using the physical representation- - - - - - - - - - - - - - - - -
@@ -898,13 +889,7 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
    for( Index i = 0 ; i < get_NNodes() ; ++i )
     E[ i ].set_dual( MCFB->E[ i ].get_dual() );
 
-   auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					    & get_static_constraints()[ 1 ] );
-   if( nnc ) {
-    for( Index i = 0 ; i < get_NArcs() ; ++i )
-     (**nnc)[ i ].set_dual( MCFB->get_rc( i ) );
-    }
-   else {
+   if( get_static_constraints().size() > 1 ) {
     auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					    & get_static_constraints()[ 1 ] );
     assert( lbc );
@@ -913,7 +898,7 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
     }
    }
 
- }  // end( MCFBlock::map_back_solution )
+}  // end( MCFBlock::map_back_solution )
 
 /*--------------------------------------------------------------------------*/
 
@@ -954,13 +939,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
    for( Index i = 0 ; i < get_NNodes() ; ++i )
     MCFB->E[ i ].set_dual( E[ i ].get_dual() );
 
-   auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					   & get_static_constraints()[ 1 ] );
-   if( nnc ) {
-    for( Index i = 0 ; i < get_NArcs() ; ++i )
-     MCFB->set_rc( (**nnc)[ i ].get_dual() , i );
-    }
-   else {
+   if( get_static_constraints().size() > 1 ) {
     auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					   & get_static_constraints()[ 1 ] );
     assert( lbc );
@@ -1290,17 +1269,17 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stp )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
 	 );
 
- auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					   & get_static_constraints()[ 1 ] );
- if( nnc )
-  for( Index i = 0 ; i < stp - std::min( strt , get_NArcs() ) ; ++i )
-   RC[ i ] = (**nnc)[ strt + i ].get_dual();
- else {
+ if( get_static_constraints().size() > 1 ) {
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					   & get_static_constraints()[ 1 ] );
   assert( lbc );
   for( Index i = 0 ; i < stp - std::min( strt , get_NArcs() ) ; ++i )
    RC[ i ] = (**lbc)[ strt + i ].get_dual();
+  }
+ else {
+  for( Index i = 0 ; i < stp - std::min( strt , get_NArcs() ) ; ++i )
+   RC[ i ] = get_C( strt + i ) + E[ SN[ strt + i ] - 1 ].get_dual()
+                               - E[ EN[ strt + i ] - 1 ].get_dual();
   }
  }  // end( MCFBlock::get_rc( interval ) )
 
@@ -1312,20 +1291,77 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
 	 );
 
- auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					   & get_static_constraints()[ 1 ] );
- if( nnc )
-  for( Index i = 0 ; i < nms.size() ; ++i )
-   RC[ i ] = (**nnc)[ nms[ i ] ].get_dual();
- else {
+ if( get_static_constraints().size() > 1 ) {
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					   & get_static_constraints()[ 1 ] );
   assert( lbc );
   for( Index i = 0 ; i < nms.size() ; ++i )
    RC[ i ] = (**lbc)[ nms[ i ] ].get_dual();
   }
- 
+ else
+  for( Index i = 0 ; i < nms.size() ; ++i )
+   RC[ i ] = get_C( nms[ i ] ) + E[ SN[ nms[ i ] ] - 1 ].get_dual()
+                               - E[ EN[ nms[ i ] ] - 1 ].get_dual();
+
  }  // end( MCFBlock::get_rc( subset ) )
+
+/*--------------------------------------------------------------------------*/
+
+MCFBlock::CNumber MCFBlock::get_rc( c_Index arc )
+{
+ if( ! E.size() )
+  throw( std::logic_error( "reduced costs unavailable if Constraint aren't"
+			   ) );
+ if( arc >= get_NArcs() )
+  throw( std::invalid_argument( "invalid arc name" ) );
+
+ if( get_static_constraints().size() > 1 ) {
+  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
+					     get_static_constraints()[ 1 ] );
+  assert( lbc );
+  return( (*lbc)[ arc ].get_dual() );
+  }
+ else
+  return( get_C( arc ) + E[ SN[ arc ] - 1 ].get_dual()
+	               - E[ EN[ arc ] - 1 ].get_dual() );
+ 
+ }  // end( MCFBlock::get_rc( one ) )
+
+/*--------------------------------------------------------------------------*/
+
+void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
+		       c_Index strt )
+{
+ if( ( ! E.size() ) || ( get_static_constraints().size() <= 1 ) )
+  return;  // nowhere to put the value:cowardly (and silently) return
+
+ if( std::distance( rcstop , rcstrt ) + strt > get_NArcs() )
+  throw( std::invalid_argument( "too many values provided" ) );
+
+ auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
+					     get_static_constraints()[ 1 ] );
+ assert( lbc );
+ for( auto bi = lbc->begin() + strt ; rcstrt < rcstop ; )
+  (bi++)->set_dual( *(rcstrt++) );
+
+ }  // end( MCFBlock::set_rc( one ) )
+
+/*--------------------------------------------------------------------------*/
+
+void MCFBlock::set_rc( c_CNumber RC , c_Index arc )
+{
+ if( ( ! E.size() ) || ( get_static_constraints().size() <= 1 ) )
+  return;  // nowhere to put the value:cowardly (and silently) return
+
+ if( arc >= get_NArcs() )
+  throw( std::invalid_argument( "invalid arc name" ) );
+
+ auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
+					     get_static_constraints()[ 1 ] );
+ assert( lbc );
+ (*lbc)[ arc ].set_dual( RC );
+
+ }  // end( MCFBlock::set_rc( one ) )
 
 /*--------------------------------------------------------------------------*/
 /*-------------------- Methods for handling Modification -------------------*/
@@ -1557,7 +1593,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
    ccp.resize( cnt );
 
    // note that ccp is ordered if nms was
-   lfo->modify_coefficients( std::move( ccp ) , ordered , issueAMod );
+   lfo->modify_coefficients( ccp , ordered , issueAMod );
    }
   /*!!
   else {                                            // "sparse" objective
@@ -1741,12 +1777,15 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
+  if( get_static_constraints().size() <= 1 )
+   throw( std::logic_error(
+		"bound constraints not defined, cannot change capacity" ) );
+
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					  & get_static_constraints()[ 1 ] );
-  if( ! lbc )
-   throw( std::logic_error( "cannot change rhs" ) );
+  assert( lbc );
 
   for( auto lbit = (*lbc)->begin() + strt ; ncit < ncstp ;
        ++ncit , ++uit , ++lbit )
@@ -1817,12 +1856,15 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
+  if( get_static_constraints().size() <= 1 )
+   throw( std::logic_error(
+		"bound constraints not defined, cannot change capacity" ) );
+
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					  & get_static_constraints()[ 1 ] );
-  if( ! lbc )
-   throw( std::logic_error( "cannot change rhs" ) );
+  assert( lbc );
 
   for( ; ncit < ncstp ; ++ncit , ++nit ) {
    if( U[ *nit ] != *ncit ) {
@@ -1874,10 +1916,13 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
+  if( get_static_constraints().size() <= 1 )
+   throw( std::logic_error(
+		"bound constraints not defined, cannot change capacity" ) );
+
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					  & get_static_constraints()[ 1 ] );
-  if( ! lbc )
-   throw( std::logic_error( "cannot change rhs" ) );
+  assert( lbc );
 
   (**lbc)[ arc ].set_rhs( NCap , issueAMod );
   }
@@ -2403,26 +2448,16 @@ void MCFBlock::guts_of_destructor( void )
  /* clear all Constraint to ensure that they do not make any reference to
     no-longer-existing Variable while they are destroyed. */
 
- // delete NN/LB0 constraints, if any
  assert( ( get_static_constraints().size() == 0 ) ||
 	 ( get_static_constraints().size() == 2 ) );
 
- if( get_static_constraints().size() ) {
-  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
+ if( get_static_constraints().size() > 1 ) { // delete LB0 constraints, if any
+  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					   & get_static_constraints()[ 1 ] );
-  if( nnc ) {
-   for( auto & cnst : **nnc )  // first clear all the Constraint
-    cnst.clear();
-   delete *nnc;                // then delete them
-   }
-  else {
-   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					   & get_static_constraints()[ 1 ] );
-   assert( lbc );
-   for( auto & cnst : **lbc )  // first clear all the Constraint
-    cnst.clear();
-   delete *lbc;                // then delete them
-   }
+  assert( lbc );
+  for( auto & cnst : **lbc )  // first clear all the Constraint
+   cnst.clear();
+  delete *lbc;                // then delete them
   }
 
  for( Index i = E.size() ; i-- ; )
@@ -2475,9 +2510,9 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    }
   }
 
- // LinearFunctionModSbst - - - - - - - - - - - - - - - - - - - - - - - - - -
+ // C05FunctionModLin - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  {
-  const auto tmod = std::dynamic_pointer_cast<LinearFunctionModSbst>( mod );
+  const auto tmod = std::dynamic_pointer_cast<C05FunctionModLin>( mod );
   if( tmod ) {
    if( get_objective().empty() )
     throw( std::invalid_argument( "Modification to non-constructed Objective"
@@ -2486,9 +2521,6 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    auto lfo = static_cast<LinearFunction * const>( tmod->f_function );
    if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
     throw( std::invalid_argument( "Modification to non-Objective" ) );
-
-   if( tmod->f_type != C05FunctionModVarsRngd::SomeEntriesChange )
-    throw( std::invalid_argument( "Unsupported Modification to Objective" ) );
 
    if( tmod->v_vars.size() == 1 ) {  // changing just one cost
     const auto var = tmod->v_vars.front();
@@ -2508,44 +2540,21 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
      i++;
      }
 
-    chg_costs( nC.begin() , std::move( nI ) , true , eNoBlck , eDryRun );
+    // check if nI is consecutive, if so use the ranged version
+    bool cnsctv = true;
+    for( auto itnI = nI.begin() ; ; ) {
+     auto nxtitnI = ++itnI;
+     if( nxtitnI == nI.end() ) break;
+     if( *nxtitnI - *itnI != 1 ) { cnsctv = false; break; }
+     itnI = nxtitnI;
+     }
+
+    if( cnsctv )
+     chg_costs( nC.begin() , nI.front() , nI.back() + 1 , eNoBlck , eDryRun );
+    else
+     chg_costs( nC.begin() , std::move( nI ) , true , eNoBlck , eDryRun );
     }
 
-   return;
-   }
-  }
-
- // LinearFunctionModRngd - - - - - - - - - - - - - - - - - - - - - - - - - -
- {
-  auto tmod = std::dynamic_pointer_cast<LinearFunctionModRngd>( mod );
-  if( tmod ) {
-   if( get_objective().empty() )
-    throw( std::invalid_argument( "Modification to non-constructed Objective"
-				  ) );
-
-   auto lfo = static_cast<LinearFunction * const>( tmod->f_function );
-   if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
-    throw( std::invalid_argument( "Modification to non-Objective" ) );
-
-   if( tmod->f_type != C05FunctionModVarsRngd::SomeEntriesChange )
-    throw( std::invalid_argument( "Unsupported Modification to Objective" ) );
-
-   c_Index strt = tmod->f_strt ? p2i( tmod->f_strt ) : 0;
-   c_Index stop = tmod->f_stop ? p2i( tmod->f_stop ) : get_NArcs();
-   c_Index num = stop - strt + 1;
-
-   if( num == 1 )  // changing just one cost
-    chg_cost( (lfo->get_v_var())[ strt ].second , strt , eNoBlck , eDryRun );
-   else {          // changing many costs at once
-    Vec_CNumber nC( num );
-    const auto cp = lfo->get_v_var();
-
-    for( Index i = 0 ; i < num ; ++i )
-     nC[ i ] = cp[ strt + i ].second;
-
-    chg_costs( nC.begin() , strt , stop , eNoBlck , eDryRun );
-    }
-   
    return;
    }
   }
@@ -2565,8 +2574,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
      
     auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 					  & get_static_constraints()[ 1 ] );
-    if( ! lbc )
-     throw( std::logic_error( "cannot change rhs" ) );
+    assert( lbc );
 
     auto i = std::distance( &((*lbc)->front()) , cp );
     if( ( i < 0 ) || ( i >= get_NArcs() ) )
@@ -2602,7 +2610,8 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    auto xi = dynamic_cast<ColVariable * const>( tmod->f_variable );
    if( ! xi )
     throw( std::logic_error( "Modification to wrong type of Variable" ) );
-   if( xi->get_type() != ColVariable::kContinuous )
+   if( ( xi->get_type() != ColVariable::kNonNegative ) &&
+       ( xi->get_type() != ColVariable::kNatural ) )
     throw( std::logic_error( "changing type of flow Variable not allowed" ) );
    
    auto i = std::distance( &(x.front()) , xi );
@@ -2665,46 +2674,6 @@ inline void MCFBlock::unmake_amod_param( c_ModParam oldiAM ,
  }
 
 /*--------------------------------------------------------------------------*/
-
-inline MCFBlock::Index MCFBlock::bound_number( Constraint * const Cnst )
-{
- auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					   & get_static_constraints()[ 1 ] );
- if( nnc ) {
-  auto cp = static_cast<NNConstraint * const>( Cnst );
-  #ifndef NDEBUG
-  if( ( cp < &( (*nnc)->front() ) ) || ( cp > &( (*nnc)->back() ) ) )
-    throw( std::invalid_argument( "illegal bound Constraint pointer" ) );
-  #endif
-
-  return( std::distance( &( (*nnc)->front() ) , cp ) );
-  }
-
- auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					   & get_static_constraints()[ 1 ] );
- assert( lbc );
- auto cp = static_cast<LB0Constraint * const>( Cnst );
- #ifndef NDEBUG
- if( ( cp < &( (*lbc)->front() ) ) || ( cp > &( (*lbc)->back() ) ) )
-   throw( std::invalid_argument( "illegal bound Constraint pointer" ) );
- #endif
-
- return( std::distance( &( (*lbc)->front() ) , cp ) );
- }
-
-/*--------------------------------------------------------------------------*/
-
-inline MCFBlock::Index MCFBlock::const_number( FRowConstraint * const Cnst )
-{
- #ifndef NDEBUG
-  if( ( Cnst < &( E.front() ) ) || ( Cnst > &( E.back() ) ) )
-   throw( std::invalid_argument( "illegal flow Constraint pointer" ) );
- #endif
-
- return( std::distance( &( E.front() ) , Cnst ) );
- }
-
-/*--------------------------------------------------------------------------*/
 /*-------------------------- METHODS OF MCFSolution ------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -2761,13 +2730,7 @@ void MCFSolution::write( Block * const block )
   for( MCFBlock::Index i = 0 ; i < v_pi.size() ; ++i )
    MCFB->E[ i ].set_dual( v_pi[ i ] );
 
-  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-				     & MCFB->get_static_constraints()[ 1 ] );
-  if( nnc )
-   for( MCFBlock::Index i = 0 ; i < MCFB->get_NArcs() ; ++i )
-    (**nnc)[ i ].set_dual( MCFB->C[ i ] - v_pi[ MCFB->SN[ i ] ]
-			                + v_pi[ MCFB->EN[ i ] ] );
-  else {
+  if( MCFB->get_static_constraints().size() > 1 ) {
    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
 				     & MCFB->get_static_constraints()[ 1 ] );
    assert( lbc );

@@ -5,9 +5,9 @@
  * Header file for the *concrete* class MCFBlock, which implements the Block
  * concept [see Block.h] for (linear) Min-Cost Flow problems.
  *
- * \version 0.11
+ * \version 0.30
  *
- * \date 23 - 02 - 2019
+ * \date 21 - 03 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -347,10 +347,10 @@ public:
   *   the flow on arc ( SN[ a ] , EN[ a ] ).
   *
   * The latter OneVarConstraint have fixed 0 LHS and a generic RHS, which can
-  * be Inf<Fnumber>(). If *all* the RHS are +Infty, it is possible to use a
-  * std::vector<NNConstraint> to represent them instead of a
-  * std::vector<LB0Constraint>. The parameter stcc is used to decide if this
-  * is done: if
+  * be Inf<Fnumber>(). If *all* the RHS are +Infty, it is possible to skip
+  * the std::vector<LB0Constraint> entirely and just use the fact that the
+  * ColVariable can be defined to be non-negative. The parameter stcc is used
+  * to decide if this is done: if
   *
   * - all the RHS are +Infty;
   *
@@ -362,12 +362,9 @@ public:
   *
   * - the f_value of the SimpleConfiguration<int> is != 0
   *
-  * then NNConstraint are used to implement *all* bound constraint. Note that
-  * this *makes it impossible to change any RHS*, as this would require
-  * changing the static Constraint and this is not allowed. Indeed,
-  * NNConstraint throws exception if one tries to change its RHS (and LHS as
-  * well, but this also NNConstraint does). Hence, if the abstract Constraint
-  * are constructed, changing the RHS is not allowed.
+  * the bound constraints are not implemented. Note that this *makes it
+  * impossible to change any RHS*; the lower bound of 0 should not be changed
+  * anyway, and there is no upper bound to be changed.
   *
   * Note that changing *all* the other parts of any of the FRowConstraint,
   * such as the coefficients of the LinearFunction inside, is not allowed:
@@ -897,23 +894,7 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the reduced costs of the given arc
 
- CNumber get_rc( c_Index arc ) {
-  if( ! E.size() )
-   throw( std::logic_error( "reduced costs unavailable if Constraint aren't"
-			    ) );
-  if( arc >= get_NArcs() )
-   throw( std::invalid_argument( "invalid arc name" ) );
-
-  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
-  if( nnc )
-   return( (*nnc)[ arc ].get_dual() );
-
-  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
-  assert( lbc );
-  return( (*lbc)[ arc ].get_dual() );
-  }
+ CNumber get_rc( c_Index arc );
 
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the flow solution
@@ -982,50 +963,12 @@ public:
   * i. This is typically used by a Solver. */
 
  void set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
-	      c_Index strt = 0 )
- {
-  if( ! E.size() )  // nowhere to put the value
-   return;          // cowardly (and silently) return
-
-  if( std::distance( rcstop , rcstrt ) + strt > get_NArcs() )
-   throw( std::invalid_argument( "too many values provided" ) );
-
-  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
-  if( nnc ) {
-   for( auto bi = nnc->begin() + strt ; rcstrt < rcstop ; )
-    (bi++)->set_dual( *(rcstrt++) );
-   }
-  else {
-   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
-   assert( lbc );
-   for( auto bi = lbc->begin() + strt ; rcstrt < rcstop ; )
-    (bi++)->set_dual( *(rcstrt++) );
-   }
-  }
+	      c_Index strt = 0 );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// sets the reduced cost of the given arc
 
- void set_rc( c_CNumber RC , c_Index arc ) {
-  if( ! E.size() )  // nowhere to put the value
-   return;          // cowardly (and silently) return
-
-  if( arc >= get_NArcs() )
-   throw( std::invalid_argument( "invalid arc name" ) );
-
-  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					     get_static_constraints()[ 1 ] );
-  if( nnc )
-   (*nnc)[ arc ].set_dual( RC );
-  else {
-   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
-   assert( lbc );
-   (*lbc)[ arc ].set_dual( RC );
-   }
-  }
+ void set_rc( c_CNumber RC , c_Index arc );
 
 /*@} -----------------------------------------------------------------------*/
 /*-------------------- Methods for handling Modification -------------------*/
@@ -1058,20 +1001,15 @@ public:
   * - GroupModification, that are simply unpacked into the individual
   *   sub-[Group]Modification and dealt with individually;
   *
-  * - LinearFunctionModSbst adding/removing Variable and changing coefficients
-  *   coming from the (LinearFunction into the FRow)Objective, but *not* from
-  *   the (LinearFunction into the FRow)Constraint;
-  *
-  * - LinearFunctionModRngd adding/removing Variable and changing coefficients
-  *   coming from the (LinearFunction into the FRow)Objective, but *not* from
-  *   the (LinearFunction into the FRow)Constraint;
+  * - C05FunctionModLin changing coefficients coming from the (LinearFunction
+  *   into the FRow)Objective, but *not* from the (LinearFunction into the
+  *   FRow)Constraint;
   *
   * - RowConstraintMod changing the RHS of the bound constraints and both
   *   sides at once of the flow conservation ones, but not any other
-  *   combination (and note that the RHS of the bound constraints may not
-  *   be changeable at all depending on how they have been constructed; in
-  *   this case attempting to do this throws exception, which means that there
-  *   is no need to handling this here);
+  *   combination; and note that the RHS of the bound constraints may not
+  *   be changeable at all if they have not been constructed, in which
+  *   case there cannot be any Modification to handle here;
   *
   * - VariableMod fixing and un-fixing a flow ColVariable; however, note
   *   that *fixing is only permitted if the value() of the ColVvariable is
@@ -1207,7 +1145,12 @@ public:
   * channel, then a new channel is opened to group the multiple Modification
   * and immediately closed when the last one is issued. Of course this only
   * applies if issueAMod specifies that abstract Modification have to be
-  * issued *and* the abstract Constraint have been constructed.
+  * issued, *and* the abstract Constraint have been constructed.
+  *
+  * Note that, according to the Configuration of the static Constraint, the
+  * capacity of the arcs cannot be changed: trying to do that will result in
+  * an exception being thrown.
+  *
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
@@ -1476,7 +1419,7 @@ public:
   *
   * There must be exactly <number of arcs> arc definition lines in the file.
   *
-  * Note that the file format accepted by LoadMCF is more general than the
+  * Note that the file format accepted by load() is more general than the
   * DIMACS standard format, in that node and arc definitions can be mixed in
   * any order, while the DIMACS file requires all node information to appear
   * before all arc information. Also, capacities of arcs can be set to
@@ -1525,10 +1468,6 @@ public:
 
  inline void unmake_amod_param( c_ModParam oldiAM , c_ModParam newiAM ,
 				c_Index num );
-
- inline Index bound_number( Constraint * const Cnst );
-
- inline Index const_number( FRowConstraint * const Cnst );
 
 /*--------------------------------------------------------------------------*/
 /*---------------------------- PRIVATE FIELDS ------------------------------*/
