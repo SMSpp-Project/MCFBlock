@@ -319,6 +319,48 @@ public:
 		    c_Vec_FNumber & pB = {} );
 
 /*--------------------------------------------------------------------------*/
+ /// extends Block::deserialize( netCDF::NcGroup )
+ /** Extends Block::deserialize( netCDF::NcGroup ) to the specific format of
+  * a MCFBlock. Besides the mandatory "type" attribute of any :Block, the
+  * group should contain the following:
+  *
+  * - the dimension "NNodes" containing the number of nodes in the graph;
+  *
+  * - the dimension "NArcs" containing the number of arcs in the graph;
+  *
+  * - the variable "C", of type double and indexed over the dimension "NArcs";
+  *   the i-th entry of the variable is assumed to contain the cost of the
+  *   i-th arc in the graph, that whose start node and ending node are
+  *   specified by the variable "SN" and "EN" (below);
+  *
+  * - the variable "U", of type double and indexed over the dimension "NArcs";
+  *   the i-th entry of the variable is assumed to contain the upper capacity
+  *   of the i-th arc in the graph (the lower capacity being fixed to 0),
+  *   that whose start node and ending node are specified by the variable
+  *   "SN" and "EN" (below);
+  *
+  * - the variable "B", of type double and indexed over the dimension
+  *   "NNodes"; the i-th entry of the variable is assumed to contain the
+  *   deficit of the i-th node in the graph (note that node names here go
+  *   from 0 to NNodes.getSize() - 1);
+  *
+  * - the variable "SN", of type int and indexed over the dimension "NArcs";
+  *   the i-th entry of the variable is assumed to contain the starting node
+  *   of the i-th arc in the graph (note that node names here go from 1 to
+  *   NNodes.getSize(), i.e., they are shifted by 1 w.r.t. to the indices
+  *   used in the "B" variable);
+  *
+  * - the variable "EN", of type int and indexed over the dimension "NArcs";
+  *   the i-th entry of the variable is assumed to contain the ending node
+  *   of the i-th arc in the graph (note that node names here go from 1 to
+  *   NNodes.getSize(), i.e., they are shifted by 1 w.r.t. to the indices
+  *   used in the "B" variable).
+  *
+  * The two dimensions "NNodes" and "NArcs" are mandatory, such as are the
+  * two variables "SN" and "EN". The three other variables are optional. If
+  * "C" is missing, all arc costs are assumed to be 0. If "U" is missing, all
+  * arc capacities are assumed to be infinite. If "B" is missing, all node
+  * deficits are assumed to be 0. */
 
  virtual void deserialize( netCDF::NcGroup&& group ,
 			   Block *father = nullptr ) override;
@@ -1034,6 +1076,11 @@ public:
 /*--------------------------------------------------------------------------*/
 /** @name Methods for loading, printing & saving the MCFBlock
  *  @{ */
+
+ /// extends Block::serialize( netCDF::NcGroup )
+ /** Extends Block::serialize( netCDF::NcGroup ) to the specific format of a
+  * MCFBlock. See MCFBlock::deserialize( netCDF::NcGroup ) for details of the
+  * format of the created netCDF group. */
 
  virtual void serialize( netCDF::NcGroup&& group ) const override final;
 

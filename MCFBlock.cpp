@@ -1387,28 +1387,28 @@ void MCFBlock::serialize( netCDF::NcGroup && group ) const
 {
  group.putAtt( "type" , "MCFBlock" );
 
- group.addDim( "NNodes" , get_NNodes() );
- group.addDim( "NArcs" , get_NArcs() );
+ netCDF::NcDim nn = group.addDim( "NNodes" , get_NNodes() );
+ netCDF::NcDim na = group.addDim( "NArcs" , get_NArcs() );
 
  std::vector<size_t> startp = { 0 };
  std::vector<size_t> countpa = { get_NArcs() };
  std::vector<size_t> countpn = { get_NNodes() };
 
  if( C.size() )
-  ( group.addVar( "C" , "double" , "NArcs" ) ).putVar( startp , countpa ,
-						       C.data() );
+  ( group.addVar( "C" , netCDF::NcDouble() , na ) ).putVar( startp , countpa ,
+							    C.data() );
  if( U.size() )
-  ( group.addVar( "U" , "double" , "NArcs" ) ).putVar( startp , countpa ,
-						       U.data() );
+  ( group.addVar( "U" , netCDF::NcDouble() , na ) ).putVar( startp , countpa ,
+							    U.data() );
  if( B.size() )
-  ( group.addVar( "B" , "double" , "NNodes" ) ).putVar( startp , countpn ,
-						        B.data() );
+  ( group.addVar( "B" , netCDF::NcDouble() , nn ) ).putVar( startp , countpn ,
+							    B.data() );
 
- ( group.addVar( "SN" , "uint64" , "NArcs" ) ).putVar( startp , countpa ,
-						       SN.data() );
+ ( group.addVar( "SN" , netCDF::NcUint64() , na ) ).putVar( startp , countpa ,
+							    SN.data() );
 
- ( group.addVar( "EN" , "uint64" , "NArcs" ) ).putVar( startp , countpa ,
-						       EN.data() );
+ ( group.addVar( "EN" , netCDF::NcUint64() , na ) ).putVar( startp , countpa ,
+							    EN.data() );
 
  }  // end( MCFBlock::serialize )
 
