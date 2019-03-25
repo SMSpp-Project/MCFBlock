@@ -383,10 +383,10 @@ public:
   *   exactly n entries, the entry i = 0, ..., n - 1 being the flow
   *   conservation of the node i;
   *
-  * - the bound constraints, a std::vector< some derived class from
-  *   OneVarConstraint > with exactly m entries, the entry a = 0, ..., m - 1
-  *   being the bound constraints of the ColVariable x[ a ] corresponding to
-  *   the flow on arc ( SN[ a ] , EN[ a ] ).
+  * - the bound constraints, a std::vector<LB0Constraint> with exactly m
+  *   entries, the entry a = 0, ..., m - 1 being the bound constraints of
+  *   the ColVariable x[ a ] corresponding to the flow on arc
+  *   ( SN[ a ] , EN[ a ] ).
   *
   * The latter OneVarConstraint have fixed 0 LHS and a generic RHS, which can
   * be Inf<Fnumber>(). If *all* the RHS are +Infty, it is possible to skip
@@ -699,7 +699,7 @@ public:
   *   = everything else (e.g., 0) means "map everything";
   *
   * - if solc == nullptr, f_BlockConfig != nullptr,
-  *   f_BlockConfig->f_is_feasible_Configuration != nullptr and it
+  *   f_BlockConfig->f_solution_Configuration != nullptr and it
   *   is a SimpleConfiguration<int>, then it depends on its f_value as in
   *   the previous case;
   *
@@ -735,7 +735,7 @@ public:
   *   = everything else (e.g., 0) means "map everything";
   *
   * - if solc == nullptr, f_BlockConfig != nullptr,
-  *   f_BlockConfig->f_is_feasible_Configuration != nullptr and it
+  *   f_BlockConfig->f_is_solution_Configuration != nullptr and it
   *   is a SimpleConfiguration<int>, then it depends on its f_value as in
   *   the previous case;
   *
@@ -826,7 +826,7 @@ public:
   *   = everything else (e.g., 0) means "map everything";
   *
   * - if solc == nullptr, f_BlockConfig != nullptr,
-  *   f_BlockConfig->f_is_feasible_Configuration != nullptr and it
+  *   f_BlockConfig->f_solution_Configuration != nullptr and it
   *   is a SimpleConfiguration<int>, then it depends on its f_value as in
   *   the previous case;
   *
