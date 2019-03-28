@@ -2437,7 +2437,7 @@ void MCFBlock::print( std::ostream &output ) const
 
 inline MCFBlock::Index MCFBlock::p2i( Variable * const var )
 {
- return( std::distance( &x[ 0 ] , static_cast< ColVariable * const >( var ) )
+ return( std::distance( x.data() , static_cast< ColVariable * const >( var ) )
 	 );
  }
 
