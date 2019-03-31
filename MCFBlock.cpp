@@ -104,7 +104,8 @@ SMSpp_insert_in_factory_cpp_1( MCFBlock );
 
 void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 		     c_Vec_FNumber & pU , c_Vec_CNumber & pC ,
-		     c_Vec_FNumber & pB )
+		     c_Vec_FNumber & pB , c_Index dn , c_Index dm ,
+		     c_Index mdn , c_Index mdm )
 {
  // sanity checks - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -128,12 +129,28 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
  // copy over problem data - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  NNodes = n;
+ NArcs = pSn.size();
+ MaxNNodes = NNodes + ( mdn > dn ? mdn - dn : 0 );
+ c_Index MaxNArcs = NArcs + ( mdm > dm ? mdm - dm : 0 );
+ NStaticNodes = dn > n : 0 ? n - dn;
+ NStaticArcs = dm > m : 0 ? m - dm;
 
- SN = pSn;
- EN = pEn;
- C = pC;
- U = pU;
- B = pB;
+ SN.resize( MaxNArcs , 0 );
+ std::copy( pSn.begin() , pSn.end() , SN.begin() );
+ EN.resize( get_MaxNArcs() , 0 );
+ std::copy( pEn.begin() , pEn.end() , EN.begin() );
+ if( ~ pC.empty() ) {
+  C.resize( get_MaxNArcs() , 0 );
+  std::copy( pC.begin() , pC.end() , C.begin() );
+  }
+ if( ~ pU.empty() ) {
+  U.resize( get_MaxNArcs() , Inf<FNumber>() );
+  std::copy( pU.begin() , pU.end() , U.begin() );
+  }
+ if( ~ pB.empty() ) {
+  B.resize( get_MaxNNodes() , 0 );
+  std::copy( pB.begin() , pB.end() , B.begin() );
+  }
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -172,16 +189,19 @@ void MCFBlock::load( std::istream &input )
   throw( std::invalid_argument( "LoadDMX: error reading number of nodes" ) );
 
  Index tm;
- if( ! ( input >> eatDMXcomments >> tm ) )
+ if( ! ( input >> eatDMXcomments >> NArcs ) )
   throw( std::invalid_argument( "LoadDMX: error reading number of arcs" ) );
 
  // allocate memory - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- SN.resize( tm );
- EN.resize( tm );
- C.resize( tm );
- U.resize( tm );
+ SN.resize( NArcs );
+ EN.resize( NArcs );
+ C.resize( NArcs );
+ U.resize( NArcs );
  B.resize( NNodes );
+
+ NStaticNodes = MaxNNodes = NNodes;
+ NStaticArcs = NArcs;
 
  for( auto & el : B )  // all deficits are 0
   el = 0;              // unless otherwise stated
@@ -210,7 +230,7 @@ void MCFBlock::load( std::istream &input )
     break;
 
    case( 'a' ):  // description of an arc
-    if( i == tm )
+    if( i == NArcs )
      throw( std::invalid_argument( "too many arc descriptors" ) );
 
     if( ! ( input >> SN[ i ] ) )
@@ -255,7 +275,7 @@ void MCFBlock::load( std::istream &input )
    }  // end( switch( c ) )
   }  // end( for( ever ) )
 
- if( i < tm )
+ if( i < NArcs )
   throw( std::invalid_argument( "too few arc descriptors" ) );
 
  // simplify out the deta structures- - - - - - - - - - - - - - - - - - - - -
@@ -307,6 +327,12 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
  size_t na = ( group.getDim( "NArcs" ) ).getSize();
  NNodes = ( group.getDim( "NNodes" ) ).getSize();
 
+
+ NStaticNodes = MaxNNodes = NNodes;
+ NStaticArcs = NArcs;
+
+
+ 
  std::vector<size_t> start = { 0 };
  std::vector<size_t> counta = { na };
  std::vector<size_t> countn = { NNodes };

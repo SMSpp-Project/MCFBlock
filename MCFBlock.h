@@ -146,7 +146,14 @@ namespace SMSpp_di_unipi_it
  *  RC[ i , j ] < 0 \Rightarrow X[ i , j ] = U[ i , j ]          (7)
  * \f]
  * are satisfied for all arcs (i, j) of A.
- */
+ *
+ * The graph G is allowed to be "partly dynamic". The sets of nodes and arcs
+ * that are input at the beginning are assumed not to be changed (save for
+ * changing costs, capacities, and deficits, and for arcs to be closed or
+ * opened). Then, new arcs and nodes, up to a set maximum, can be dynamically
+ * added or deleted. This means that the graph can be fully static (if the
+ * maximum number of dynamic arcs and nodes is set to zero) as well as fully
+ * dynamic (if the initial graph is empty). */
 
 class MCFBlock : public Block {
 
@@ -275,7 +282,8 @@ public:
   * can be of any type, defaulting to nullpt so that this can also be used as
   * the void constructor. */
 
- MCFBlock( Block *father = nullptr ) : Block( father ) , NNodes( 0 ) { }
+ MCFBlock( Block *father = nullptr ) : Block( father ) , NNodes( 0 ) ,
+  NArcs( 0 ) , MaxNNodes( 0 ) , NStaticNodes( 0 ) , NStaticArcs( 0 ) { }
 
 /*--------------------------------------------------------------------------*/
  /// destructor of MCFBlock: deletes the abstract representation, if any
@@ -306,6 +314,30 @@ public:
   *        deficits and sink nodes have positive deficits; if pB is empty,
   *        then all deficits are taken to be 0 (a circulation problem).
   *
+  * - dn   the current number (<= n, default 0) of dynamic nodes: all the
+  *        nodes between 0 and n - dn - 1 are static, i.e., they cannot be
+  *        deleted (and re-created), whereas all those from n - dn to n - 1
+  *        are dynamic, i.e., they can deleted and later on re-created;
+  *
+  * - dm   the current number (<= m,  default 0) of dynamic arcs: all the
+  *        arcs between 0 and m - dm - 1 are static, i.e., they cannot be
+  *        deleted (and re-created), whereas all those from m - dm to m - 1
+  *        are dynamic, i.e., they can deleted and later on re-created;
+  *
+  * - mdn  the maximum number of dynamic nodes (default 0, if mdn < dn
+  *        then the value is ignored and dn is used): data in the MCFBlock
+  *        is allocated to accommodate for the fact that further mdn - dn
+  *        nodes can later on be dynamically created (and deleted); if
+  *        mdn < dn the parameter is ignored and n is taken as the maximum
+  *        overall number of nodes;
+  *
+  * - mdm  the maximum number of dynamic arcs (default 0, if mdm < dm
+  *        then the value is ignored and dm is used): data in the MCFBlock
+  *        is allocated to accommodate for the fact that further mdm - dm
+  *        arcs can later on be dynamically created (and deleted); if
+  *        mdm < dm the parameter is ignored and m is taken as the maximum
+  *        overall number of arcs.
+  *
   * The number m of arcs of the graph need not be explicitly provided because
   * it is the length of pEn and sEn; while pU and pC can be empty, they cannot
   * (unless the graph is empty of arcs). Conversely, n must be explicitly
@@ -316,7 +348,9 @@ public:
 
  virtual void load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 		    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
-		    c_Vec_FNumber & pB = {} );
+		    c_Vec_FNumber & pB = {} ,
+		    c_Index dn = 0 , c_Index dm = 0 ,
+		    c_Index mdn = 0 , c_Index mdm = 0 );
 
 /*--------------------------------------------------------------------------*/
  /// extends Block::deserialize( netCDF::NcGroup )
@@ -356,11 +390,40 @@ public:
   *   NNodes.getSize(), i.e., they are shifted by 1 w.r.t. to the indices
   *   used in the "B" variable).
   *
+  * - the dimension "DynNNodes" containing the current number of dynamic
+  *   nodes: all the nodes between 0 and "NNodes" - "DynNNodes" - 1 are
+  *   static, i.e., they cannot be deleted (and re-created), whereas all
+  *   those from "NNodes" + "DynNNodes" to "NNodes" - 1 are dynamic, i.e.,
+  *   they can deleted and later on re-created;
+  *
+  * - the dimension "DynNArcs" containing the current number of dynamic
+  *   arcs: all the arcs between 0 and "NArcs" - "DynNArcs" - 1 are
+  *   static, i.e., they cannot be deleted (and re-created), whereas all
+  *   those from "NArcs" + "DynNArcs" to "NArcs" - 1 are dynamic, i.e.,
+  *   they can deleted and later on re-created;
+  *
+  * - the dimension "MaxDynNNodes" containing the maximum number of dynamic
+  *   nodes: data in the MCFBlock is allocated to accommodate for the fact
+  *   that further "MaxDynNNodes" - "DynNNodes" nodes can later on be
+  *   dynamically created (and deleted); if "MaxDynNNodes" < "DynNNodes"
+  *   the dimension is ignored and "NNodes" is taken as the maximum overall
+  *   number of nodes;
+  *
+  * - the dimension "MaxDynNArcs" containing the maximum number of dynamic
+  *   arcs: data in the MCFBlock is allocated to accommodate for the fact
+  *   that further "MaxDynNArcs" - "DynNArcs" arcs can later on be
+  *   dynamically created (and deleted); if "MaxDynNArcs" < "DynNArcs"
+  *   the dimension is ignored and "NArcs" is taken as the maximum overall
+  *   number of arcs.
+  *
   * The two dimensions "NNodes" and "NArcs" are mandatory, such as are the
   * two variables "SN" and "EN". The three other variables are optional. If
   * "C" is missing, all arc costs are assumed to be 0. If "U" is missing, all
   * arc capacities are assumed to be infinite. If "B" is missing, all node
-  * deficits are assumed to be 0. */
+  * deficits are assumed to be 0. Finally, all the dimensions "DynNNodes",
+  * "DynNArcs", "MaxDynNNodes" and "MaxDynNArcs" are optional: if they are
+  * missing they are treated as being 0 (this happening for all four means
+  * that the graph is "fully static" and cannot be changed. */
 
  virtual void deserialize( netCDF::NcGroup&& group ,
 			   Block *father = nullptr ) override;
@@ -480,7 +543,23 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of arcs
- inline Index get_NArcs( void ) const { return( SN.size() ); }
+ inline Index get_NArcs( void ) const { return( NArcs ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// get the maximum number of nodes
+ inline Index get_MaxNNodes( void ) const { return( MaxNNodes ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// get the maximum number of arcs
+ inline Index get_MaxNArcs( void ) const { return( SN.size() ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// get the number of static nodes
+ inline Index get_NStaticNodes( void ) const { return( NStaticNodes ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// get the number of static arcs
+ inline Index get_NStaticArcs( void ) const { return( NStaticNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
@@ -1471,7 +1550,10 @@ public:
   * any order, while the DIMACS file requires all node information to appear
   * before all arc information. Also, capacities of arcs can be set to
   * +Inf<FNumber>() by putting "INF", "Inf" or "inf" in the file (actually,
-  * any string starting with "I" or "i" where these would be expected.
+  * any string starting with "I" or "i" where these would be expected).
+  *
+  * Note that the graph as provided by this method is considered to be
+  * "fully static".
   *
   * Like load( memory ), if there is any Solver attached to this MCFBlock
   * then a NBModification (the "nuclear option") is issued. */
@@ -1482,7 +1564,12 @@ public:
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
 /*--------------------------------------------------------------------------*/
 
- Index NNodes;                        ///< the number of nodes
+ Index NNodes;                        ///< the current number of nodes
+ Index NArcs;                         ///< the current number of arcs
+ Index MaxNNodes;                     ///< the maximum number of nodes
+ Index NStaticNodes;                  ///< the number of static nodes
+ Index NStaticArcs;                   ///< the number of static arcs
+ 
  Vec_Index SN;                        ///< vector of arc starting nodes
  Vec_Index EN;                        ///< vector of arc ending nodes
 
