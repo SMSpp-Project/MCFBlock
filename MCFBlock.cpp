@@ -324,50 +324,82 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
 		   
  // read problem data- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- size_t na = ( group.getDim( "NArcs" ) ).getSize();
- NNodes = ( group.getDim( "NNodes" ) ).getSize();
 
+ netCDF::NcDim nn = group.getDim( "NNodes" );
+ if( nn.isNull() )
+  throw( std::logic_error( "NNodes dimension is required" ) );
+ NNodes = nn.getSize();
 
- NStaticNodes = MaxNNodes = NNodes;
- NStaticArcs = NArcs;
+ netCDF::NcDim na = group.getDim( "NArcs" );
+ if( na.isNull() )
+  throw( std::logic_error( "NArcs dimension is required" ) );
+ NArcs = na.getSize();
 
+ Index DynNNodes = 0;
+ netCDF::NcDim dn = group.getDim( "DynNNodes" );
+ if( dn.isNull() )
+  NStaticNodes = NNodes;
+ else {
+  DynNNodes = dn.getSize();
+  NStaticNodes = DynNNodes > NNodes ? 0 : NNodes - DynNNodes;
+  }
 
+ Index DynNArcs = 0;
+ netCDF::NcDim dm = group.getDim( "DynNArcs" );
+ if( dm.isNull() )
+  NStaticArcs = NArcs;
+ else {
+  DynNArcs = dm.getSize();
+  NStaticArcs = DynNArcs > NArcs ? 0 : NArcs - DynNArcs;
+  }
+
+ MaxNNodes = NNodes;
+ netCDF::NcDim mdn = group.getDim( "MaxDynNNodes" );
+ if( ! mdn.isNull() )
+  if( mdn.getSize() > DynNNodes )
+   MaxNNodes += mdn.getSize() - DynNNodes;
+
+ Index MaxNArcs = NArcs;
+ netCDF::NcDim mdm = group.getDim( "MaxDynNArcs" );
+ if( ! mdm.isNull() )
+  if( mdm.getSize() > DynNArcs )
+   MaxNNodes += mdm.getSize() - DynNArcs;
  
- std::vector<size_t> start = { 0 };
- std::vector<size_t> counta = { na };
- std::vector<size_t> countn = { NNodes };
-
- netCDF::NcVar cst = group.getVar( "C" );
- if( ! cst.isNull() ) {
-  C.resize( na );
-  cst.getVar( start , counta , C.data() );
-  }
-
- netCDF::NcVar cap = group.getVar( "U" );
- if( ! cap.isNull() ) {
-  U.resize( na );
-  cap.getVar( start , counta , U.data() );
-  }
-
- netCDF::NcVar dfc = group.getVar( "B" );
- if( ! dfc.isNull() ) {
-  B.resize( NNodes );
-  dfc.getVar( start , countn , B.data() );
-  }
-
  netCDF::NcVar sn = group.getVar( "SN" );
  if( sn.isNull() )
   throw( std::logic_error( "Starting Nodes not found" ) );
 
- SN.resize( na );
+ SN.resize( MaxNArcs );
  sn.getVar( start , counta , SN.data() );
 
  netCDF::NcVar en = group.getVar( "EN" );
  if( en.isNull() )
   throw( std::logic_error( "Ending Nodes not found" ) );
 
- EN.resize( na );
+ EN.resize( MaxNArcs );
  en.getVar( start , counta , EN.data() );
+
+ std::vector<size_t> start = { 0 };
+ std::vector<size_t> counta = { NArcs };
+ std::vector<size_t> countn = { NNodes };
+
+ netCDF::NcVar cst = group.getVar( "C" );
+ if( ! cst.isNull() ) {
+  C.resize( MaxNArcs );
+  cst.getVar( start , counta , C.data() );
+  }
+
+ netCDF::NcVar cap = group.getVar( "U" );
+ if( ! cap.isNull() ) {
+  U.resize( MaxNArcs );
+  cap.getVar( start , counta , U.data() );
+  }
+
+ netCDF::NcVar dfc = group.getVar( "B" );
+ if( ! dfc.isNull() ) {
+  B.resize( MaxNNodes );
+  dfc.getVar( start , countn , B.data() );
+  }
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -385,43 +417,40 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
 
 void MCFBlock::generate_abstract_variables( Configuration *stvv )
 {
- if( x.size() == get_NArcs() )  // the variables are there already
-  return;                       // nothing to do
+ if( ( ! x.empty() ) || ( ! dx.empty() ) )  // the variables are there already
+  return;                                   // nothing to do
 
  assert( x.size() == 0 );       // this should only happen once
 
- x.resize( SN.size() );
- for( auto & var : x ) {
-  var.is_positive( true , eNoBlck );
-  var.set_Block( this );
+ if( HasStaticX() ) {
+  x.resize( get_NStaticArcs() );
+  for( auto & var : x ) {
+   var.is_positive( true , eNoBlck );
+   var.set_Block( this );
+   }
+
+  add_static_variable( x );
   }
 
- add_static_variable( x );
+ if( MayHaveDynX() ) {
+  dx.resize( get_NArcs() - get_NStaticArcs() );
+  for( auto & var : dx ) {
+   var.is_positive( true , eNoBlck );
+   var.set_Block( this );
+   }
 
+  add_dynamic_variable( dx );
+  } 
  }  // end( MCFBlock::generate_abstract_variables )
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 {
- if( E.size() == get_NNodes() )  // the constraints are there already
-  return;                        // nothing to do
+ if( E.size() || dE.size() )  // the constraints are there already
+  return;                     // nothing to do
 
- assert( E.size() == 0 );  // this should only happen once
-
- // generate the node-arc incidence matrix- - - - - - - - - - - - - - - - - -
-
- E.resize( get_NNodes() );  // ensure E has n constraints
-
- // each constraint is an equality, i.e., LHS = RHS = B[ i ]
- if( B.size() )
-  for( Index i = 0 ; i < get_NNodes() ; ++i )
-   E[ i ].set_both( B[ i ] );
- else
-  for( auto & ei : E )
-   ei.set_both( 0 );
-
- // number of nonzeroes in each constraint, i.e., #FS( i ) + #BS( i )
+ // count number of nonzeroes in each constraint, i.e., #FS( i ) + #BS( i )
  std::vector<Index> count( get_NNodes() );
  
  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
@@ -437,21 +466,54 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   count[ i ] = 0;
   }
 
- // construct the vector of coefficients
- for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+ // construct the vector of coefficients, static phase
+ Index i = 0;
+ for( ; i < get_NStaticArcs() ; ++i ) {
   coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
                                     std::make_pair( &x[ i ] , double( -1 ) );
   coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
                                     std::make_pair( &x[ i ] , double( 1 ) );
   }
 
- for( Index i = 0 ; i < get_NNodes() ; ++i ) {
-  E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) ,
-					   0 , true ) );
-  E[ i ].set_Block( this );  // this is done last ==> no Modification
+ // construct the vector of coefficients, dynamic phase
+ for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi ) {
+  coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
+                                    std::make_pair( &(*dxi) , double( -1 ) );
+  coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
+                                    std::make_pair( &(*dxi) , double( 1 ) );
   }
 
- add_static_constraint( E );
+ // generate the node-arc incidence matrix- - - - - - - - - - - - - - - - - -
+ // each constraint is an equality, i.e., LHS = RHS = B[ i ]
+
+ // static part
+ if( HasStaticE() ) {
+  E.resize( get_NStaticNodes() );
+
+  for( Index i = 0 ; i < get_NStaticNodes() ; ++i ) {
+   E[ i ].set_both( B.size() ? B[ i ] : 0 );
+   E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) ,
+					   0 , true ) );
+   E[ i ].set_Block( this );  // this is done last ==> no Modification
+   }
+
+  add_static_constraint( E );
+  }
+
+ // dynamic part
+ if( MayHaveDynE() ) {
+  dE.resize( get_NNodes() - get_NStaticNodes() );
+
+  Index i = get_NStaticNodes();
+  for( auto & cnst : dE ) {
+   cnst.set_both( B.size() ? B[ i ] : 0 );
+   cnst.set_function( new LinearFunction( std::move( coeffs[ i++ ] ) ,
+					  0 , true ) );
+   cnst.set_Block( this );  // this is done last ==> no Modification
+   }
+
+  add_dynamic_constraint( dE );
+  }
 
  // generate the bound constraints- - - - - - - - - - - - - - - - - - - - - -
  // if upper bounds are not there, the LB0Constraint can be skipped entirely
@@ -468,15 +530,32 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
    return;
   }
 
- auto LU = new std::vector<LB0Constraint>( SN.size() );
- for( Index i = 0 ; i < SN.size() ; ++i ) {
-  (*LU)[ i ].set_variable( & x[ i ] , eNoBlck );
-  (*LU)[ i ].set_rhs( U[ i ] , eNoBlck );
-  (*LU)[ i ].set_Block( this );  // this is done last ==> no Modification
+ // static part
+ if( HasStaticX() ) {
+  auto LU = new std::vector<LB0Constraint>( get_NStaticArcs() );
+  for( Index i = 0 ; i < get_NStaticArcs() ; ++i ) {
+   (*LU)[ i ].set_variable( & x[ i ] , eNoBlck );
+   (*LU)[ i ].set_rhs( U[ i ] , eNoBlck );
+   (*LU)[ i ].set_Block( this );  // this is done last ==> no Modification
+   }
+
+  add_static_constraint( *LU );
   }
 
- add_static_constraint( *LU );
+ // dynamic part
+ if( MayHaveDynX() ) {
+  auto LU = new std::list<LB0Constraint>( get_NArcs() - get_NStaticArcs() );
 
+  auto dxi = dx.begin();
+  auto ui = U.begin() + get_NStaticArcs();
+  for( auto & cnst : *LU ) {
+   cnst.set_variable( &(*(dxi++)) , eNoBlck );
+   cnst.set_rhs( *(ui++) , eNoBlck );
+   cnst.set_Block( this );  // this is done last ==> no Modification
+   }
+
+  add_dynamic_constraint( *LU );
+  }
  }  // end( MCFBlock::generate_abstract_constraints )
 
 /*--------------------------------------------------------------------------*/
@@ -510,16 +589,35 @@ void MCFBlock::generate_objective( Configuration *objc )
  if( nzc >= std::ceil( sprs * get_NArcs() ) ) !!*/ {
   // construct a "dense" LinearFunction - - - - - - - - - - - - - - - - - - -
   p.resize( get_NArcs() );
-  if( C.size() )
-   for( Index i = 0 ; i < C.size() ; ++i ) {
-    p[ i ].first = &x[ i ];
-    p[ i ].second = C[ i ];
-    }
-  else
-   for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-    p[ i ].first = &x[ i ];
-    p[ i ].second = 0;
-    }
+  Index i = 0;
+
+  // static part
+  if( HasStaticX() )
+   if( C.size() )
+    for( ; i < get_NStaticArcs() ; ++i ) {
+     p[ i ].first = &x[ i ];
+     p[ i ].second = C[ i ];
+     }
+   else
+    for( ; i < get_NStaticArcs() ; ++i ) {
+     p[ i ].first = &x[ i ];
+     p[ i ].second = 0;
+     }
+
+  // dynamic part
+  if( HasDynamicX() ) {
+   auto dxi = dx.begin();
+   if( C.size() )
+    for( ; i < get_NArcs() ; ++i ) {
+     p[ i ].first = &(*(dxi++));
+     p[ i ].second = C[ i ];
+     }
+   else
+    for( ; i < get_NArcs() ; ++i ) {
+     p[ i ].first = &(*(dxi++));
+     p[ i ].second = 0;
+     }
+   }
   }
  /*!!
  else {
@@ -560,14 +658,27 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
 
+  Index i = 0;
   Vec_FNumber tB = B;
-  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+
+  // static part
+  for(  ; i < get_NStaticArcs() ; ++i ) {
    c_FNumber xi = x[ i ].get_value();
    tB[ SN[ i ] - 1 ] += xi;
    tB[ EN[ i ] - 1 ] -= xi;
    }
 
-  for( Index i = 0 ; i < get_NNodes() ; ++i ) {
+  // dynamic part
+  if( HasDynamicX() ) {
+   auto dxi = dx.begin();
+   for(  ; i < get_NArcs() ; ++i ) {
+    c_FNumber xi = (*(dxi++)).get_value();
+    tB[ SN[ i ] - 1 ] += xi;
+    tB[ EN[ i ] - 1 ] -= xi;
+    }
+   }
+
+ for( Index i = 0 ; i < get_NNodes() ; ++i ) {
    c_FNumber slck = B[ i ] == 0 ? std::abs( tB[ i ] ) :
                                   std::abs( tB[ i ] / B[ i ] );
    if( slck > feps )
@@ -588,22 +699,42 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
 
   assert( E.size() );  // ... which must exist
 
-  if( get_static_constraints().size() > 1 ) {
+  // static part
+  if( HasStaticX() && ( ! get_static_constraints().empty() ) ) {
    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					   & get_static_constraints()[ 1 ] );
-   assert( lbc );
-   for( const auto & cnst : **lbc )
-    if( cnst.rel_viol() > feps )
-     return( false );
+					 & get_static_constraints().back() );
+   if( lbc ) {
+    for( const auto & cnst : **lbc )
+     if( cnst.rel_viol() > feps )
+      return( false );
+    }
+   else
+    for( const auto & var : x )
+     if( ! var.is_feasible() )
+      return( false );  
    }
-  else
-   for( const auto & var : x )
-    if( ! var.is_feasible() )
-     return( false );  
+
+  // dynamic part
+  if( HasDynamicX() && ( ! get_dynamic_constraints().empty() ) ) {
+   auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
+					  & get_dynamic_constraints()[ 1 ] );
+   if( lbc ) {
+    for( const auto & cnst : **lbc )
+     if( cnst.rel_viol() > feps )
+      return( false );
+    }
+   else
+    for( const auto & var : x )
+     if( ! var.is_feasible() )
+      return( false );
+   }
   }
  else
   // do it using the physical representation- - - - - - - - - - - - - - - - -
-  for( Index i = 0 ; i < SN.size() ; ++i ) {
+  Index i = 0;
+
+  // static part
+  for(  ; i < get_NStaticArcs() ; ++i ) {
    c_FNumber Ui = get_U( i );
    c_FNumber xi = x[ i ].get_value();
    if( Ui >= Inf<FNumber>() ) {
@@ -615,6 +746,25 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
                                std::max( - xi , xi - Ui ) / std::abs( Ui );
     if( slck > feps )
      return( false );
+    }
+   }
+
+  // dynamic part
+  if( HasDynamicX() ) {
+   auto dxi = dx.begin();
+   for(  ; i < get_NArcs() ; ++i ) {
+   c_FNumber Ui = get_U( i );
+   c_FNumber xi = x[ i ].get_value();
+   if( Ui >= Inf<FNumber>() ) {
+    if( xi < - feps )
+     return( false );
+    }
+   else {
+    c_FNumber slck = Ui == 0 ? std::abs( xi ) :
+                               std::max( - xi , xi - Ui ) / std::abs( Ui );
+    if( slck > feps )
+     return( false );
+    }
     }
    }
 
@@ -642,19 +792,13 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
   #endif
   auto obj_it = lfo->begin();
 
-  for( Index i = 0 , h = 0 ; i < get_NArcs() ; ++i ) {
-   CNumber RCi;
-   if( static_cast< const ColVariable * >( &(*obj_it) ) == & x[ i ] ) {
-    RCi = lfo->get_coefficient( h++ );
-    obj_it++;
-    }
-   else
-    RCi = 0;
-
+  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+   CNumber RCi = lfo->get_coefficient( i );
+   auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
    c_CNumber Ci = RCi;
 
-   for( Index j = 0 ; j < x[ i ].get_num_active() ; ++j ) {
-    ThinVarDepInterface * ci = x[ i ].get_active( j );
+   for( Index j = 0 ; j < xi->get_num_active() ; ++j ) {
+    ThinVarDepInterface * ci = xi->get_active( j );
     auto rci = dynamic_cast<FRowConstraint *>( ci );
     if( rci ) {
      #ifdef NDEBUG
@@ -663,7 +807,7 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
       auto lfi = dynamic_cast<const LinearFunction *>( rci->get_function() );
       assert( lfi );
      #endif
-     ThinVarDepInterface::Index pi = lfi->is_active( &x[ i ] );
+     ThinVarDepInterface::Index pi = lfi->is_active( xi );
      assert( pi < Inf<ThinVarDepInterface::Index>() );
      RCi -= rci->get_dual() * lfi->get_coefficient( pi );
      }
@@ -685,11 +829,15 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
 
-  for( Index i = 0 ; i < SN.size() ; ++i ) {
+  Vec_CNumber RC;
+  get_RC( RC );
+  Vec_CNumber Pi;
+  get_pi( Pi );
+
+  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
    c_CNumber Ci = get_C( i );
-   c_CNumber RCi = Ci + E[ SN[ i ] - 1 ].get_dual()
-                      - E[ EN[ i ] - 1 ].get_dual();
-   c_CNumber df = std::abs( RCi - get_rc( i ) );
+   c_CNumber RCi = Ci + Pi( SN[ i ] - 1 ) - Pi( EN[ i ] - 1 );
+   c_CNumber df = std::abs( RCi - RC[ i ] );
    c_CNumber mx = std::max( std::abs( Ci ) , df );
    if( mx == 0 ) {
     if( df > ceps )
@@ -712,6 +860,9 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 {
  assert( E.size() == get_NNodes() );
 
+ Vec_CNumber RC;
+ get_RC( RC );
+  
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
@@ -725,42 +876,91 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
    assert( lfo );
   #endif
   auto obj_it = lfo->begin();
+  Index i = 0;
 
-  auto nnc = boost::any_cast<std::vector<NNConstraint> *>(
-					   & get_static_constraints()[ 1 ] );
-
-  auto lbc = nnc ? nullptr : boost::any_cast<std::vector<LB0Constraint> *>(
-					   & get_static_constraints()[ 1 ] );
-
-
-  for( Index i = 0 , h = 0 ; i < SN.size() ; ++i ) {
-   CNumber RCi = get_rc( i );
-   if( static_cast< const ColVariable * >( &(*obj_it) ) == & x[ i ] ) {
-    RCi /= lfo->get_coefficient( h++ );
-    obj_it++;
+  // static part
+  if( HasStaticX() && ( ! get_static_constraints().empty() ) ) {
+   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
+					 & get_static_constraints().back() );
+   if( lbc ) {
+    for( ; i < get_NStaticArcs() ; ++i ) {
+     c_CNumber Ci = lfo->get_coefficient( i );
+     CNumber RCi = RC[ i ];
+     if( Ci )
+      RCi /= Ci;
+     auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
+     c_FNumber xiv = xi->get_value();
+     c_FNumber UBi = (**lbc)[ i ].get_rhs();
+     if( UBi >= Inf<RowConstraint::RHSValue>() ) {
+      if( ( xiv > feps ) && ( RCi < - ceps ) )
+       return( false );
+      }
+     else {
+      c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
+      if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
+	  ( ( UBi - xiv > sfeps ) && ( RCi > ceps ) ) )
+       return( false );
+      }
+     }
     }
+   else
+    for( ; i < get_NStaticArcs() ; ++i ) {
+     c_CNumber Ci = lfo->get_coefficient( i );
+     CNumber RCi = RC[ i ];
+     if( Ci )
+      RCi /= Ci;
+     auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
+     if( ( xi->get_value() > feps ) && ( RCi < - ceps ) )
+      return( false );
+     }
+   }
 
-   c_FNumber xi = x[ i ].get_value();
-   c_FNumber UBi = nnc ? (**nnc)[ i ].get_rhs() : (**lbc)[ i ].get_rhs();
-
-   if( UBi >= Inf<RowConstraint::RHSValue>() ) {
-    if( ( xi > feps ) && ( RCi < - ceps ) )
-     return( false );
+  // dynamic part
+  if( HasDynamicX() && ( ! get_dynamic_constraints().empty() ) ) {
+   auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
+					 & get_dynamic_constraints().back() );
+   if( lbc ) {
+    auto lbci = (**lbc).begin();
+    for( ; i < get_NStaticArcs() ; ++i ) {
+     c_CNumber Ci = lfo->get_coefficient( i );
+     CNumber RCi = RC[ i ];
+     if( Ci )
+      RCi /= Ci;
+     auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
+     c_FNumber xiv = xi->get_value();
+     c_FNumber UBi = (*(lbci++)).get_rhs();
+     if( UBi >= Inf<RowConstraint::RHSValue>() ) {
+      if( ( xiv > feps ) && ( RCi < - ceps ) )
+       return( false );
+      }
+     else {
+      c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
+      if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
+	  ( ( UBi - xiv > sfeps ) && ( RCi > ceps ) ) )
+       return( false );
+      }
+     }
     }
-   else {
-    c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
-    if( ( ( xi > sfeps ) && ( RCi < - ceps ) ) ||
-	( ( UBi - xi > sfeps ) && ( RCi > ceps ) ) )
-     return( false );
-    }
+   else
+    for( ; i < get_NStaticArcs() ; ++i ) {
+     c_CNumber Ci = lfo->get_coefficient( i );
+     CNumber RCi = RC[ i ];
+     if( Ci )
+      RCi /= Ci;
+     auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
+     if( ( xi->get_value() > feps ) && ( RCi < - ceps ) )
+      return( false );
+     }
    }
   }
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
+  Index i = 0;
 
-  for( Index i = 0 ; i < SN.size() ; ++i ) {
+  // static part
+  for(  ; i < get_NStaticArcs() ; ++i ) {
    c_CNumber Ci = get_C( i );
-   CNumber RCi = get_rc( i );
+   CNumber RCi = RC[ i ];
    if( Ci != 0 )
     RCi /= C[ i ];
 
@@ -776,6 +976,30 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
     if( ( ( xi > sfeps ) && ( RCi < - ceps ) ) ||
 	( ( Ui - xi > sfeps ) && ( RCi > ceps ) ) )
      return( false );
+    }
+   }
+
+  // dynamic part
+  if( HasDynamicX() ) {
+   auto dxi = dx.begin();
+   for(  ; i < get_NArcs() ; ++i ) {
+    c_FNumber xi = (*(dxi++)).get_value();
+    c_CNumber Ci = get_C( i );
+    CNumber RCi = RC[ i ];
+    if( Ci != 0 )
+     RCi /= C[ i ];
+
+    c_FNumber Ui = get_U( i );
+    if( Ui >= Inf<FNumber>() ) {
+     if( ( xi > feps ) && ( RCi < - ceps ) )
+      return( false );
+     }
+    else {
+     c_FNumber sfeps = ( Ui == 0 ? feps : feps * Ui );
+     if( ( ( xi > sfeps ) && ( RCi < - ceps ) ) ||
+	 ( ( Ui - xi > sfeps ) && ( RCi > ceps ) ) )
+      return( false );
+     }
     }
    }
   }
@@ -870,7 +1094,11 @@ Block * MCFBlock::get_R3_Block( Configuration *r3bc )
 
  auto MCFB = new MCFBlock();
 
- MCFB->load( get_NNodes() , EN , SN , U , C , B );
+ MCFB->load( get_NNodes() , EN , SN , U , C , B ,
+	     get_NNodes() - get_NStaticNodes() ,
+	     get_NArcs() - get_NStaticArcs() ,
+	     get_MaxNNodes() - get_NStaticNodes() ,
+	     get_MaxNArcs() - get_NStaticArcs() );
  
  return( MCFB );
 
@@ -881,6 +1109,9 @@ Block * MCFBlock::get_R3_Block( Configuration *r3bc )
 void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
 				               Configuration *solc )
 {
+ // process Configuration - - - - - - - - - - - - - - - - - - - - - - - - - -
+ // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
  auto MCFB = dynamic_cast<MCFBlock *>( R3B );
  if( ! MCFB )
   throw( std::invalid_argument( "R3B is not a MCFBlock" ) );
@@ -896,41 +1127,122 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
  if( tsolc )
   wsol = tsolc->f_value;
 
- if( wsol != 2 ) {  // map back primal solution
-  if( MCFB->get_NArcs() != get_NArcs() )
-   throw( std::invalid_argument( "incompatible flow size" ) );
+ // if required, map back primal solution - - - - - - - - - - - - - - - - - -
+ // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  for( Index i = 0 ; i < get_NArcs() ; ++i )
-   if( ! x[ i ].is_fixed() )
-    x[ i ].set_value( MCFB->x[ i ].get_value() );
+ if( wsol != 2 ) {
+  if( MCFB->get_NStaticArcs() != get_NStaticArcs() )
+   throw( std::invalid_argument( "incompatible static flow size" ) );
+
+  // static part
+  if( HasStaticX() )
+   for( auto xi = x.begin() , r3bxi = MCFB->x.begin() ; xi != x.end() ;
+	++xi , ++r4bxi )
+    if( ! xi->is_fixed() )
+     xi->set_value( r3bxi->get_value() );
+ 
+  // dynamic part
+  // note that if MCFB->dx is longer than this->dx the last part is
+  // ignored, while if the converse happens it is filled with zeros
+  if( HasDynamicX() ) {
+   auto dxi = dx.begin();
+   for( auto r3bdxi = MCFB->dx.begin() ;
+	( dxi != dx.end() ) && ( r3bdxi != MCFB->dx.end() ) ;
+	++dxi , ++r3bdxi )
+    if( ! dxi->is_fixed() )
+     dxi->set_value( r3bdxi->get_value() );
+
+   for( ; dxi != dx.end() ; ++dxi )
+    if( ! dxi->is_fixed() )
+     dxi->set_value();
+   }
   }
 
- if( wsol != 2 )    // map back dual solution
-  if( E.size() ) {  // ... if there is any
-   if( MCFB->get_NArcs() != get_NArcs() )
-    throw( std::invalid_argument( "incompatible flow size" ) );
-   if( MCFB->get_NNodes() != get_NNodes() )
-    throw( std::invalid_argument( "incompatible potential size" ) );
+ // if required, map back dual solution - - - - - - - - - - - - - - - - - - -
+ // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-   for( Index i = 0 ; i < get_NNodes() ; ++i )
-    E[ i ].set_dual( MCFB->E[ i ].get_dual() );
+ if( ( wsol != 2 ) && ( E.size() || dE.size() ) ) {  // ... if there is any
 
-   if( get_static_constraints().size() > 1 ) {
-    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					    & get_static_constraints()[ 1 ] );
-    assert( lbc );
-    for( Index i = 0 ; i < get_NArcs() ; ++i )
-     (**lbc)[ i ].set_dual( MCFB->get_rc( i ) );
+  // map back the potentials- - - - - - - - - - - - - - - - - - - - - - - - -
+
+  if( MCFB->get_NStaticNodes() != get_NStaticNodes() )
+   throw( std::invalid_argument( "incompatible static potential size" ) );
+
+  // static part
+  if( HasStaticE() )
+   for( auto ei = E.begin() , r3bei = MCFB->E.begin() ; ei != E.end() ; )
+    (ei++)->set_dual( (r3bei++)->get_dual() );
+ 
+  // dynamic part
+  // note that if MCFB->dE is longer than this->dE the last part is
+  // ignored, while if the converse happens it is filled with zeros
+  if( HasDynamicE() ) {
+   auto dei = de.begin();
+
+   for( auto r3bdei = MCFB->dE.begin() ;
+	( dei != dE.end() ) && ( r3bdei != MCFB->dE.end() ) ; )
+    (dei++)->set_dual( (r3bdei++)->get_dual() );
+ 
+   while( dei != dE.end() )
+    (dei++)->set_dual( 0 );
+   }
+
+  // map back the reduced costs - - - - - - - - - - - - - - - - - - - - - - -
+
+  if( MCFB->get_NStaticArcs() != get_NStaticArcs() )
+   throw( std::invalid_argument( "incompatible static reduced cost size" ) );
+
+  // static part
+  if( HasStaticX() && ( ! get_static_constraints().empty() ) ) {
+   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
+					 & get_static_constraints().back() );
+   if( lbc ) {
+    auto r3blbc = boost::any_cast<std::vector<LB0Constraint> *>(
+				   & MCFB->get_static_constraints().back() );
+    if( r3blbc ) {
+     auto drci = (*lbc)->begin();
+     for( auto r3bdrci = (*r3lbc)->begin() ; drci != (*lbc)->end() ; )
+      (drci++)->set_dual( (r3bdrci++)->get_dual() );
+      }
+    else
+     for( auto & cnst : **lbc )
+      cnst.set_dual( 0 );
     }
    }
 
-}  // end( MCFBlock::map_back_solution )
+  // dynamic part
+  if( HasDynamicX() && ( ! get_dynamic_constraints().empty() ) ) {
+   auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
+					 & get_dynamic_constraints().back() );
+   if( lbc ) {
+    auto r3blbc = boost::any_cast<std::list<LB0Constraint> *>(
+				   & MCFB->get_dynamic_constraints().back() );
+    if( r3blbc ) {
+     auto drci = (*lbc)->begin();
+     for( auto r3bdrci = (*r3lbc)->begin() ;
+	  ( drci != (*lbc)->end() ) && ( r3bdrci != (*r3lbc)->end() ) ;
+	++drci , ++r3bdrci )
+      drci->set_dual( r3bdrci->get_dual() );
+ 
+     while( drci != (*lbc)->end() )
+      (drci++)->set_dual( 0 );
+     }
+    else
+     for( auto & cnst : **lbc )
+      cnst.set_dual( 0 );
+    }
+   }
+  }
+ }  // end( MCFBlock::map_back_solution )
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
 				                  Configuration *solc )
 {
+ // process Configuration - - - - - - - - - - - - - - - - - - - - - - - - - -
+ // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
  auto MCFB = dynamic_cast<MCFBlock *>( R3B );
  if( ! MCFB )
   throw( std::invalid_argument( "R3B is not a MCFBlock" ) );
@@ -946,34 +1258,112 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  if( tsolc )
   wsol = tsolc->f_value;
 
- if( wsol != 2 ) {  // map forward primal solution
-  if( MCFB->get_NArcs() != get_NArcs() )
-   throw( std::invalid_argument( "incompatible flow size" ) );
+ // if required, map forward primal solution- - - - - - - - - - - - - - - - -
+ // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  for( Index i = 0 ; i < get_NArcs() ; ++i )
-   if( ! MCFB->x[ i ].is_fixed() )
-    MCFB->x[ i ].set_value( x[ i ].get_value() );
+ if( wsol != 2 ) {
+  if( MCFB->get_NStaticArcs() != get_NStaticArcs() )
+   throw( std::invalid_argument( "incompatible static flow size" ) );
+
+  // static part
+  if( MCFB->HasStaticX() )
+   for( auto xi = x.begin() , r3bxi = MCFB->x.begin() ; xi != x.end() ;
+	++xi , ++r4bxi )
+    if( ! r3bxi->is_fixed() )
+     r3bxi->set_value( xi->get_value() );
+ 
+  // dynamic part
+  // note that if this->dx is longer than MCFB->dx the last part is
+  // ignored, while if the converse happens it is filled with zeros
+  if( MCFB->HasDynamicX() ) {
+   auto r3bdxi = MCFB->dx.begin();
+   for( auto dxi = dx.begin();
+	( dxi != dx.end() ) && ( r3bdxi != MCFB->dx.end() ) ;
+	++dxi , ++r3bdxi )
+    if( ! r3bdxi->is_fixed() )
+     r3bdxi->set_value( dxi->get_value() );
+
+   for( ; r3bdxi !=  MCFB->dx.end() ; ++r3bdxi )
+    if( ! r3bdxi->is_fixed() )
+     r3bdxi->set_value();
+   }
   }
 
- if( wsol != 2 )          // map forward dual solution
-  if( MCFB->E.size() ) {  // ... if there is any
-   if( MCFB->get_NArcs() != get_NArcs() )
-    throw( std::invalid_argument( "incompatible flow size" ) );
-   if( MCFB->get_NNodes() != get_NNodes() )
-    throw( std::invalid_argument( "incompatible potential size" ) );
+ // if required, map forward dual solution- - - - - - - - - - - - - - - - - -
+ // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-   for( Index i = 0 ; i < get_NNodes() ; ++i )
-    MCFB->E[ i ].set_dual( E[ i ].get_dual() );
+ if( ( wsol != 2 ) && ( E.size() || dE.size() ) ) {  // ... if there is any
 
-   if( get_static_constraints().size() > 1 ) {
+  // map forward the potentials - - - - - - - - - - - - - - - - - - - - - - -
+
+  if( MCFB->get_NStaticNodes() != get_NStaticNodes() )
+   throw( std::invalid_argument( "incompatible static potential size" ) );
+
+  // static part
+  if( MCFB->HasStaticE() )
+   for( auto ei = E.begin() , r3bei = MCFB->E.begin() ; ei != E.end() ; )
+    (r3bei++)->set_dual( (ei++)->get_dual() );
+ 
+  // dynamic part
+  // note that if this->dE is longer than MCFB->dE the last part is
+  // ignored, while if the converse happens it is filled with zeros
+  if( MCFB->HasDynamicE() ) {
+   auto dei = de.begin();
+
+   for( auto r3bdei = MCFB->dE.begin() ;
+	( dei != dE.end() ) && ( r3bdei != MCFB->dE.end() ) ; )
+    (dei++)->set_dual( (r3bdei++)->get_dual() );
+ 
+   while( dei != dE.end() )
+    (dei++)->set_dual( 0 );
+   }
+
+  // map forward the reduced costs- - - - - - - - - - - - - - - - - - - - - -
+
+  if( MCFB->get_NStaticArcs() != get_NStaticArcs() )
+   throw( std::invalid_argument( "incompatible static reduced cost size" ) );
+
+  // static part
+  if( MCFB->HasStaticX() && ( ! MCFB->get_static_constraints().empty() ) ) {
+   auto r3blbc = boost::any_cast<std::vector<LB0Constraint> *>(
+				   & MCFB->get_static_constraints().back() );
+   if( r3blbc ) {
     auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					   & get_static_constraints()[ 1 ] );
-    assert( lbc );
-    for( Index i = 0 ; i < get_NArcs() ; ++i )
-     MCFB->set_rc( (**lbc)[ i ].get_dual() , i );
+				         & get_static_constraints().back() );
+    if( lbc ) {
+     auto drci = (*lbc)->begin();
+     for( auto r3bdrci = (*r3lbc)->begin() ; drci != (*lbc)->end() ; )
+      (r3bdrci++)->set_dual( (drci++)->get_dual() );
+      }
+    else
+     for( auto & cnst : **r3blbc )
+      cnst.set_dual( 0 );
     }
    }
 
+  // dynamic part
+  if( MCFB->HasDynamicX() && ( ! MCFB->get_dynamic_constraints().empty() ) ) {
+   auto r3blbc = boost::any_cast<std::list<LB0Constraint> *>(
+				   & MCFB->get_dynamic_constraints().back() );
+   if( r3blbc ) {
+    auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
+				         & get_dynamic_constraints().back() );
+    if( lbc ) {
+     auto r3bdrci = (*r3lbc)->begin();
+
+     for( auto drci = (*lbc)->begin() ;
+	  ( drci != (*lbc)->end() ) && ( r3bdrci != (*r3lbc)->end() ) ; )
+      (r3bdrci++)->set_dual( (drci++)->get_dual() );
+ 
+     while( r3bdrci != (*r3blbc)->end() )
+      (r3bdrci++)->set_dual( 0 );
+     }
+    else
+     for( auto & cnst : **r3blbc )
+      cnst.set_dual( 0 );
+    }
+   }
+  }
  }  // end( MCFBlock::map_forward_solution )
 
 /*--------------------------------------------------------------------------*/
@@ -1416,10 +1806,27 @@ void MCFBlock::serialize( netCDF::NcGroup && group ) const
  netCDF::NcDim nn = group.addDim( "NNodes" , get_NNodes() );
  netCDF::NcDim na = group.addDim( "NArcs" , get_NArcs() );
 
+ if( get_NNodes() > get_NStaticNodes() )
+  group.addDim( "DynNNodes" , get_NNodes() - get_NStaticNodes() );
+
+ if( get_NArcs() > get_NStaticNArcs() )
+  group.addDim( "DynNArcs" , get_NArcs() - get_NStaticNArcs() );
+
+ if( get_MaxNNodes() > get_NStaticNodes() )
+  group.addDim( "MaxDynNNodes" , get_MaxNNodes() - get_NStaticNodes() );
+
+ if( get_MaxNArcs() > get_NStaticNArcs() )
+  group.addDim( "MaxDynNArcs" , get_MaxNArcs() - get_NStaticNArcs() );
+ 
  std::vector<size_t> startp = { 0 };
  std::vector<size_t> countpa = { get_NArcs() };
  std::vector<size_t> countpn = { get_NNodes() };
 
+ ( group.addVar( "SN" , netCDF::NcUint64() , na ) ).putVar( startp , countpa ,
+							    SN.data() );
+
+ ( group.addVar( "EN" , netCDF::NcUint64() , na ) ).putVar( startp , countpa ,
+							    EN.data() );
  if( C.size() )
   ( group.addVar( "C" , netCDF::NcDouble() , na ) ).putVar( startp , countpa ,
 							    C.data() );
@@ -1429,13 +1836,6 @@ void MCFBlock::serialize( netCDF::NcGroup && group ) const
  if( B.size() )
   ( group.addVar( "B" , netCDF::NcDouble() , nn ) ).putVar( startp , countpn ,
 							    B.data() );
-
- ( group.addVar( "SN" , netCDF::NcUint64() , na ) ).putVar( startp , countpa ,
-							    SN.data() );
-
- ( group.addVar( "EN" , netCDF::NcUint64() , na ) ).putVar( startp , countpa ,
-							    EN.data() );
-
  }  // end( MCFBlock::serialize )
 
 /*--------------------------------------------------------------------------*/
@@ -2463,19 +2863,40 @@ void MCFBlock::print( std::ostream &output ) const
 
 inline MCFBlock::Index MCFBlock::p2i( Variable * const var )
 {
- return( std::distance( x.data() , static_cast< ColVariable * const >( var ) )
-	 );
+ auto i = std::distance( x.data() , static_cast< ColVariable * const >( var )
+			 );
+ if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
+  return( i );
+
+ i = get_NStaticArcs();
+ for( auto dxi = dx.begin() ; ; ++i , ++dx )
+  if( *dx == static_cast< ColVariable * >( var ) )
+   return( i );
+ }
+
+/*--------------------------------------------------------------------------*/
+
+inline Variable * MCFBlock::i2p( c_Index i )
+{
+ if( i < get_NStaticArcs() )
+  return( &x[ i ] );
+ else
+  return( &( *std::next( dx.begin() , i ) ) );
  }
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::guts_of_destructor( void )
 {
- /* clear all Constraint to ensure that they do not make any reference to
-    no-longer-existing Variable while they are destroyed. */
+ /* clear() all Constraint to ensure that they do not bother to un-register
+    themselves from Variable that are going to be deleted anyway. Then
+    deletes all the "abstract representation", if any. */
 
  assert( ( get_static_constraints().size() == 0 ) ||
 	 ( get_static_constraints().size() == 2 ) );
+
+ assert( ( get_dynamic_constraints().size() == 0 ) ||
+	 ( get_dynamic_constraints().size() == 2 ) );
 
  if( get_static_constraints().size() > 1 ) { // delete LB0 constraints, if any
   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
@@ -2486,20 +2907,41 @@ void MCFBlock::guts_of_destructor( void )
   delete *lbc;                // then delete them
   }
 
- for( Index i = E.size() ; i-- ; )
-  E[ i ].clear();
+ if( get_dynamic_constraints().size() > 1 ) { // delete LB0 constraints, if any
+  auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
+					   & get_dynamic_constraints()[ 1 ] );
+  assert( lbc );
+  for( auto & cnst : **lbc )  // first clear all the Constraint
+   cnst.clear();
+  delete *lbc;                // then delete them
+  }
 
+ // clear the flow conservation constraints
+ for( auto & cnst : E )
+  cnst.clear();
+ for( auto & cnst : dE )
+  cnst.clear();
+
+ // then delete them all
  E.clear();
+ dE.clear();
 
  // clear the objective function
  c.clear();
 
- // explicitly clear static Constraint and Variable
+ // delete all Variable
+ x.clear();
+ dx.clear();
+
+ // explicitly reset all Constraint and Variable
+ // this is done for the case where this method is called prior to re-loading
+ // a new instance: if not, the new representation would be added to the
+ // (no longer 
  reset_static_constraints();
  reset_static_variables();
+ reset_dynamic_constraints();
+ reset_dynamic_variables();
  reset_objective();
-
- x.clear();
 
  }  // end( MCFBlock::guts_of_destructor )
 

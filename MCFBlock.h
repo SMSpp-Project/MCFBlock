@@ -429,31 +429,60 @@ public:
 			   Block *father = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
+ /// generate the abstract variables of the MCF
+ /** Method that generates the abstract Variable of the MCF. These are:
+  *
+  * - if ms = get_NStaticArcs() > 0, a std::vector< ColVariable > with
+  *   exactly ms entries, the entry a = 0, ...,  ms - 1 corresponding to the
+  *   flow on arc a, i.e., ( SN[ a ] , EN[ a ] );
+  *
+  * - if md = get_NArcs() - get_NStaticArcs() > 0, a std::list< ColVariable >
+  *   with exactly md entries, the entry h = 0, ...,  md - 1 corresponding to
+  *   the flow on arc a = ms + h, i.e., ( SN[ ms + h ] , EN[ ms + h ] ).
+  *
+  * Note that the dynamic Variable are actually created if get_MaxNArcs() >
+  * get_NStaticArcs(), which may mean that the list can be empty when it is
+  * created (if get_MaxNArcs() > get_NArcs() = get_NStaticArcs()); this is
+  * done because new dynamic arcs can be created any time, and the list of
+  * dynamic Variable is there ready for when this happens. */
 
  virtual void generate_abstract_variables( Configuration *stvv = nullptr )
   override final;
 
- /// generate the abstract variables of the MCF
- /** Method that generates the abstract variables of the MCF. These are the a
-  * std::vector< ColVariable > with exactly m entries, the entry a = 0, ...,
-  *  m - 1 corresponding to the flow on arc ( SN[ a ] , EN[ a ] ). */
-
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the static constraint of the MCF
- /** Method that generates the static constraint of the MCF. These are the:
+ /** Method that generates the abstract constraint of the MCF. These are:
   *
-  * - the flow conservation equations, a std::vector<FRowConstraint> with
-  *   exactly n entries, the entry i = 0, ..., n - 1 being the flow
-  *   conservation of the node i;
+  * - if ns = get_NStaticNodes() > 0, a std::vector< FRowConstraint > with
+  *   exactly ns entries, the entry i = 0, ..., ns - 1 being the flow
+  *   conservation equation of the node i;
   *
-  * - the bound constraints, a std::vector<LB0Constraint> with exactly m
-  *   entries, the entry a = 0, ..., m - 1 being the bound constraints of
-  *   the ColVariable x[ a ] corresponding to the flow on arc
-  *   ( SN[ a ] , EN[ a ] ).
+  * - if nd = get_NNodes() - get_NStaticNodes() > 0, a
+  *   std::list< FRowConstraint > with exactly nd entries, the entry
+  *   h = 0 , ...,  nd - 1 being the flow conservation equation of the node
+  *   i = ns + h;
   *
-  * The latter OneVarConstraint have fixed 0 LHS and a generic RHS, which can
-  * be Inf<Fnumber>(). If *all* the RHS are +Infty, it is possible to skip
-  * the std::vector<LB0Constraint> entirely and just use the fact that the
+  * - if ms = get_NStaticArcs() > 0, a std::vector< LB0Constraint > with
+  *   exactly ms entries, the entry a = 0, ..., ms - 1 being the bound
+  *   constraints of the ColVariable x[ a ] corresponding to the flow on arc
+  *   ( SN[ a ] , EN[ a ] );
+  *
+  * - if md = get_NArcs() - get_NStaticArcs() > 0, a
+  *   std::list< LB0Constraint > with exactly md entries, the entry
+  *   h = 0, ...,  md - 1  being the bound constraints of the ColVariable
+  *   dx[ h ] corresponding to the flow on arc a = ms + h, i.e.,
+  *   ( SN[ ms + h ] , EN[ ms + h ] ).
+  *
+  * Note that the dynamic flow conservation constraints are actually created
+  * if get_MaxNNodes() > get_NStaticNodes(), which may mean that the list can
+  * be empty when it is created (if get_MaxNNodes() > get_NNodes() 
+  * get_NStaticNodes()); this is done because new dynamic nodes can be created
+  * any time, and the list of dynamic Constraint is there ready for when this
+  * happens.
+  *
+  * Regarding the bound constraints, these have fixed 0 LHS and a generic RHS,
+  * which can be Inf<Fnumber>(). If *all* the RHS are +Infty, it is possible
+  * to avoid creating the LB0Constraint entirely and just use the fact that the
   * ColVariable can be defined to be non-negative. The parameter stcc is used
   * to decide if this is done: if
   *
@@ -469,9 +498,21 @@ public:
   *
   * the bound constraints are not implemented. Note that this *makes it
   * impossible to change any RHS*; the lower bound of 0 should not be changed
-  * anyway, and there is no upper bound to be changed.
+  * anyway, and there is no upper bound to be changed. This is done
+  * consistently for the dynamic and static part, i.e., either both of them
+  * are created, or none is. Actually, each part is only created if the
+  * corresponding set of static/dynamic Variable exists; yet, note that the
+  * dynamic Variable are actually created if get_MaxNArcs() >
+  * get_NStaticArcs(), and thus the same is done for their dynamic bound
+  * constraints (if they are created at all). This may mean that the list can
+  * be empty when it is created (if get_MaxNArcs() > get_NArcs() =
+  * get_NStaticArcs()); this is done because new dynamic arcs can be created
+  * any time, and the list of dynamic bound Constraint is there ready for when
+  * this happens.
   *
-  * Note that changing *all* the other parts of any of the FRowConstraint,
+  * Note that it is only allowed to change the bounds of the LB0Constraint
+  * (if any) and both bounds of the FRowConstraint (at the same time, and to
+  * the same value): changing *any* the parts of any of the FRowConstraint,
   * such as the coefficients of the LinearFunction inside, is not allowed:
   * the MCFBlock will throw exception while processing the corresponding
   * "abstract" Modification. */
@@ -956,7 +997,10 @@ public:
   if( arc >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
-  return( x[ arc ].get_value() );
+  if( arc < get_NStaticArcs() )
+   return( x[ arc ].get_value() );
+  else
+   return( std::next( dx.begin() , arc - get_NStaticArcs() )->get_value() );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -987,12 +1031,16 @@ public:
   * and get_EN() report node "names" between 1 and get_NNodes(). */
 
  CNumber get_pi( c_Index nde ) {
-  if( ! E.size() )
-   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
   if( nde >= get_NNodes() )
    throw( std::invalid_argument( "invalid node name" ) );
-   
-  return( E[ nde ].get_dual() );
+
+  if( ( ! E.size() ) && ( ! dE.size() ) )
+   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
+
+  if( nde < get_NStaticNodes() )
+   return( E[ nde ].get_dual() );
+  else
+   return( std::next( dE.begin() , nde - get_NStaticNodes() )->get_dual() );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1040,7 +1088,10 @@ public:
   if( arc >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
-  x[ arc ].set_value( FSol );
+  if( arc < get_NStaticArcs() )
+   x[ arc ].set_value( FSol );
+  else
+   std::next( dx.begin() , arc - get_NStaticArcs() )->set_value( FSol );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1564,23 +1615,26 @@ public:
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
 /*--------------------------------------------------------------------------*/
 
- Index NNodes;                        ///< the current number of nodes
- Index NArcs;                         ///< the current number of arcs
- Index MaxNNodes;                     ///< the maximum number of nodes
- Index NStaticNodes;                  ///< the number of static nodes
- Index NStaticArcs;                   ///< the number of static arcs
+ Index NNodes;                   ///< the current number of nodes
+ Index NArcs;                    ///< the current number of arcs
+ Index MaxNNodes;                ///< the maximum number of nodes
+ Index NStaticNodes;             ///< the number of static nodes
+ Index NStaticArcs;              ///< the number of static arcs
  
- Vec_Index SN;                        ///< vector of arc starting nodes
- Vec_Index EN;                        ///< vector of arc ending nodes
+ Vec_Index SN;                   ///< vector of arc starting nodes
+ Vec_Index EN;                   ///< vector of arc ending nodes
 
- Vec_CNumber C;                       ///< vector of arc costs
- Vec_FNumber U;                       ///< vector of arc upper capacities
- Vec_FNumber B;                       ///< vector of node deficits
+ Vec_CNumber C;                  ///< vector of arc costs
+ Vec_FNumber U;                  ///< vector of arc upper capacities
+ Vec_FNumber B;                  ///< vector of node deficits
 
- std::vector<ColVariable> x;          ///< the flow variables
- std::vector<FRowConstraint> E;       ///< the flow conservation constraints
+ std::vector<ColVariable> x;     ///< the static flow variables
+ std::vector<FRowConstraint> E;  ///< the static flow conservation constrs.
 
- FRealObjective c;                    ///< the (linear) objective function
+ std::list<ColVariable> dx;      ///< the dynamic flow variables
+ std::list<FRowConstraint> dE;   ///< the dynamic flow conservation constrs.
+
+ FRealObjective c;               ///< the (linear) objective function
 
 /*--------------------------------------------------------------------------*/
 /*--------------------- PRIVATE PART OF THE CLASS --------------------------*/
@@ -1592,7 +1646,21 @@ public:
 /*-------------------------- PRIVATE METHODS -------------------------------*/
 /*--------------------------------------------------------------------------*/
 
+ bool HasStaticX( void ) { return( get_NStaticArcs() ); }
+
+ bool HasDynamicX( void ) { return( get_NArcs() > get_NStaticArcs() ); }
+
+ bool MayHaveDynX( void ) { return( get_MaxNArcs() > get_NStaticArcs() ); }
+
+ bool HasStaticE( void ) { return( get_NStaticNodes() ); }
+
+ bool HasDynamicE( void ) { return( get_NNodes() > get_NStaticNodes() ); }
+
+ bool MayHaveDynE( void ) { return( get_MaxNNodes() > get_NStaticNodes() ); }
+
  inline Index p2i( Variable * const var );
+
+ inline Variable * i2p( c_Index i );
 
  void guts_of_destructor( void );
 
