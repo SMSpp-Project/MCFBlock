@@ -90,6 +90,52 @@ static MCFBlock::FNumber read_UB( std::istream & iStrm )
  }
 
 /*--------------------------------------------------------------------------*/
+// returns the number of elements where two vectors differ
+template< typename T >
+static inline MCFBlock::Index countdiff( std::vector<T>:const_iterator beg ,
+					 std::vector<T>:const_iterator end ,
+					 std::vector<T>:const_iterator cmp )
+{
+ MCFBlock::Index ndiff = 0;
+ for( ; beg != end ; )
+  if( *(beg++) != *(cmp++) )
+   ndiff++;
+
+ return( ndiff );
+ }
+
+/*--------------------------------------------------------------------------*/
+// returns the number of elements where two vectors differ, one of them
+// being given as a base vector and a subset of indices
+template< typename T >
+static inline MCFBlock::Index countdiff( std::vector<T> & vec ,
+					 MCFBlock::c_Vec_Index & nms ,
+					 std::vector<T>:const_iterator cmp ,
+					 MCFBlock::c_Index n_max )
+{
+ MCFBlock::Index ndiff = 0;
+ for( auto beg = nms.begin() ; beg != nms.end() ; ) {
+  if( nms[ *beg ] >= n_max )
+   throw( std::invalid_argument( "invalid name in nms" ) );
+  if( vec[ *(beg++) ] != *(cmp++) )
+   ndiff++;
+  }
+
+ return( ndiff );
+ }
+
+/*--------------------------------------------------------------------------*/
+// copys one vector to a given subset of another
+template< typename T >
+static inline MCFBlock::Index copyidx( std::vector<T> & vec ,
+				       MCFBlock::c_Vec_Index & nms ,
+				       std::vector<T>:const_iterator cpy )
+{
+ for( auto nit = nms.begin() ; nit < nms.end() ; )
+  vec[ *(nit++) ] = *(cpy++);
+ }
+
+/*--------------------------------------------------------------------------*/
 /*----------------------------- STATIC MEMBERS -----------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -137,17 +183,24 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
 
  SN.resize( MaxNArcs , 0 );
  std::copy( pSn.begin() , pSn.end() , SN.begin() );
+
  EN.resize( get_MaxNArcs() , 0 );
  std::copy( pEn.begin() , pEn.end() , EN.begin() );
- if( ~ pC.empty() ) {
+
+ if( std::any_of( pC.begin() , pC.end() ,
+		  []( c_CNumber ci ) { return( ci != 0 ); } ) ) {
   C.resize( get_MaxNArcs() , 0 );
   std::copy( pC.begin() , pC.end() , C.begin() );
   }
- if( ~ pU.empty() ) {
+
+ if( std::any_of( pU.begin() , pU.end() ,
+		  []( c_FNumber ui ) { return( ui < Inf<FNumber>() ); } ) ) {
   U.resize( get_MaxNArcs() , Inf<FNumber>() );
   std::copy( pU.begin() , pU.end() , U.begin() );
   }
- if( ~ pB.empty() ) {
+
+ if( std::any_of( pB.begin() , pB.end() ,
+		  []( c_FNumber bi ) { return( bi != 0 ); } ) ) {
   B.resize( get_MaxNNodes() , 0 );
   std::copy( pB.begin() , pB.end() , B.begin() );
   }
@@ -196,15 +249,12 @@ void MCFBlock::load( std::istream &input )
 
  SN.resize( NArcs );
  EN.resize( NArcs );
- C.resize( NArcs );
- U.resize( NArcs );
- B.resize( NNodes );
+ C.resize( NArcs , 0 );
+ U.resize( NArcs , Inf<FNumber>() );
+ B.resize( NNodes , 0 );
 
  NStaticNodes = MaxNNodes = NNodes;
  NStaticArcs = NArcs;
-
- for( auto & el : B )  // all deficits are 0
-  el = 0;              // unless otherwise stated
 
  // read problem data - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -280,25 +330,16 @@ void MCFBlock::load( std::istream &input )
 
  // simplify out the deta structures- - - - - - - - - - - - - - - - - - - - -
 
- bool reduce = true;
- for( auto cost : C )
-  if( cost ) { reduce = false; break; }
-
- if( reduce )
+ if( std::all_of( C.begin() , C.end() ,
+		  []( c_CNumber ci ) { return( ci == 0 ); } ) )
   C.clear();
 
- reduce = true;
- for( auto dfct : B )
-  if( dfct ) { reduce = false; break; }
-
- if( reduce )
+ if( std::all_of( B.begin() , B.end() ,
+		  []( c_FNumber bi ) { return( bi == 0 ); } ) )
   B.clear();
 
- reduce = true;
- for( auto cap : U )
-  if( cap < Inf<FNumber>() ) { reduce = false; break; }
-
- if( reduce )
+ if( std::all_of( U.begin() , U.end() ,
+		  []( c_FNumber ui ) { return( ui == Inf<FNumber>() ); } ) )
   U.clear();
  
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -323,7 +364,6 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
   guts_of_destructor();
 		   
  // read problem data- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
 
  netCDF::NcDim nn = group.getDim( "NNodes" );
  if( nn.isNull() )
@@ -355,21 +395,22 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
 
  MaxNNodes = NNodes;
  netCDF::NcDim mdn = group.getDim( "MaxDynNNodes" );
- if( ! mdn.isNull() )
-  if( mdn.getSize() > DynNNodes )
-   MaxNNodes += mdn.getSize() - DynNNodes;
+ if( ( ! mdn.isNull() ) && ( mdn.getSize() > DynNNodes ) )
+  MaxNNodes += mdn.getSize() - DynNNodes;
 
  Index MaxNArcs = NArcs;
  netCDF::NcDim mdm = group.getDim( "MaxDynNArcs" );
- if( ! mdm.isNull() )
-  if( mdm.getSize() > DynNArcs )
-   MaxNNodes += mdm.getSize() - DynNArcs;
+ if( ( ! mdm.isNull() ) && ( mdm.getSize() > DynNArcs ) )
+  MaxNNodes += mdm.getSize() - DynNArcs;
  
  netCDF::NcVar sn = group.getVar( "SN" );
  if( sn.isNull() )
   throw( std::logic_error( "Starting Nodes not found" ) );
 
  SN.resize( MaxNArcs );
+
+ std::vector<size_t> start = { 0 };
+ std::vector<size_t> counta = { NArcs };
  sn.getVar( start , counta , SN.data() );
 
  netCDF::NcVar en = group.getVar( "EN" );
@@ -379,26 +420,32 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
  EN.resize( MaxNArcs );
  en.getVar( start , counta , EN.data() );
 
- std::vector<size_t> start = { 0 };
- std::vector<size_t> counta = { NArcs };
- std::vector<size_t> countn = { NNodes };
-
  netCDF::NcVar cst = group.getVar( "C" );
  if( ! cst.isNull() ) {
-  C.resize( MaxNArcs );
+  C.resize( MaxNArcs , 0 );
   cst.getVar( start , counta , C.data() );
+  if( std::all_of( C.begin() , C.begin() + NArcs ,
+		   []( c_CNumber ci ) { return( ci == 0 ); } ) )
+   C.clear();
   }
 
  netCDF::NcVar cap = group.getVar( "U" );
  if( ! cap.isNull() ) {
-  U.resize( MaxNArcs );
+  U.resize( MaxNArcs , Inf<FNumber>() );
   cap.getVar( start , counta , U.data() );
+  if( std::all_of( U.begin() , U.begin() + NArcs ,
+		   []( c_FNumber ui ) { return( ui == Inf<FNumber>() ); } ) )
+   U.clear();
   }
 
  netCDF::NcVar dfc = group.getVar( "B" );
  if( ! dfc.isNull() ) {
-  B.resize( MaxNNodes );
+  B.resize( MaxNNodes , 0 );
+  std::vector<size_t> countn = { NNodes };
   dfc.getVar( start , countn , B.data() );
+  if( std::all_of( B.begin() , B.begin() + NNodes ,
+		   []( c_FNumber bi ) { return( bi == 0 ); } ) )
+   B.clear();
   }
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -417,10 +464,8 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
 
 void MCFBlock::generate_abstract_variables( Configuration *stvv )
 {
- if( ( ! x.empty() ) || ( ! dx.empty() ) )  // the variables are there already
-  return;                                   // nothing to do
-
- assert( x.size() == 0 );       // this should only happen once
+ if( x.size() || dx.size() )  // the variables are there already
+  return;                     // nothing to do
 
  if( HasStaticX() ) {
   x.resize( get_NStaticArcs() );
@@ -476,12 +521,13 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   }
 
  // construct the vector of coefficients, dynamic phase
- for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi ) {
-  coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
+ if( MayHaveDynX() )
+  for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi ) {
+   coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
                                     std::make_pair( &(*dxi) , double( -1 ) );
-  coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
+   coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
                                     std::make_pair( &(*dxi) , double( 1 ) );
-  }
+   }
 
  // generate the node-arc incidence matrix- - - - - - - - - - - - - - - - - -
  // each constraint is an equality, i.e., LHS = RHS = B[ i ]
@@ -492,8 +538,9 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 
   for( Index i = 0 ; i < get_NStaticNodes() ; ++i ) {
    E[ i ].set_both( B.size() ? B[ i ] : 0 );
-   E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) ,
-					   0 , true ) );
+   // note that the pairs are not ordered if there is a dynamic part
+   E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) , 0 ,
+					    ! HasDynamicX() ) );
    E[ i ].set_Block( this );  // this is done last ==> no Modification
    }
 
@@ -507,8 +554,9 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   Index i = get_NStaticNodes();
   for( auto & cnst : dE ) {
    cnst.set_both( B.size() ? B[ i ] : 0 );
-   cnst.set_function( new LinearFunction( std::move( coeffs[ i++ ] ) ,
-					  0 , true ) );
+   // note that the pairs are not ordered since there is a dynamic part
+   cnst.set_function( new LinearFunction( std::move( coeffs[ i++ ] ) , 0 ,
+					  false ) );
    cnst.set_Block( this );  // this is done last ==> no Modification
    }
 
@@ -519,7 +567,7 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
  // if upper bounds are not there, the LB0Constraint can be skipped entirely
  // if the Configuration agrees
 
- if( U.size() == 0 ) {
+ if( U.empty() ) {
   auto tstcc = dynamic_cast<SimpleConfiguration<int> *>( stcc );
 
   if( ( ! tstcc ) && f_BlockConfig &&
@@ -532,29 +580,29 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 
  // static part
  if( HasStaticX() ) {
-  auto LU = new std::vector<LB0Constraint>( get_NStaticArcs() );
+  UB.resize( get_NStaticArcs() );
   for( Index i = 0 ; i < get_NStaticArcs() ; ++i ) {
-   (*LU)[ i ].set_variable( & x[ i ] , eNoBlck );
-   (*LU)[ i ].set_rhs( U[ i ] , eNoBlck );
-   (*LU)[ i ].set_Block( this );  // this is done last ==> no Modification
+   UB[ i ].set_variable( & x[ i ] , eNoBlck );
+   UB[ i ].set_rhs( U[ i ] , eNoBlck );
+   UB[ i ].set_Block( this );  // this is done last ==> no Modification
    }
 
-  add_static_constraint( *LU );
+  add_static_constraint( &LB );
   }
 
  // dynamic part
  if( MayHaveDynX() ) {
-  auto LU = new std::list<LB0Constraint>( get_NArcs() - get_NStaticArcs() );
+  dUB.resize( get_NArcs() - get_NStaticArcs() );
 
   auto dxi = dx.begin();
   auto ui = U.begin() + get_NStaticArcs();
-  for( auto & cnst : *LU ) {
+  for( auto & cnst : dUB ) {
    cnst.set_variable( &(*(dxi++)) , eNoBlck );
    cnst.set_rhs( *(ui++) , eNoBlck );
    cnst.set_Block( this );  // this is done last ==> no Modification
    }
 
-  add_dynamic_constraint( *LU );
+  add_dynamic_constraint( &dUB );
   }
  }  // end( MCFBlock::generate_abstract_constraints )
 
@@ -633,7 +681,9 @@ void MCFBlock::generate_objective( Configuration *objc )
 
  // ensure no Modification is issued: this may happen in case a MCFBlock
  // is re-loaded, so that set_objective( c ) had already been called
- c.set_function( new LinearFunction( std::move( p ) , 0 , true ) , eNoMod );
+ // note that the pairs are not ordered if there is a dynamic part
+ c.set_function( new LinearFunction( std::move( p ) , 0 , ! HasDynamicX() ) ,
+		 eNoMod );
  c.set_Block( this );
 
  set_objective( c , eNoMod );
@@ -649,9 +699,13 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
-  assert( E.size() == get_NNodes() );  // ... which must exist
-
+  // static part
   for( const auto & cnst : E )
+   if( cnst.rel_viol() > feps )
+    return( false );
+
+  // dynamic part
+  for( const auto & cnst : dE )
    if( cnst.rel_viol() > feps )
     return( false );
   }
@@ -697,37 +751,29 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
-  assert( E.size() );  // ... which must exist
-
   // static part
-  if( HasStaticX() && ( ! get_static_constraints().empty() ) ) {
-   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					 & get_static_constraints().back() );
-   if( lbc ) {
-    for( const auto & cnst : **lbc )
-     if( cnst.rel_viol() > feps )
+  if( HasStaticX() )
+   if( UB.empty() ) {
+    for( const auto & var : x )
+     if( ! var.is_feasible() )
       return( false );
     }
    else
-    for( const auto & var : x )
-     if( ! var.is_feasible() )
-      return( false );  
-   }
+    for( const auto & cnst : UB )
+     if( cnst.rel_viol() > feps )
+      return( false );
 
   // dynamic part
-  if( HasDynamicX() && ( ! get_dynamic_constraints().empty() ) ) {
-   auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
-					  & get_dynamic_constraints()[ 1 ] );
-   if( lbc ) {
-    for( const auto & cnst : **lbc )
-     if( cnst.rel_viol() > feps )
+  if( HasDynamicX() )
+   if( dUB.empty() ) {
+    for( const auto & var : dx )
+     if( ! var.is_feasible() )
       return( false );
     }
    else
-    for( const auto & var : x )
-     if( ! var.is_feasible() )
+    for( const auto & cnst : dUB )
+     if( cnst.rel_viol() > feps )
       return( false );
-   }
   }
  else
   // do it using the physical representation- - - - - - - - - - - - - - - - -
@@ -753,18 +799,18 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   if( HasDynamicX() ) {
    auto dxi = dx.begin();
    for(  ; i < get_NArcs() ; ++i ) {
-   c_FNumber Ui = get_U( i );
-   c_FNumber xi = x[ i ].get_value();
-   if( Ui >= Inf<FNumber>() ) {
-    if( xi < - feps )
-     return( false );
-    }
-   else {
-    c_FNumber slck = Ui == 0 ? std::abs( xi ) :
-                               std::max( - xi , xi - Ui ) / std::abs( Ui );
-    if( slck > feps )
-     return( false );
-    }
+    c_FNumber Ui = get_U( i );
+    c_FNumber xi = (*(dxi++)).get_value();
+    if( Ui >= Inf<FNumber>() ) {
+     if( xi < - feps )
+      return( false );
+     }
+    else {
+     c_FNumber slck = Ui == 0 ? std::abs( xi ) :
+                                std::max( - xi , xi - Ui ) / std::abs( Ui );
+     if( slck > feps )
+      return( false );
+     }
     }
    }
 
@@ -776,12 +822,17 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
 
 bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
 {
- assert( E.size() );
-
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
-  assert( ! get_objective().empty() );  // ... which must exist
+  if( E.empty() && dE.empty() )
+   throw( std::logic_error( "Constraint required for dual_feasible( , true )"
+			    ) );
+
+  if( get_objective().empty() )
+   throw( std::logic_error( "Objective required for dual_feasible( , true )"
+			    ) );
+
   auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
   assert( obj );
   #ifdef NDEBUG
@@ -790,13 +841,10 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
    auto lfo = dynamic_cast<const LinearFunction *>( (*obj)->get_function() );
    assert( lfo );
   #endif
-  auto obj_it = lfo->begin();
 
-  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-   CNumber RCi = lfo->get_coefficient( i );
-   auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
-   c_CNumber Ci = RCi;
-
+  for( auto & pi : (*lfo).get_v_var() ) {
+   auto xi = pi.first;
+   auto RCi = pi.second;
    for( Index j = 0 ; j < xi->get_num_active() ; ++j ) {
     ThinVarDepInterface * ci = xi->get_active( j );
     auto rci = dynamic_cast<FRowConstraint *>( ci );
@@ -807,9 +855,7 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
       auto lfi = dynamic_cast<const LinearFunction *>( rci->get_function() );
       assert( lfi );
      #endif
-     ThinVarDepInterface::Index pi = lfi->is_active( xi );
-     assert( pi < Inf<ThinVarDepInterface::Index>() );
-     RCi -= rci->get_dual() * lfi->get_coefficient( pi );
+     RCi -= rci->get_dual() * lfi->get_coefficient( xi );
      }
     else {
      auto bci = dynamic_cast<BoxConstraint *>( ci );
@@ -819,8 +865,8 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
     }
 
    RCi = std::abs( RCi );
-   if( Ci != 0 )
-    RCi /= Ci;
+   if( pi.second != 0 )
+    RCi /= pi.second;
 
    if( RCi > ceps )
     return( false );
@@ -858,8 +904,6 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
 bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 					bool useabstract )
 {
- assert( E.size() == get_NNodes() );
-
  Vec_CNumber RC;
  get_RC( RC );
   
@@ -875,82 +919,76 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   auto lfo = dynamic_cast<const LinearFunction *>( (*obj)->get_function() );
    assert( lfo );
   #endif
-  auto obj_it = lfo->begin();
   Index i = 0;
 
   // static part
-  if( HasStaticX() && ( ! get_static_constraints().empty() ) ) {
-   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					 & get_static_constraints().back() );
-   if( lbc ) {
+  if( HasStaticX() )
+   if( UB.empty() ) {
     for( ; i < get_NStaticArcs() ; ++i ) {
-     c_CNumber Ci = lfo->get_coefficient( i );
+     c_CNumber Ci = lfo->get_coefficient( &x[ i ] );
      CNumber RCi = RC[ i ];
      if( Ci )
       RCi /= Ci;
-     auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
-     c_FNumber xiv = xi->get_value();
-     c_FNumber UBi = (**lbc)[ i ].get_rhs();
-     if( UBi >= Inf<RowConstraint::RHSValue>() ) {
-      if( ( xiv > feps ) && ( RCi < - ceps ) )
-       return( false );
-      }
-     else {
-      c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
-      if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
-	  ( ( UBi - xiv > sfeps ) && ( RCi > ceps ) ) )
-       return( false );
-      }
-     }
-    }
-   else
-    for( ; i < get_NStaticArcs() ; ++i ) {
-     c_CNumber Ci = lfo->get_coefficient( i );
-     CNumber RCi = RC[ i ];
-     if( Ci )
-      RCi /= Ci;
-     auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
-     if( ( xi->get_value() > feps ) && ( RCi < - ceps ) )
+     if( ( x[ i ]->get_value() > feps ) && ( RCi < - ceps ) )
       return( false );
      }
-   }
+    }
+  else
+   for( ; i < get_NStaticArcs() ; ++i ) {
+    c_CNumber Ci = lfo->get_coefficient( &x[ i ] );
+    CNumber RCi = RC[ i ];
+    if( Ci )
+     RCi /= Ci;
+    c_FNumber xiv = x[ i ]->get_value();
+    c_FNumber UBi = UB[ i ].get_rhs();
+    if( UBi >= Inf<RowConstraint::RHSValue>() ) {
+     if( ( xiv > feps ) && ( RCi < - ceps ) )
+      return( false );
+     }
+    else {
+     c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
+     if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
+	 ( ( UBi - xiv > sfeps ) && ( RCi > ceps ) ) )
+      return( false );
+     }
+    }
 
   // dynamic part
-  if( HasDynamicX() && ( ! get_dynamic_constraints().empty() ) ) {
-   auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
-					 & get_dynamic_constraints().back() );
-   if( lbc ) {
-    auto lbci = (**lbc).begin();
+  if( HasDynamicX() ) {
+   auto dxi = dx.begin();
+
+   if( dUB.empty() ) {
     for( ; i < get_NStaticArcs() ; ++i ) {
-     c_CNumber Ci = lfo->get_coefficient( i );
+     c_CNumber Ci = lfo->get_coefficient( *dxi );
      CNumber RCi = RC[ i ];
      if( Ci )
       RCi /= Ci;
-     auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
-     c_FNumber xiv = xi->get_value();
-     c_FNumber UBi = (*(lbci++)).get_rhs();
+     if( ( (*(dxi++))->get_value() > feps ) && ( RCi < - ceps ) )
+      return( false );
+     }
+    }
+   else {
+    auto dubi = dU.begin();
+
+    for( ; i < get_NArcs() ; ++i ) {
+     c_CNumber Ci = lfo->get_coefficient( *dxi );
+     CNumber RCi = RC[ i ];
+     if( Ci )
+      RCi /= Ci;
+     c_FNumber dxiv = (*(dxi++))->get_value();
+     c_FNumber UBi = (*(dubi++)).get_rhs();
      if( UBi >= Inf<RowConstraint::RHSValue>() ) {
-      if( ( xiv > feps ) && ( RCi < - ceps ) )
+      if( ( dxiv > feps ) && ( RCi < - ceps ) )
        return( false );
       }
      else {
       c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
-      if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
-	  ( ( UBi - xiv > sfeps ) && ( RCi > ceps ) ) )
+      if( ( ( dxiv > sfeps ) && ( RCi < - ceps ) ) ||
+	  ( ( UBi - dxiv > sfeps ) && ( RCi > ceps ) ) )
        return( false );
       }
      }
     }
-   else
-    for( ; i < get_NStaticArcs() ; ++i ) {
-     c_CNumber Ci = lfo->get_coefficient( i );
-     CNumber RCi = RC[ i ];
-     if( Ci )
-      RCi /= Ci;
-     auto xi = static_cast< const ColVariable * >( &(*(obj_it++)) );
-     if( ( xi->get_value() > feps ) && ( RCi < - ceps ) )
-      return( false );
-     }
    }
   }
  else {
@@ -965,16 +1003,16 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
     RCi /= C[ i ];
 
    c_FNumber Ui = get_U( i );
-   c_FNumber xi = x[ i ].get_value();
+   c_FNumber xiv = x[ i ].get_value();
 
    if( Ui >= Inf<FNumber>() ) {
-    if( ( xi > feps ) && ( RCi < - ceps ) )
+    if( ( xiv > feps ) && ( RCi < - ceps ) )
      return( false );
     }
    else {
     c_FNumber sfeps = ( Ui == 0 ? feps : feps * Ui );
-    if( ( ( xi > sfeps ) && ( RCi < - ceps ) ) ||
-	( ( Ui - xi > sfeps ) && ( RCi > ceps ) ) )
+    if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
+	( ( Ui - xiv > sfeps ) && ( RCi > ceps ) ) )
      return( false );
     }
    }
@@ -982,8 +1020,9 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   // dynamic part
   if( HasDynamicX() ) {
    auto dxi = dx.begin();
+
    for(  ; i < get_NArcs() ; ++i ) {
-    c_FNumber xi = (*(dxi++)).get_value();
+    c_FNumber dxiv = (*(dxi++)).get_value();
     c_CNumber Ci = get_C( i );
     CNumber RCi = RC[ i ];
     if( Ci != 0 )
@@ -991,13 +1030,13 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 
     c_FNumber Ui = get_U( i );
     if( Ui >= Inf<FNumber>() ) {
-     if( ( xi > feps ) && ( RCi < - ceps ) )
+     if( ( dxiv > feps ) && ( RCi < - ceps ) )
       return( false );
      }
     else {
      c_FNumber sfeps = ( Ui == 0 ? feps : feps * Ui );
-     if( ( ( xi > sfeps ) && ( RCi < - ceps ) ) ||
-	 ( ( Ui - xi > sfeps ) && ( RCi > ceps ) ) )
+     if( ( ( dxiv > sfeps ) && ( RCi < - ceps ) ) ||
+	 ( ( Ui - dxiv > sfeps ) && ( RCi > ceps ) ) )
       return( false );
      }
     }
@@ -1137,7 +1176,7 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
   // static part
   if( HasStaticX() )
    for( auto xi = x.begin() , r3bxi = MCFB->x.begin() ; xi != x.end() ;
-	++xi , ++r4bxi )
+	++xi , ++r3bxi )
     if( ! xi->is_fixed() )
      xi->set_value( r3bxi->get_value() );
  
@@ -1193,45 +1232,32 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
    throw( std::invalid_argument( "incompatible static reduced cost size" ) );
 
   // static part
-  if( HasStaticX() && ( ! get_static_constraints().empty() ) ) {
-   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					 & get_static_constraints().back() );
-   if( lbc ) {
-    auto r3blbc = boost::any_cast<std::vector<LB0Constraint> *>(
-				   & MCFB->get_static_constraints().back() );
-    if( r3blbc ) {
-     auto drci = (*lbc)->begin();
-     for( auto r3bdrci = (*r3lbc)->begin() ; drci != (*lbc)->end() ; )
-      (drci++)->set_dual( (r3bdrci++)->get_dual() );
-      }
-    else
-     for( auto & cnst : **lbc )
-      cnst.set_dual( 0 );
+  if( HasStaticX() && ( ! UB.empty() ) )
+   if( MCFB->UB.empty() ) {
+    for( auto & cnst : UB )
+     cnst.set_dual( 0 );
     }
-   }
+   else
+    for( auto drci = UB.begin() , r3bdrci = MCFB->UB.begin() ;
+	 drci != UB.end() ; )
+      (drci++)->set_dual( (r3bdrci++)->get_dual() );
 
   // dynamic part
-  if( HasDynamicX() && ( ! get_dynamic_constraints().empty() ) ) {
-   auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
-					 & get_dynamic_constraints().back() );
-   if( lbc ) {
-    auto r3blbc = boost::any_cast<std::list<LB0Constraint> *>(
-				   & MCFB->get_dynamic_constraints().back() );
-    if( r3blbc ) {
-     auto drci = (*lbc)->begin();
-     for( auto r3bdrci = (*r3lbc)->begin() ;
-	  ( drci != (*lbc)->end() ) && ( r3bdrci != (*r3lbc)->end() ) ;
-	++drci , ++r3bdrci )
-      drci->set_dual( r3bdrci->get_dual() );
- 
-     while( drci != (*lbc)->end() )
-      (drci++)->set_dual( 0 );
-     }
-    else
-     for( auto & cnst : **lbc )
-      cnst.set_dual( 0 );
+  if( HasDynamicX() && ( ! dUB.empty() ) )
+   if( MCFB->dUB.empty() ) {
+    for( auto & cnst : dUB )
+     cnst.set_dual( 0 );
     }
-   }
+   else {
+    auto drci = dUC.begin();
+    for( auto r3bdrci = MCFB->dUB.begin() ;
+	 ( drci != dUB.end() ) && ( r3bdrci != MCFB->dUB.end() ) ;
+	 ++drci , ++r3bdrci )
+     drci->set_dual( r3bdrci->get_dual() );
+ 
+    while( drci != dUB.end() )
+     (drci++)->set_dual( 0 );
+    }
   }
  }  // end( MCFBlock::map_back_solution )
 
@@ -1268,7 +1294,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
   // static part
   if( MCFB->HasStaticX() )
    for( auto xi = x.begin() , r3bxi = MCFB->x.begin() ; xi != x.end() ;
-	++xi , ++r4bxi )
+	++xi , ++r3bxi )
     if( ! r3bxi->is_fixed() )
      r3bxi->set_value( xi->get_value() );
  
@@ -1283,7 +1309,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
     if( ! r3bdxi->is_fixed() )
      r3bdxi->set_value( dxi->get_value() );
 
-   for( ; r3bdxi !=  MCFB->dx.end() ; ++r3bdxi )
+   for( ; r3bdxi != MCFB->dx.end() ; ++r3bdxi )
     if( ! r3bdxi->is_fixed() )
      r3bdxi->set_value();
    }
@@ -1308,14 +1334,14 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
   // note that if this->dE is longer than MCFB->dE the last part is
   // ignored, while if the converse happens it is filled with zeros
   if( MCFB->HasDynamicE() ) {
-   auto dei = de.begin();
+   auto r3bdei = MCFB->dE.begin();
 
-   for( auto r3bdei = MCFB->dE.begin() ;
+   for( auto dei = de.begin() ;
 	( dei != dE.end() ) && ( r3bdei != MCFB->dE.end() ) ; )
-    (dei++)->set_dual( (r3bdei++)->get_dual() );
+    (r3bdei++)->set_dual( (dei++)->get_dual() );
  
-   while( dei != dE.end() )
-    (dei++)->set_dual( 0 );
+   while( r3bdei != MCFB->dE.end() )
+    (r3bdei++)->set_dual( 0 );
    }
 
   // map forward the reduced costs- - - - - - - - - - - - - - - - - - - - - -
@@ -1324,45 +1350,32 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
    throw( std::invalid_argument( "incompatible static reduced cost size" ) );
 
   // static part
-  if( MCFB->HasStaticX() && ( ! MCFB->get_static_constraints().empty() ) ) {
-   auto r3blbc = boost::any_cast<std::vector<LB0Constraint> *>(
-				   & MCFB->get_static_constraints().back() );
-   if( r3blbc ) {
-    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-				         & get_static_constraints().back() );
-    if( lbc ) {
-     auto drci = (*lbc)->begin();
-     for( auto r3bdrci = (*r3lbc)->begin() ; drci != (*lbc)->end() ; )
-      (r3bdrci++)->set_dual( (drci++)->get_dual() );
-      }
-    else
-     for( auto & cnst : **r3blbc )
-      cnst.set_dual( 0 );
+  if( MCFB->HasStaticX() && ( ! MCFB->UB.empty() ) )
+   if( UB.empty() ) {
+    for( auto & cnst : MCFB->UB )
+     cnst.set_dual( 0 );
     }
-   }
+   else
+    for( auto drci = UB.begin() , r3bdrci = MCFB->UB.begin() ;
+	 drci != UB.end() ; )
+      (r3bdrci++)->set_dual( (drci++)->get_dual() );
 
   // dynamic part
-  if( MCFB->HasDynamicX() && ( ! MCFB->get_dynamic_constraints().empty() ) ) {
-   auto r3blbc = boost::any_cast<std::list<LB0Constraint> *>(
-				   & MCFB->get_dynamic_constraints().back() );
-   if( r3blbc ) {
-    auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
-				         & get_dynamic_constraints().back() );
-    if( lbc ) {
-     auto r3bdrci = (*r3lbc)->begin();
-
-     for( auto drci = (*lbc)->begin() ;
-	  ( drci != (*lbc)->end() ) && ( r3bdrci != (*r3lbc)->end() ) ; )
-      (r3bdrci++)->set_dual( (drci++)->get_dual() );
- 
-     while( r3bdrci != (*r3blbc)->end() )
-      (r3bdrci++)->set_dual( 0 );
-     }
-    else
-     for( auto & cnst : **r3blbc )
-      cnst.set_dual( 0 );
+  if( MCFB->HasDynamicX() && ( ! MCFB->dUB.empty() ) )
+   if( UB.empty() ) {
+    for( auto & cnst : MCFB->dUB )
+     cnst.set_dual( 0 );
     }
-   }
+   else {
+    auto r3bdrci = MCFB->dUB.begin();
+
+    for( auto drci = dUB.begin() ;
+	 ( drci != dUB.end() ) && ( r3bdrci != MCFB->dUB.end() ) ; )
+     (r3bdrci++)->set_dual( (drci++)->get_dual() );
+ 
+    while( r3bdrci != MCFB->dUB.end() )
+     (r3bdrci++)->set_dual( 0 );
+    }
   }
  }  // end( MCFBlock::map_forward_solution )
 
@@ -1628,7 +1641,7 @@ Solution * MCFBlock::get_Solution( Configuration *solc , bool emptys )
  if( wsol != 1 )
   sol->v_pi.resize( get_NNodes() );
 
- if( ! emptys)
+ if( ! emptys )
   sol->read( this );
 
  return( sol );
@@ -1637,65 +1650,121 @@ Solution * MCFBlock::get_Solution( Configuration *solc , bool emptys )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_x( Vec_FNumber & FSol , c_Index strt , c_Index stp )
+void MCFBlock::get_x( Vec_FNumber & FSol , c_Index strt , c_Index stop )
 {
- for( Index i = 0 ; i < stp - std::min( strt , get_NArcs() ) ; ++i )
-  FSol[ i ] = x[ strt + i ].get_value();
+ auto FSi = FSol.begin();
+ Index i = strt;
+ for( ; i < std::min( stop , get_NStaticArcs() ) ; ++i )
+  *(FSi++) = x[ i ].get_value();
 
+ if( HasDynamicX() ) {
+  auto dxi = dx.begin();
+  for( ; i < std::min( stop , get_NArcs() ) ; ++i )
+   *(FSi++) = (*(dxi++)).get_value();
+  }
  }  // end( MCFBlock::get_x( interval ) )
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::get_x( Vec_FNumber & FSol , c_Vec_Index & nms )
 {
- for( Index i = 0 ; i < nms.size() ; ++i )
-  FSol[ i ] = x[ nms[ i ] ].get_value();
+ auto FSi = FSol.begin();
+ auto nmsi = nms.begin();
+
+ if( HasDynamicX() ) {
+  while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticArcs() ) )
+   *(FSi++) = x[ *(nmsi++) ].get_value();
+
+  if( nmsi == nms.end() )
+   return;
+
+  auto i = get_NStaticArcs();
+  for( auto dxi = dx.begin() ; nmsi != nms.end() ; ++dxi )
+   if( *nmsi == i++ ) {
+    *(FSi++) = (*dxi).get_value();
+    nmsi++;
+    }
+  }
+ else
+  while( nmsi != nms.end() ) 
+   *(FSi++) = x[ *(nmsi++) ].get_value();
 
  }  // end( MCFBlock::get_x( subset ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_pi( Vec_CNumber & PSol , c_Index strt , c_Index stp )
+void MCFBlock::get_pi( Vec_CNumber & PSol , c_Index strt , c_Index stop )
 {
- if( ! E.size() )
+ if( E.empty() && dE.empty() )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
- for( Index i = 0 ; i < stp - std::min( strt , get_NNodes() ) ; ++i )
-  PSol[ i ] = E[ strt + i ].get_dual();
+ auto PSi = PSol.begin();
+ Index i = strt;
+ for( ; i < std::min( stop , get_NStaticNodes() ) ; ++i )
+  *(PSi++) = E[ i ].get_dual();
 
+ if( HasDynamicE() ) {
+  auto dei = dE.begin();
+  for( ; i < std::min( stop , get_NNodes() ) ; ++i )
+   *(PSi++) = (*(dei++)).get_dual();
+  }
  }  // end( MCFBlock::get_pi( interval ) )
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::get_pi( Vec_CNumber & PSol , c_Vec_Index & nms )
 {
- if( ! E.size() )
+ if( E.empty() && dE.empty() )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
- for( Index i = 0 ; i < nms.size() ; ++i )
-  PSol[ i ] = E[ nms[ i ] ].get_dual();
+ auto PSi = PSol.begin();
+ auto nmsi = nms.begin();
+
+ if( HasDynamicE() ) {
+  while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticNodes() ) )
+   *(PSi++) = E[ *(nmsi++) ].get_dual();
+
+  if( nmsi == nms.end() )
+   return;
+
+  auto i = get_NStaticNodes();
+  for( auto dei = dE.begin() ; nmsi != nms.end() ; ++dei )
+   if( *nmsi == i++ ) {
+    *(PSi++) = (*dei).get_dual();
+    nmsi++;
+    }
+  }
+ else
+  while( nmsi != nms.end() )
+   *(PSi++) = E[ *(nmsi++) ].get_dual();
 
  }  // end( MCFBlock::get_pi( subset ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stp )
+void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stop )
 {
- if( ! E.size() )
+ if( E.empty() && dE.empty() )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
 	 );
 
- if( get_static_constraints().size() > 1 ) {
-  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					   & get_static_constraints()[ 1 ] );
-  assert( lbc );
-  for( Index i = 0 ; i < stp - std::min( strt , get_NArcs() ) ; ++i )
-   RC[ i ] = (**lbc)[ strt + i ].get_dual();
-  }
+ auto RCi = RC.begin();
+
+ if( UB.empty() && dUB.empty() )
+  for( Index i = strt ; i < std::min( stop , get_NArcs() ) ; ++i )
+   *(RCi++) = get_C( i ) + get_pi( SN[ i ] - 1 ) - get_pi( EN[ i ] - 1 );
  else {
-  for( Index i = 0 ; i < stp - std::min( strt , get_NArcs() ) ; ++i )
-   RC[ i ] = get_C( strt + i ) + E[ SN[ strt + i ] - 1 ].get_dual()
-                               - E[ EN[ strt + i ] - 1 ].get_dual();
+  Index i = strt;
+
+  if( HasStaticX() )
+   for( ; i < std::min( stop , get_NStaticArcs() ) ; ++i )
+    *(RCi++) = UB[ i ].get_dual();
+
+  if( HasDynamicX() ) {
+   auto dubi = dUB.begin();
+   for( ; i < std::min( stop , get_NArcs() ) ; ++i )
+    *(RCi++) = (*(dubi++)).get_dual();
+   }
   }
  }  // end( MCFBlock::get_rc( interval ) )
 
@@ -1703,81 +1772,124 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stp )
 
 void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
 {
- if( ! E.size() )
+ if( E.empty() && dE.empty() )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
 	 );
 
- if( get_static_constraints().size() > 1 ) {
-  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					   & get_static_constraints()[ 1 ] );
-  assert( lbc );
-  for( Index i = 0 ; i < nms.size() ; ++i )
-   RC[ i ] = (**lbc)[ nms[ i ] ].get_dual();
-  }
+ auto RCi = RC.begin();
+ auto nmsi = nms.begin();
+
+ if( UB.empty() && dUB.empty() )
+  for( ; nmsi != nms.end() ; ++nmsi ) 
+   *(RCi++) = get_C( *nmsi ) + get_pi( SN[ *nmsi ] - 1 )
+                             - get_pi( EN[ *nmsi ] - 1 );
  else
-  for( Index i = 0 ; i < nms.size() ; ++i )
-   RC[ i ] = get_C( nms[ i ] ) + E[ SN[ nms[ i ] ] - 1 ].get_dual()
-                               - E[ EN[ nms[ i ] ] - 1 ].get_dual();
+  if( HasDynamicX() ) {
+   while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticArcs() ) )
+     *(RCi++) = UB[ *(nmsi++) ].get_dual();
+
+   if( nmsi == nms.end() )
+    return;
+
+   auto i = get_NStaticArcs();
+   for( auto dubi = dUB.begin() ; nmsi != nms.end() ; ++dubi )
+    if( *nmsi == i++ ) {
+     *(RCi++) = (*dubi).get_dual();
+     nmsi++;
+     }
+   }
+  else
+   while( nmsi != nms.end() ) 
+    *(FSi++) = UB[ *(nmsi++) ].get_dual();
 
  }  // end( MCFBlock::get_rc( subset ) )
 
 /*--------------------------------------------------------------------------*/
 
-MCFBlock::CNumber MCFBlock::get_rc( c_Index arc )
+void MCFBlock::set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
+		      c_Index strt )
 {
- if( ! E.size() )
-  throw( std::logic_error( "reduced costs unavailable if Constraint aren't"
-			   ) );
- if( arc >= get_NArcs() )
-  throw( std::invalid_argument( "invalid arc name" ) );
+ if( std::distance( rcstop , rcstrt ) + strt > get_NArcs() )
+  throw( std::invalid_argument( "too many values provided" ) );
 
- if( get_static_constraints().size() > 1 ) {
-  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
-  assert( lbc );
-  return( (*lbc)[ arc ].get_dual() );
-  }
- else
-  return( get_C( arc ) + E[ SN[ arc ] - 1 ].get_dual()
-	               - E[ EN[ arc ] - 1 ].get_dual() );
- 
- }  // end( MCFBlock::get_rc( one ) )
+ Index i = strt;
+
+ if( HasStaticX() )
+  for( auto xi = x.begin() + strt ;
+       ( fstrt != fstop ) && ( i < get_NStaticArcs() ) ; ++i )
+   (xi++)->set_value( *(fstrt++) );
+
+ if( ( rcstrt == rcstop ) || ( ! HasDynamicX() ) )
+  return;
+
+ auto dxi = dx.begin();
+ if( i > get_NStaticArcs() )
+  dxi = std::next( dxi , i - get_NStaticArcs() );
+
+ while( ; rcstrt < rcstop ; )
+  (dxi++)->set_value( *(fstrt++) );
+
+ }  // end( MCFBlock::set_x( range ) )
+
+/*--------------------------------------------------------------------------*/
+
+void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
+		       c_Index strt )
+{
+ if( E.empty() && dE.empty() )  // nowhere to put the value in
+  return;                       // cowardly (and silently) return
+
+ if( std::distance( pstop , pstrt ) + strt > get_NArcs() )
+  throw( std::invalid_argument( "too many values provided" ) );
+
+ Index i = strt;
+
+ if( HasStaticE() )
+  for( auto ei = E.begin() + strt ;
+       ( pstrt != pstop ) && ( i < get_NStaticArcs() ) ; ++i )
+   (ei++)->set_dual( *(pstrt++) );
+
+ if( ( pstrt == pstop ) || ( ! HasDynamicE() ) )
+  return;
+
+ auto dei = dE.begin();
+ if( i > get_NStaticArcs() )
+  dEi = std::next( dEi , i - get_NStaticArcs() );
+
+ while( ; pstrt < pstop ; )
+  (dei++)->set_value( *(fpstrt++) );
+
+ }  // end( MCFBlock::set_x( range ) )
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
 		       c_Index strt )
 {
- if( ( ! E.size() ) || ( get_static_constraints().size() <= 1 ) )
-  return;  // nowhere to put the value:cowardly (and silently) return
+ if( UB.empty() && dUB.empty() )  // nowhere to put the value in
+  return;                         // cowardly (and silently) return
 
  if( std::distance( rcstop , rcstrt ) + strt > get_NArcs() )
   throw( std::invalid_argument( "too many values provided" ) );
 
- auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
- assert( lbc );
- for( auto bi = lbc->begin() + strt ; rcstrt < rcstop ; )
-  (bi++)->set_dual( *(rcstrt++) );
+ Index i = strt;
 
- }  // end( MCFBlock::set_rc( one ) )
+ if( HasStaticX() )
+  for( auto ubi = UB.begin() + strt ;
+       ( rcstrt != rcstop ) && ( i < get_NStaticArcs() ) ; ++i )
+   (ubi++)->set_dual( *(rcstrt++) );
 
-/*--------------------------------------------------------------------------*/
+ if( ( rcstrt == rcstop ) || ( ! HasDynamicX() ) )
+  return;
 
-void MCFBlock::set_rc( c_CNumber RC , c_Index arc )
-{
- if( ( ! E.size() ) || ( get_static_constraints().size() <= 1 ) )
-  return;  // nowhere to put the value:cowardly (and silently) return
+ auto dubi = dUB.begin();
+ if( i > get_NStaticArcs() )
+  dubi = std::next( dubi , i - get_NStaticArcs() );
 
- if( arc >= get_NArcs() )
-  throw( std::invalid_argument( "invalid arc name" ) );
+ while( ; rcstrt < rcstop ; )
+  (dubi++)->set_dual( *(rcstrt++) );
 
- auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					     get_static_constraints()[ 1 ] );
- assert( lbc );
- (*lbc)[ arc ].set_dual( RC );
-
- }  // end( MCFBlock::set_rc( one ) )
+ }  // end( MCFBlock::set_rc( range ) )
 
 /*--------------------------------------------------------------------------*/
 /*-------------------- Methods for handling Modification -------------------*/
@@ -1849,24 +1961,15 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
  if( stop >= get_NArcs() )
   stop = get_NArcs();
 
- c_Vec_CNumber_it ncit = NCost;
- const c_Vec_CNumber_it ncstp = ncit + ( stop - strt );
-
  if( ! C.size() ) {
-  for( ; ncit < ncstp ; ++ncit )
-   if( *ncit )
-    break;
-
-  if( ncit >= ncstp )
+  if( std::all_of( NCost , NCost + ( stop - strt ) ,
+		   []( c_CNumber cst ) { return( cst == 0 ); } ) )
    return;
 
-  C.resize( get_NArcs() , 0 );
-  ncit = NCost;
+  C.resize( get_MaxNArcs() , 0 );
   }
 
- Vec_CNumber_it cit = C.begin() + strt;
-
- if( not_dry_run( issueAMod ) && ( ! get_objective().empty()  ) ) {
+ if( not_dry_run( issueAMod ) && ( ! get_objective().empty() ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification(s)
 
@@ -1877,85 +1980,54 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
    assert( lfo );
   #endif
 
-  /*!! if( lfo->get_num_active_var() == get_NArcs() ) !!*/ {
-   // "dense" objective
-   Index cnt = 0;
-   for( ; ncit < ncstp ; ++ncit , ++cit )
-    if( *cit != *ncit ) {
-     *cit = *ncit;
-     cnt++;  // meanwhile, count how many real changes happen
+  Index cnt = 0;
+  Vec_CNumber_it cit = C.begin() + strt;
+  for( c_Vec_CNumber_it ncit = NCost ;
+       ncit < NCost + ( stop - strt ) ; ++ncit , ++cit )
+   if( *cit != *ncit ) {
+    *cit = *ncit;
+    cnt++;  // meanwhile, count how many real changes happen
+    }
+
+  if( ! cnt )  // actually nothing has changed
+   return;     // avoid the call, hence issuing the abstract Modification
+
+  if( HasDynamicX() ) {  // there are dynamic arcs
+   if( stop <= get_NStaticArcs() ) {
+    // but all those in the range are static: hence, the range maps
+    // into a range of the coefficient, just have to find the extreme
+    auto rstrt = lfo->is_active( &x[ strt ] );
+    lfo->modify_coefficients( NCost , rstrt , rstrt + ( stop - strt ) ,
+			      issueAMod );
+    }
+   else {
+    // the range mixes static and dynamic: the only way is to use the
+    // subset version of modify_coefficients()
+    LinearFunction::v_coeff_pair pairs;
+    auto pi = pairs.begin();
+
+    if( strt < get_NStaticArcs()  )
+     for( auto xi = x.begin() + strt ; xi != x.end() ; ) {
+      (*pi).first = *(xi++);
+      (*(pi++)).second = *(NCost++);
+      }
+
+    for( auto dxi = dx.begin() ;
+	 dxi != dx.begin() + ( stop - get_NStaticArcs() ) ; ) {
+     (*pi).first = *(dxi++);
+     (*(pi++)).second = *(NCost++);
      }
 
-   if( ! cnt )  // actually nothing has changed
-    return;     // avoid the call, hence issuing the abstract Modification
-
+    lfo->modify_coefficients( pairs , false , issueAMod );
+    }
+   }
+  else                 // all arcs are static
    lfo->modify_coefficients( NCost , strt , stop , issueAMod );
-   }
-  /*!!
-  else {                                            // "sparse" objective
-   Index addv = 0;  // Variable to be added
-   Index rmvv = 0;  // Variable to be removed
-   Index chgv = 0;  // coefficients to be changed
- 
-   Vec_CNumber_it cit = C.begin() + strt;
-   for( ; ncit < ncstp ; ++ncit , ++cit )
-    if( *ncit != *cit ) {
-     if( *ncit == 0 )
-      rmvv++;
-     else
-      if( *cit == 0 )
-       addv++;
-      else
-       chgv++;
-     }
-
-   if( ! ( addv + rmvv + chgv ) )
-    return;
-
-   LinearFunction::v_coeff_pair acp( addv );
-   LinearFunction::v_coeff_pair ccp( chgv );
-   Vec_p_Var rcp( rmvv );
-
-   addv = 0;
-   rmvv = 0;
-   chgv = 0;
-
-   // compute the three sets of removed, added and changed coefficients,
-   // all the while doing the change, so as to ensure that the change is
-   // in place the moment the Modification is issued.
-   auto xit = x.begin();
-   for( cit = C.begin() + strt , ncit = NCost ; ncit < ncstp ;
-	++ncit , ++cit , ++xit )
-    if( *ncit != *cit ) {
-     ColVariable * xi = & (*xit);
-     if( *ncit == 0 )
-      rcp[ rmvv++ ] = xi;
-     else
-      if( *cit == 0 )
-       acp[ addv++ ] = std::make_pair( xi , *ncit );
-      else
-       ccp[ chgv++ ] = std::make_pair( xi , *ncit );
-
-     *cit = *ncit;
-     }
-
-   c_Index nmod = ( addv > 0 ) + ( rmvv > 0 ) + ( chgv > 0 );
-   c_ModParam ampar = make_amod_param( issueAMod , nmod );
-
-   // note that the vectors are ordered by construction
-   if( rmvv ) lfo->remove_variables( std::move( rcp ) , true , ampar );
-   if( addv ) lfo->add_variables( std::move( acp ) , true , ampar );
-   if( chgv ) lfo->modify_coefficients( std::move( ccp ) , true , ampar );
-
-   unmake_amod_param( issueAMod , ampar , nmod );
-   }
-   !!*/
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   while( ncit < ncstp )
-    *(cit++) = *(ncit++);
+   std::copy( NCost , NCost + ( stop - strt ) , C.begin() + strt );
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -1972,26 +2044,15 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
 			  const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- assert( nms.size() <= get_NArcs() );
-
- c_Vec_CNumber_it ncit = NCost;
- const c_Vec_CNumber_it ncstp = ncit + nms.size();
-
  if( ! C.size() ) {
-  for( ; ncit < ncstp ; ++ncit )
-   if( *ncit )
-    break;
-
-  if( ncit >= ncstp )
+  if( std::all_of( NCost , NCost + nms.size() ,
+		   []( c_CNumber cst ) { return( cst == 0 ); } ) )
    return;
 
-  C.resize( get_NArcs() , 0 );
-  ncit = NCost;
+  C.resize( get_MaxNArcs() , 0 );
   }
 
- c_Vec_Index_it nit = nms.begin();
-
- if( not_dry_run( issueAMod ) && ( ! get_objective().empty()  ) ) {
+ if( not_dry_run( issueAMod ) && ( ! get_objective().empty() ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -2002,92 +2063,91 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
    assert( lfo );
   #endif
 
-  /*!! if( lfo->get_num_active_var() == get_NArcs() ) !!*/ {
-   // "dense" objective
-   LinearFunction::v_coeff_pair ccp( nms.size() );
+  LinearFunction::v_coeff_pair ccp( nms.size() );
+  Index cnt = 0;
 
-   Index cnt = 0;
-   for( ; ncit < ncstp ; ++ncit , ++nit )
-    if( C[ *nit ] != *ncit ) {
-     C[ *nit ] = *ncit;
-     ccp[ cnt++ ] = std::make_pair( & x[ *nit ] , *ncit );
+  if( HasDynamicX() )
+   if( ordered ) {
+    // static part
+    auto nit = nms.begin();
+    for( ; ( nit != nms.end() ) && ( *nit < get_NStaticArcs() ) ;
+	 ++NCost , ++nit ) {
+     if( *nit >= get_NStaticArcs() )
+      throw( std::invalid_argument( "invalid arc name" ) );
+     if( C[ *nit ] != *NCost ) {
+      C[ *nit ] = *NCost;
+      ccp[ cnt++ ] = std::make_pair( & x[ *nit ] , *NCost );
+      }
      }
 
-   if( ! cnt )  // actually nothing has changed
-    return;     // nothing to change, hence no Modification
-
-   ccp.resize( cnt );
-
-   // note that ccp is ordered if nms was
-   lfo->modify_coefficients( ccp , ordered , issueAMod );
-   }
-  /*!!
-  else {                                            // "sparse" objective
-   Index addv = 0;  // Variable to be added
-   Index rmvv = 0;  // Variable to be removed
-   Index chgv = 0;  // coefficients to be changed
-
-   for( ; ncit < ncstp ; ++ncit , ++nit ) {
-    #ifndef NDEBUG
-     if( *nit >= get_NArcs() )
+    // dynamic part
+    auto dxi = dx.begin();
+    for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
+     if( *(nit++) == i ) {
+      if( C[ i ] != *NCost ) {
+       C[ i ] = *NCost;
+       ccp[ cnt++ ] = std::make_pair( &(*dxi) , *NCost );
+       }
+      NCost++;
+      }
+    }
+   else {
+    // make a vector of pairs < arc index , new cost >
+    typedef std::pair< Index , CNumber > index_pair;
+    std::vector< index_pair > pairs( nms.size() );
+    for( Index i = 0 ; i < nms.size() ; ++i ) {
+     if( nms[ i ] >= get_NArcs() )
       throw( std::invalid_argument( "invalid arc name" ) );
-    #endif
-    if( *ncit != C[ *nit ] ) {
-     if( *ncit == 0 )
-      rmvv++;
-     else
-      if( C[ *nit ] == 0 )
-       addv++;
-      else
-       chgv++;
+     pairs[ i ] = std::make_pair( nms[ i ] , *(NCost++) );
+     }
+
+    // sort the vector for increasing index
+    std::sort( pairs.begin() , pairs.end ,
+	       []( index_pair i , index_pair j )
+	       { return( i.first < j.first ); } );
+
+    // static part
+    auto pit = pairs.begin();
+    for( ; ( pit != pairs.end() ) && ( (*pit).first < get_NStaticArcs() ) ;
+	 ++pit )
+     if( C[ (*pit).first ] != (*pit).second ) {
+      C[ (*pit).first ] = (*pit).second;
+      ccp[ cnt++ ] = std::make_pair( & x[ (*pit).first ] , (*pit).second );
+      }
+
+    // dynamic part
+    auto dxi = dx.begin();
+    for( Index i = get_NStaticArcs() ; pairs != pairs.end() ; ++i , ++dxi )
+     if( (*pit).first == i ) {
+      if( C[ i ] != (*pit).second ) {
+       C[ i ] = (*pit).second;
+       ccp[ cnt++ ] = std::make_pair( &(*dxi) , (*pit).second );
+       }
+      pit++;
+      }
+    }
+  else
+   for( auto nit = nms.begin() ; nit != nms.end() ; ++NCost , ++nit ) {
+    if( C[ *nit ] != *NCost ) {
+     if( *nit >= get_NStaticArcs() )
+      throw( std::invalid_argument( "invalid arc name" ) );
+     C[ *nit ] = *NCost;
+     ccp[ cnt++ ] = std::make_pair( & x[ *nit ] , *NCost );
      }
     }
 
-   if( ! ( addv + rmvv + chgv ) )
-    return;
+  if( ! cnt )  // actually nothing has changed
+   return;     // nothing to change, hence no Modification
 
-   LinearFunction::v_coeff_pair acp( addv );
-   LinearFunction::v_coeff_pair ccp( chgv );
-   Vec_p_Var rcp( rmvv );
+  ccp.resize( cnt );
 
-   addv = 0;
-   rmvv = 0;
-   chgv = 0;
-
-   // compute the three sets of removed, added and changed coefficients,
-   // all the while doing the change, so as to ensure that the change is
-   // in place the moment the Modification is issued
-   for( nit = nms.begin() , ncit = NCost ; ncit < ncstp ; ++ncit , ++nit )
-    if( C[ *nit ] != *ncit ) {
-     ColVariable * xi = & x[ *nit ];
-     if( *ncit == 0 )
-      rcp[ rmvv++ ] = xi;
-     else
-      if( C[ *nit ] == 0 )
-       acp[ addv++ ] = std::make_pair( xi , *ncit );
-      else
-       ccp[ chgv++ ] = std::make_pair( xi , *ncit );
-
-     C[ *nit ] = *ncit;
-     }
-
-   c_Index nmod = ( addv > 0 ) + ( rmvv > 0 ) + ( chgv > 0 );
-   c_ModParam ampar = make_amod_param( issueAMod , nmod );
-
-   // note that the vectors are ordered if nms is
-   if( rmvv ) lfo->remove_variables( std::move( rcp ) , ordered , nmod );
-   if( addv ) lfo->add_variables( std::move( acp ) , ordered , nmod );
-   if( chgv ) lfo->modify_coefficients( std::move( ccp ) , ordered , nmod );
-
-   unmake_amod_param( issueAMod , ampar , nmod );
-   }
-   !!*/
+  // note that ccp is ordered if nms was
+  lfo->modify_coefficients( ccp , ordered , issueAMod );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   for( ; ncit < ncstp ; ++ncit , ++nit )
-    C[ *nit ] = *ncit;
+   copyidx( C , nms , NCost );
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -2112,14 +2172,15 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( ( ! C.size() ) && NCost )
-   C.resize( get_NArcs() , 0 );
+  C.resize( get_MaxNArcs() , 0 );
 
  if( C[ arc ] == NCost )
   return;
 
- if( not_dry_run( issueAMod ) && ( ! get_objective().empty()  ) ) {
+ if( not_dry_run( issueAMod ) && ( ! get_objective().empty() ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
+  C[ arc ] = NCost;
 
   #ifdef NDEBUG
    auto lfo = static_cast<LinearFunction *>( c.get_function() );
@@ -2128,27 +2189,7 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
    assert( lfo );
   #endif
 
-  /*!! if( lfo->get_num_active_var() == get_NArcs() ) !!*/ {
-   // "dense" objective
-   C[ arc ] = NCost;                                // modify coefficient
-   lfo->modify_coefficient( &x[ arc ] , NCost , issueAMod );
-   }
-  /*!!
-  else                                              // "sparse" objective
-   if( NCost == 0 ) {        // remove one Variable
-    C[ arc ] = 0;
-    lfo->remove_variable( &x[ arc ] , issueAMod );
-    }
-   else
-    if( C[ arc ] == 0 ) {    // add one Variable
-     C[ arc ] = NCost;
-     lfo->add_variable( &x[ arc ] , NCost , issueAMod );
-     }
-    else {                   // modify one coefficient
-     C[ arc ] = NCost;
-     lfo->modify_coefficient( &x[ arc ] , NCost , issueAMod );
-     }
-     !!*/
+  lfo->modify_coefficient( i2p_x( arc ) , NCost , issueAMod );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -2171,53 +2212,45 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
  if( stop >= get_NArcs() )
   stop = get_NArcs();
 
- c_Vec_FNumber_it ncit = NCap;
- const c_Vec_CNumber_it ncstp = ncit + ( stop - strt );
+ if( stop <= strt )
+  return;
 
  if( ! U.size() ) {
-  for( ; ncit < ncstp ; ++ncit )
-   if( *ncit < Inf<FNumber>() )
-    break;
-
-  if( ncit >= ncstp )
+  if( std::all_of( NCap , NCap + nms.size() ,
+		   []( c_FNumber cap ) { return( cap >= Inf<FNumber>() ); } ) )
    return;
 
-  U.resize( get_NArcs() , Inf<FNumber>() );
-  ncit = NCap;
+  U.resize( get_MaxNArcs() , Inf<FNumber>() );
   }
 
- Vec_FNumber_it uit = U.begin() + strt;
-
- Index ndiff = 0;
- while( ncit < ncstp )
-  if( *(ncit++) != *(uit++) )
-   ndiff++;
-
+ c_Index ndiff = countdiff( NCap , NCap + ( stop - strt ) , U.begin() + strt );
  if( ! ndiff )
   return;
 
- ncit = NCap;
- uit = U.begin() + strt;
-
- if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
+ if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  if( get_static_constraints().size() <= 1 )
+  if( UB.empty() && dUB.empty() )
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					  & get_static_constraints()[ 1 ] );
-  assert( lbc );
+  Index i = strt;
 
-  for( auto lbit = (*lbc)->begin() + strt ; ncit < ncstp ;
-       ++ncit , ++uit , ++lbit )
-   if( *uit != *ncit ) {
-    *uit = *ncit;
-    lbit->set_rhs( *ncit , ampar );
+  // static part
+  for( ; i < std::min( stop , get_NStaticArcs() ) ;  ++i , ++NCap )
+   if( U[ i ] != *NCap ) {
+    U[ i ] = *NCap;
+    UB[ i ].set_rhs( *NCap , ampar );
+    }
+
+  // dynamic part
+  for( auto dubi = dUB.begin() ; i < stop ; ++i , ++NCap , ++dubi )
+   if( U[ i ] != *NCap ) {
+    U[ i ] = *NCap;
+    *(dubi++).set_rhs( *NCap , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2225,8 +2258,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   while( ncit < ncstp )
-    *(uit++) = *(ncit++);
+   std::copy( NCap , NCap + ( stop - strt ) , U.begin() + strt );
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -2243,69 +2275,98 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
 			  const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- assert( nms.size() <= get_NArcs() );
-
- c_Vec_FNumber_it ncit = NCap;
- const c_Vec_FNumber_it ncstp = ncit + nms.size();
-
  if( ! U.size() ) {
-  for( ; ncit < ncstp ; ++ncit )
-   if( *ncit < Inf<FNumber>() )
-    break;
-
-  if( ncit >= ncstp )
+  if( std::all_of( NCap , NCap + nms.size() ,
+		   []( c_FNumber cap ) { return( cap >= Inf<FNumber>() ); } ) )
    return;
 
-  U.resize( get_NArcs() , Inf<FNumber>() );
-  ncit = NCap;
+  U.resize( get_MaxNArcs() , Inf<FNumber>() );
   }
 
- c_Vec_Index_it nit = nms.begin();
-
- Index ndiff = 0;
- for( ; ncit < ncstp ; ++ncit , ++nit ) {
-  #ifndef NDEBUG
-   if( *nit >= get_NArcs() )
-    throw( std::invalid_argument( "invalid arc name" ) );
-  #endif
-  if( *ncit != U[ *nit ] )
-   ndiff++;
-  }
-
+ Index ndiff = countdiff( U , nms , NCap , get_NArcs() );
  if( ! ndiff )
   return;
 
- ncit = NCap;
- nit = nms.begin();
-
- if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
+ if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  if( get_static_constraints().size() <= 1 )
+  if( UB.empty() && dUB.empty() )
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					  & get_static_constraints()[ 1 ] );
-  assert( lbc );
+  if( HasDynamicX() )
+   if( ordered ) {
+    // static part
+    auto nit = nms.begin();
+    for( ; ( nit != nms.end() ) && ( *nit < get_NStaticArcs() ) ;
+	 ++NCap , ++nit ) {
+     if( U[ *nit ] != *NCap ) {
+      U[ *nit ] = *NCap;
+      UB[ *nit ].set_rhs( *NCap , ampar );
+      }
+     }
 
-  for( ; ncit < ncstp ; ++ncit , ++nit ) {
-   if( U[ *nit ] != *ncit ) {
-    U[ *nit ] = *ncit;
-    (**lbc)[ *nit ].set_rhs( *ncit , ampar );
+    // dynamic part
+    auto dubi = dUB.begin();
+    for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dubi )
+     if( *nit == i ) {
+      if( U[ i ] != *NCap ) {
+       U[ i ] = *NCap;
+       (*dubi).set_rhs( *NCap , ampar );
+       }
+      nit++;
+      NCap++;
+      }
     }
-   }
+   else {
+    // make a vector of pairs < arc index , new capacity >
+    typedef std::pair< Index , FNumber > index_pair;
+    std::vector< index_pair > pairs( nms.size() );
+    for( Index i = 0 ; i < nms.size() ; ++i )
+     pairs[ i ] = std::make_pair( nms[ i ] , *(NCap++) );
+
+    // sort the vector for increasing index
+    std::sort( pairs.begin() , pairs.end ,
+	       []( index_pair i , index_pair j )
+	       { return( i.first < j.first ); } );
+
+    // static part
+    auto pit = pairs.begin();
+    for( ; ( pit != pairs.end() ) && ( (*pit).first < get_NStaticArcs() ) ;
+	 ++pit )
+     if( U[ (*pit).first ] != (*pit).second ) {
+      U[ (*pit).first ] = (*pit).second;
+      UB[ *nit ].set_rhs( *NCap , ampar );
+      }
+
+    // dynamic part
+    auto dubi = dUB.begin();
+    for( Index i = get_NStaticArcs() ; pairs != pairs.end() ; ++i , ++dubi )
+     if( (*pit).first == i ) {
+      if( U[ i ] != (*pit).second ) {
+       U[ i ] = (*pit).second;
+       (*dubi).set_rhs( (*pit).second , ampar );
+       }
+      pit++;
+      }
+    }
+  else
+   for( auto nit = nms.begin() ; nit != nms.end() ; ++NCap , ++nit ) {
+    if( U[ *nit ] != *NCap ) {
+     U[ *nit ] = *NCap;
+     UB[ *nit ].set_rhs( *NCap , ampar );
+     }
+    }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   while( ncit < ncstp )
-    U[ *(nit++) ] = *(ncit++);
+   copyidx( U , nms , NCap );
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -2330,7 +2391,7 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( ( ! U.size() ) && ( NCap < Inf<FNumber>() ) )
-  U.resize( get_NArcs() , Inf<FNumber>() );
+  U.resize( get_MaxNArcs() , Inf<FNumber>() );
 
  if( U[ arc ] == NCap )
   return;
@@ -2338,19 +2399,19 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
  if( not_dry_run( issueMod ) )
   U[ arc ] = NCap;  // only change the physical representation - - - - - - -
 
- if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
+ if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  if( get_static_constraints().size() <= 1 )
+  if( UB.empty() && dUB.empty() )
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
-  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					  & get_static_constraints()[ 1 ] );
-  assert( lbc );
-
-  (**lbc)[ arc ].set_rhs( NCap , issueAMod );
+  if( arc < get_NStaticArcs() )
+   UB[ arc ].set_rhs( NCap , issueAMod );
+  else
+   std::next( dUB.begin() , arc - get_NStaticArcs() )->set_rhs( NCap ,
+								issueAMod );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2369,44 +2430,37 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
  if( stop >= get_NNodes() )
   stop = get_NNodes();
 
- c_Vec_FNumber_it ndit = NDfct;
- const c_Vec_CNumber_it ndstp = ndit + ( stop - strt );
-
  if( ! B.size() ) {
-  for( ; ndit < ndstp ; ++ndit )
-   if( *ndit )
-    break;
-
-  if( ndit >= ndstp )
+  if( std::all_of( NDfct , NDfct + ( stop - strt ) ,
+		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
 
-  B.resize( get_NNodes() , 0 );
-  ndit = NDfct;
+  B.resize( get_MaxNNodes() , 0 );
   }
 
- Vec_FNumber_it bit = B.begin() + strt;
-
- Index ndiff = 0;
- while( ndit < ndstp )
-  if( *(ndit++) != *(bit++) )
-   ndiff++;
-
+ c_Index ndiff = countdiff( NDfct , NDfct + ( stop - strt ) ,
+			    B.begin() + strt );
  if( ! ndiff )
   return;
 
- ndit = NDfct;
- bit = B.begin() + strt;
-
- if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
+ if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  for( auto eit = E.begin() ; ndit < ndstp ; ++ndit , ++bit , ++eit )
-   if( *bit != *ndit ) {
-    *bit = *ndit;
-    eit->set_both( *ndit , ampar );
+  // static part
+  for( ; i < std::min( stop , get_NStaticNodes() ) ;  ++i , ++NDfct )
+   if( B[ i ] != *NDfct ) {
+    B[ i ] = *NDfct;
+    E[ i ].set_both( *NDfct , ampar );
+    }
+
+  // dynamic part
+  for( auto dei = dE.begin() ; i < stop ; ++i , ++NDfct , ++dei )
+   if( B[ i ] != *NDfct ) {
+    B[ i ] = *NDfct;
+    *(dei++).set_both( *NDfct , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2414,8 +2468,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   while( ndit < ndstp )
-    *(bit++) = *(ndit++);
+   std::copy( NDfct , NDfct + ( stop - strt ) , B.begin() + strt );
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -2432,51 +2485,86 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
 			  const bool ordered ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- assert( nms.size() <= get_NNodes() );
-
- c_Vec_FNumber_it ndit = NDfct;
- const c_Vec_FNumber_it ndstp = ndit + nms.size();
-
  if( ! B.size() ) {
-  for( ; ndit < ndstp ; ++ndit )
-   if( *ndit )
-    break;
-
-  if( ndit >= ndstp )
+  if( std::all_of( NDfct , NDfct + nms.size() ,
+		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
 
-  B.resize( get_NNodes() , 0 );
-  ndit = NDfct;
+  B.resize( get_MaxNNodes() , 0 );
   }
 
- c_Vec_Index_it nit = nms.begin();
-
- Index ndiff = 0;
- for( ; ndit < ndstp ; ++ndit , ++nit ) {
-  #ifndef NDEBUG
-   if( *nit >= get_NNodes() )
-    throw( std::invalid_argument( "invalid node name" ) );
-  #endif
-  if( *ndit != B[ *nit ] )
-   ndiff++;
-  }
-
+ Index ndiff = countdiff( B , nms , NDfct , get_NNodes() );
  if( ! ndiff )
   return;
 
- ndit = NDfct;
- nit = nms.begin();
-
- if( not_dry_run( issueAMod ) && ( ! E.empty() ) ) {
+ if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  for( ; ndit < ndstp ; ++ndit , ++nit )
-   if( B[ *nit ] != *ndit ) {
-    B[ *nit ] = *ndit;
-    E[ *nit ].set_both( *ndit , ampar );
+  if( HasDynamicE() )
+   if( ordered ) {
+    // static part
+    auto nit = nms.begin();
+    for( ; ( nit != nms.end() ) && ( *nit < get_NStaticNodes() ) ;
+	 ++NDfct , ++nit ) {
+     if( B[ *nit ] != *NDfct ) {
+      B[ *nit ] = *NDfct;
+      E[ *nit ].set_both( *NDfct , ampar );
+      }
+     }
+
+    // dynamic part
+    auto dei = dE.begin();
+    for( Index i = get_NStaticNodes() ; nit != nms.end() ; ++i , ++dubi )
+     if( *nit == i ) {
+      if( B[ i ] != *NDfct ) {
+       B[ i ] = *NDfct;
+       (*dei).set_both( *NDfct , ampar );
+       }
+      nit++;
+      NDfct++;
+      }
+    }
+   else {
+    // make a vector of pairs < arc index , new capacity >
+    typedef std::pair< Index , FNumber > index_pair;
+    std::vector< index_pair > pairs( nms.size() );
+    for( Index i = 0 ; i < nms.size() ; ++i )
+     pairs[ i ] = std::make_pair( nms[ i ] , *(NDfct++) );
+
+    // sort the vector for increasing index
+    std::sort( pairs.begin() , pairs.end ,
+	       []( index_pair i , index_pair j )
+	       { return( i.first < j.first ); } );
+
+    // static part
+    auto pit = pairs.begin();
+    for( ; ( pit != pairs.end() ) && ( (*pit).first < get_NStaticArcs() ) ;
+	 ++pit )
+     if( B[ (*pit).first ] != (*pit).second ) {
+      B[ (*pit).first ] = (*pit).second;
+      E[ *nit ].set_both( *NCap , ampar );
+      }
+
+    // dynamic part
+    auto dei = dE.begin();
+    for( Index i = get_NStaticNodes() ; pairs != pairs.end() ; ++i , ++dubi )
+     if( (*pit).first == i ) {
+      if( B[ i ] != (*pit).second ) {
+       B[ i ] = (*pit).second;
+       (*dei).set_both( (*pit).second , ampar );
+       }
+      pit++;
+      }
+    }
+  else
+   for( auto nit = nms.begin() ; nit != nms.end() ; ++NDfct , ++nit ) {
+    if( B[ *nit ] != *NDfct ) {
+     B[ *nit ] = *NDfct;
+     E[ *nit ].set_both( *NDfct , ampar );
+     }
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2484,8 +2572,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   while( ndit < ndstp )
-    B[ *(nit++) ] = *(ndit++);
+   copyidx( B , nms , NDfct );
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -2517,11 +2604,15 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
  if( not_dry_run( issueMod ) )
   B[ nde ] = NDfct;  // change the physical representation- - - - - - - - - -
 
- if( not_dry_run( issueAMod ) && ( ! E.empty() ) )
+ if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) )
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
-  E[ nde ].set_both( NDfct , issueAMod );
-
+  if( nde < get_NStaticNodes() )
+   E[ nde ].set_both( NDfct , issueAMod );
+  else
+   std::next( dE.begin() , nde - get_NStaticNodes() )->set_both( NDfct ,
+								 issueAMod );
+ 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 				    MCFBlockMod::eChgDfct , nde , nde + 1 ) ,
@@ -2535,7 +2626,7 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( stop >= get_NArcs() )
-   stop = get_NArcs();
+  stop = get_NArcs();
 
  if( stop <= strt )  // nothing to change
   return;            // cowardly (and silently) return
@@ -2546,8 +2637,16 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
-  for( Index i = strt ; i < stop ; ++i )
+  Index i = strt;
+
+  // static part
+  for( ; i < std::min( stop , get_NStaticArcs() ) ; ++i )
    if( ! x[ i ].is_fixed() )
+    ndiff++;
+
+  // dynamic part
+  for( auto dxi = dx.begin() ; i++ < stop ; )
+   if( ! (*(dxi++)).is_fixed() )
     ndiff++;
 
   if( ! ndiff )
@@ -2558,10 +2657,18 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  for( Index i = strt ; i < stop ; ++i )
+  // static part
+  for( i = strt ; std::min( stop , get_NStaticArcs() ) ; ++i )
    if( ! x[ i ].is_fixed() ) {
     x[ i ].set_value( 0 );
     x[ i ].is_fixed( true , ampar );
+    }
+
+  // dynamic part
+  for( auto dxi = dx.begin() ; i++ < stop ; ++dxi )
+   if( ! (*dxi).is_fixed() ) {
+    (*dxi).set_value( 0 );
+    (*dxi).is_fixed( true , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2581,7 +2688,15 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
- assert( nms.size() <= get_NArcs() );
+ if( nms.empty() )
+  return;
+
+ // ensure the names are ordered even if they were not so originally
+ if( ! ordered )
+  std::sort( nms.begin() , nms.end() );
+
+ if( nms.back() >= get_NArcs() )
+  throw( std::invalid_argument( "invalid arc name" ) );
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
@@ -2589,14 +2704,21 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
 
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
-  for( auto i : nms ) {
-   #ifndef NDEBUG
-    if( i >= get_NArcs() )
-     throw( std::invalid_argument( "invalid arc name" ) );
-   #endif
-   if( ! x[ i ].is_fixed() )
+
+  // static part
+  auto nit = nms.begin();
+  for( ; ( nit != nms.end() ) && ( *nit < get_NStaticArcs() ) ; ++nit )
+   if( ! x[ *nit ].is_fixed() )
     ndiff++;
-   }
+
+  // dynamic part
+  auto dxi = dx.begin();
+  for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
+   if( *nit == i ) {
+    if( ! (*dxi).is_fixed() )
+     ndiff++;
+    ++nit;
+    }
 
   if( ! ndiff )
    return;
@@ -2606,25 +2728,33 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  for( auto i : nms )
-   if( ! x[ i ].is_fixed() ) {
-    x[ i ].set_value( 0 );
-    x[ i ].is_fixed( true , ampar );
+  // static part
+  for( nit = nms.begin() ; ( nit != nms.end() ) &&
+	                   ( *nit < get_NStaticArcs() ) ; ++nit )
+   if( ! x[ *nit ].is_fixed() ) {
+    x[ *nit ].set_value( 0 );
+    x[ *nit ].is_fixed( true , ampar );
+    }
+
+  // dynamic part
+  dxi = dx.begin();
+  for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
+   if( *nit == i ) {
+    if( ! (*dxi).is_fixed() ) {
+     (*dxi).set_value( 0 );
+     (*dxi).is_fixed( true , ampar );
+     }
+    ++nit;
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
 
- if( issue_pmod( issueMod ) ) {  // issue "physical Modification" - - - - - -
-  // ensure the names are ordered even if they were not so originally
-  if( ! ordered )
-   std::sort( nms.begin() , nms.end() );
+ if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
+  Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
+                                 MCFBlockMod::eCloseArc , std::move( nms ) ) ,
+			   Observer::par2chnl( issueMod ) );
 
-  auto mod = std::make_shared<MCFBlockSbstMod>( this ,
-                                 MCFBlockMod::eCloseArc , std::move( nms ) );
-
-  Block::add_Modification( mod , Observer::par2chnl( issueMod ) );
-  }
  }  // end( MCFBlock::close_arcs( subset ) )
 
 /*--------------------------------------------------------------------------*/
@@ -2640,15 +2770,17 @@ void MCFBlock::close_arc( c_Index arc ,
  // "dry run" case; but the "phisical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  if( x[ arc ].is_fixed() )
+  auto xa = i2p_x( arc );
+
+  if( xa.is_fixed() )
    return;
 
-  x[ arc ].set_value( 0 );
+  xa.set_value( 0 );
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  x[ arc ].is_fixed( true , issueAMod );
+  xa.is_fixed( true , issueAMod );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2674,9 +2806,17 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
  // "dry run" case; but the "phisical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  Index ndiff = 0;
-  for( Index i = strt ; i < stop ; ++i )
+   Index ndiff = 0;
+  Index i = strt;
+
+  // static part
+  for( ; i < std::min( stop , get_NStaticArcs() ) ; ++i )
    if( x[ i ].is_fixed() )
+    ndiff++;
+
+  // dynamic part
+  for( auto dxi = dx.begin() ; i++ < stop ; )
+   if( (*(dxi++)).is_fixed() )
     ndiff++;
 
   if( ! ndiff )
@@ -2687,9 +2827,15 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  for( Index i = strt ; i < stop ; ++i )
+  // static part
+  for( i = strt ; std::min( stop , get_NStaticArcs() ) ; ++i )
    if( x[ i ].is_fixed() )
     x[ i ].is_fixed( false , ampar );
+
+  // dynamic part
+  for( auto dxi = dx.begin() ; i++ < stop ; ++dxi )
+   if( (*dxi).is_fixed() )
+    (*dxi).is_fixed( false , ampar );
 
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
@@ -2708,7 +2854,15 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
 void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- assert( nms.size() <= get_NArcs() );
+ if( nms.empty() )
+  return;
+
+ // ensure the names are ordered even if they were not so originally
+ if( ! ordered )
+  std::sort( nms.begin() , nms.end() );
+
+ if( nms.back() >= get_NArcs() )
+  throw( std::invalid_argument( "invalid arc name" ) );
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
@@ -2716,14 +2870,21 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
 
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
-  for( auto i : nms ) {
-   #ifndef NDEBUG
-    if( i >= get_NArcs() )
-     throw( std::invalid_argument( "invalid arc name" ) );
-   #endif
-   if( x[ i ].is_fixed() )
+
+  // static part
+  auto nit = nms.begin();
+  for( ; ( nit != nms.end() ) && ( *nit < get_NStaticArcs() ) ; ++nit )
+   if( x[ *nit ].is_fixed() )
     ndiff++;
-   }
+
+  // dynamic part
+  auto dxi = dx.begin();
+  for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
+   if( *nit == i ) {
+    if( (*dxi).is_fixed() )
+     ndiff++;
+    ++nit;
+    }
 
   if( ! ndiff )
    return;
@@ -2733,25 +2894,31 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  for( auto i : nms )
-   if( x[ i ].is_fixed() )
-    x[ i ].is_fixed( false , ampar );
+  // static part
+  for( nit = nms.begin() ; ( nit != nms.end() ) &&
+	                   ( *nit < get_NStaticArcs() ) ; ++nit )
+   if( x[ *nit ].is_fixed() )
+    x[ *nit ].is_fixed( false , ampar );
+
+  // dynamic part
+  dxi = dx.begin();
+  for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
+   if( *nit == i ) {
+    if( (*dxi).is_fixed() )
+     (*dxi).is_fixed( false , ampar );
+    ++nit;
+    }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
 
  // TODO: eliminate from nms the "fake" changes
 
- if( issue_pmod( issueMod ) ) {  // issue "physical Modification" - - - - - -
-  // ensure the names are ordered even if they were not so originally
-  if( ! ordered )
-   std::sort( nms.begin() , nms.end() );
+ if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
+  Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
+                                  MCFBlockMod::eOpenArc , std::move( nms ) ) ,
+			   Observer::par2chnl( issueMod ) );
 
-  auto mod = std::make_shared<MCFBlockSbstMod>( this ,
-                                   MCFBlockMod::eOpenArc , std::move( nms ) );
-
-  Block::add_Modification( mod , Observer::par2chnl( issueMod ) );
-  }
  }  // end( MCFBlock::open_arcs( subset ) )
 
 /*--------------------------------------------------------------------------*/
@@ -2767,13 +2934,15 @@ void MCFBlock::open_arc( c_Index arc ,
  // "dry run" case; but the "phisical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  if( ! x[ arc ].is_fixed() )
+  auto xa = i2p_x( arc );
+
+  if( ! xa.is_fixed() )
    return;
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  x[ arc ].is_fixed( false , issueAMod );
+  xa.is_fixed( false , issueAMod );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2861,27 +3030,95 @@ void MCFBlock::print( std::ostream &output ) const
 /*-------------------------- PRIVATE METHODS -------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-inline MCFBlock::Index MCFBlock::p2i( Variable * const var )
+inline MCFBlock::Index MCFBlock::p2i_x( Variable * const var )
 {
- auto i = std::distance( x.data() , static_cast< ColVariable * const >( var )
-			 );
+ auto i = std::distance( x.data() ,
+			 static_cast< ColVariable * const >( var ) );
  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
   return( i );
 
  i = get_NStaticArcs();
- for( auto dxi = dx.begin() ; ; ++i , ++dx )
-  if( *dx == static_cast< ColVariable * >( var ) )
+ for( auto dxi = dx.begin() ; dxi != dx.end() ; ++i , ++dxi )
+  if( &(*dxi) == static_cast< ColVariable * >( var ) )
    return( i );
+
+ throw( std::invalid_argument( "invalid arc name" ) );
+ return( 0 );
  }
 
 /*--------------------------------------------------------------------------*/
 
-inline Variable * MCFBlock::i2p( c_Index i )
+inline ColVariable * MCFBlock::i2p_x( c_Index i )
 {
+ if( i >= get_NArcs() )
+  throw( std::invalid_argument( "invalid arc name" ) );
+
  if( i < get_NStaticArcs() )
   return( &x[ i ] );
  else
-  return( &( *std::next( dx.begin() , i ) ) );
+  return( &( *std::next( dx.begin() , i - get_NStaticArcs() ) ) );
+ }
+
+/*--------------------------------------------------------------------------*/
+
+inline MCFBlock::Index MCFBlock::p2i_ub( Constraint * const cns )
+{
+ auto i = std::distance( UB.data() ,
+			 static_cast< LB0Constraint * const >( cns ) );
+ if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
+  return( i );
+
+ i = get_NStaticArcs();
+ for( auto dubi = dUB.begin() ; dubi != dUB.end() ; ++i , ++dubi )
+  if( &(*dubi) == static_cast< LB0Constraint * >( cns ) )
+   return( i );
+
+ throw( std::invalid_argument( "invalid arc name" ) );
+ return( 0 );
+ }
+
+/*--------------------------------------------------------------------------*/
+
+inline LB0Constraint * MCFBlock::i2p_ub( c_Index i )
+{
+ if( i >= get_NArcs() )
+  throw( std::invalid_argument( "invalid arc name" ) );
+
+ if( i < get_NStaticArcs() )
+  return( &UB[ i ] );
+ else
+  return( &( *std::next( dUB.begin() , i - get_NStaticArcs() ) ) );
+ }
+
+/*--------------------------------------------------------------------------*/
+
+inline MCFBlock::Index MCFBlock::p2i_e( Constraint * const cns )
+{
+ auto i = std::distance( E.data() ,
+			 static_cast< LB0Constraint * const >( cns ) );
+ if( ( i >= 0 ) && ( i < get_NStaticNodes() ) )
+  return( i );
+
+ i = get_NStaticNodes();
+ for( auto dei = dE.begin() ; dei != dE.end() ; ++i , ++dei )
+  if( &(*dei) == static_cast< FRowConstraint * >( cns ) )
+   return( i );
+
+ throw( std::invalid_argument( "invalid node name" ) );
+ return( 0 );
+ }
+
+/*--------------------------------------------------------------------------*/
+
+inline FRowConstraint * MCFBlock::i2p_e( c_Index i )
+{
+ if( i >= get_NNodes() )
+  throw( std::invalid_argument( "invalid arc name" ) );
+
+ if( i < get_NStaticNodes() )
+  return( &E[ i ] );
+ else
+  return( &( *std::next( dE.begin() , i - get_NStaticArcs() ) ) );
  }
 
 /*--------------------------------------------------------------------------*/
@@ -2892,29 +3129,11 @@ void MCFBlock::guts_of_destructor( void )
     themselves from Variable that are going to be deleted anyway. Then
     deletes all the "abstract representation", if any. */
 
- assert( ( get_static_constraints().size() == 0 ) ||
-	 ( get_static_constraints().size() == 2 ) );
-
- assert( ( get_dynamic_constraints().size() == 0 ) ||
-	 ( get_dynamic_constraints().size() == 2 ) );
-
- if( get_static_constraints().size() > 1 ) { // delete LB0 constraints, if any
-  auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					   & get_static_constraints()[ 1 ] );
-  assert( lbc );
-  for( auto & cnst : **lbc )  // first clear all the Constraint
-   cnst.clear();
-  delete *lbc;                // then delete them
-  }
-
- if( get_dynamic_constraints().size() > 1 ) { // delete LB0 constraints, if any
-  auto lbc = boost::any_cast<std::list<LB0Constraint> *>(
-					   & get_dynamic_constraints()[ 1 ] );
-  assert( lbc );
-  for( auto & cnst : **lbc )  // first clear all the Constraint
-   cnst.clear();
-  delete *lbc;                // then delete them
-  }
+ // clear the bound constraints
+ for( auto & cnst : UB )
+  cnst.clear();
+ for( auto & cnst : dUB )
+  cnst.clear();
 
  // clear the flow conservation constraints
  for( auto & cnst : E )
@@ -2923,15 +3142,17 @@ void MCFBlock::guts_of_destructor( void )
   cnst.clear();
 
  // then delete them all
- E.clear();
+ dUB.clear();
+ UB.clear();
  dE.clear();
+ E.clear();
 
  // clear the objective function
  c.clear();
 
  // delete all Variable
- x.clear();
  dx.clear();
+ x.clear();
 
  // explicitly reset all Constraint and Variable
  // this is done for the case where this method is called prior to re-loading
@@ -2993,20 +3214,64 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    if( tmod->v_vars.size() == 1 ) {  // changing just one cost
     const auto var = tmod->v_vars.front();
     const auto cp = lfo->get_v_var();
-    c_Index i = p2i( var );
+    c_Index i = p2i_x( var );
     chg_cost( cp[ i ].second , i , eNoBlck , eDryRun );
     }
    else {                            // changing many costs at once
     Vec_CNumber nC( tmod->v_vars.size() );
     Vec_Index nI( tmod->v_vars.size() );
     Index i = 0;
-   
+
     const auto cp = lfo->get_v_var();
-    for( const auto & var : tmod->v_vars ) {
-     nI[ i ] = p2i( var );
-     nC[ i ] = cp[ nI[ i ] ].second;
-     i++;
+
+    if( HasDynamicX() ) {
+     // use nI as a temporary to store the index of the Variable
+     // in the LinearFunction, but it will be overwrittem
+     lfo->map_active( tmod->v_vars , nI , true );
+
+     auto dxi = dx.begin();
+
+     if( x.empty() ) {  // there are only dynamic Variable
+      for( Index h = 0 ; i < tmod->v_vars.size() ; ++h , ++dxi )
+       if( tmod->v_vars[ i ] == &(*dxi) ) {
+	nC[ i ] = cp[ nI[ i ] ].second;
+	nI[ i++ ] = h;
+        }
+      }
+     else {
+      // there are both static and dynamic Variable, which means that
+      // x.front() and x.back() are well-defined
+      Index h = 0;
+
+      // first part: variables before x.front() (if any)
+      for( ; ( i < tmod->v_vars.size() ) &&
+	     ( tmod->v_vars[ i ] < &(x.front()) ) ; ++h , ++dxi )
+       if( tmod->v_vars[ i ] == &(*dxi) ) {
+	nC[ i ] = cp[ nI[ i ] ].second;
+	nI[ i++ ] = h;
+        }
+
+      // middle part: variables in x (if any)
+      for( ; ( i < tmod->v_vars.size() ) &&
+	     ( tmod->v_vars[ i ] < &(x.back()) ) ; ++i ) {
+       nC[ i ] = cp[ nI[ i ] ].second;
+       nI[ i ] = p2i_i( tmod->v_vars[ i ] );
+       }
+
+      // last part: variables after x.back() (if any)
+      for( ; i < tmod->v_vars.size() ; ++h , ++dxi )
+       if( tmod->v_vars[ i ] == &(*dxi) ) {
+	nC[ i ] = cp[ nI[ i ] ].second;
+	nI[ i++ ] = h;
+        }      
+      }
      }
+    else  // there are only static Variable
+     for( const auto & var : tmod->v_vars ) {
+      nI[ i ] = p2i_x( var );
+      nC[ i ] = cp[ nI[ i ] ].second;
+      i++;
+      }
 
     // check if nI is consecutive, if so use the ranged version
     bool cnsctv = true;
@@ -3031,25 +3296,16 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
  {
   const auto tmod = std::dynamic_pointer_cast<RowConstraintMod>( mod );
   if( tmod ) {
-   if( ! E.size() )
-    throw( std::invalid_argument( "Modification to non-constructed Constraint"
-				  ) );
+   if( ! ( E.empty() && dE.empty() ) )
+    throw( std::invalid_argument(
+			     "Modification to non-constructed Constraint" ) );
 
    if( tmod->f_type == RowConstraintMod::eChgRHS ) {
     auto cp = dynamic_cast<LB0Constraint * const>( tmod->f_constraint );
     if( ! cp )
      throw( std::invalid_argument( "Invalid Modification to Constraint" ) );
-     
-    auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-					  & get_static_constraints()[ 1 ] );
-    assert( lbc );
 
-    auto i = std::distance( &((*lbc)->front()) , cp );
-    if( ( i < 0 ) || ( i >= get_NArcs() ) )
-     throw( std::invalid_argument(
-			    "Modification to Constraint of another Block" ) );
-
-    chg_ucap( cp->get_rhs() , i , eNoBlck , eDryRun );
+    chg_ucap( cp->get_rhs() , p2i_ub( cp ) , eNoBlck , eDryRun );
     return;
     }
 
@@ -3058,12 +3314,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     if( ! cp )
      throw( std::invalid_argument( "Invalid Modification to Constraint" ) );
 
-    auto i = std::distance( &(E.front()) , cp );
-    if( ( i < 0 ) || ( i >= NNodes ) )
-     throw( std::invalid_argument(
-			    "Modification to Constraint of another Block" ) );
-
-    chg_dfct( cp->get_rhs() , i , eNoBlck , eDryRun );
+    chg_dfct( cp->get_rhs() , p2i_e( cp ) , eNoBlck , eDryRun );
     return;
     }
 
@@ -3082,14 +3333,11 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
        ( xi->get_type() != ColVariable::kNatural ) )
     throw( std::logic_error( "changing type of flow Variable not allowed" ) );
    
-   auto i = std::distance( &(x.front()) , xi );
-   if( ( i < 0 ) || ( i >= get_NArcs() ) )
-    throw( std::invalid_argument(
-			     "Modification to Variable of another Block" ) );
+   auto i = p2i_x( xi );
    if( xi->is_fixed() )
-    close_arc( i ,  eNoBlck , eDryRun );
+    close_arc( i , eNoBlck , eDryRun );
    else
-    open_arc( i ,  eNoBlck , eDryRun );
+    open_arc( i , eNoBlck , eDryRun );
 
    return;
    }
@@ -3151,24 +3399,39 @@ void MCFSolution::read( const Block * const block )
  if( ! MCFB )
   throw( std::invalid_argument( "block is not a MCFBlock" ) );
 
- if( v_x.size() > 0 ) {
-  if( v_x.size() != MCFB->get_NArcs() )
-   throw( std::invalid_argument( "incompatible flow size" ) );
+ // read flows- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  for( MCFBlock::Index i = 0 ; i < v_x.size() ; ++i )
-   v_x[ i ] = MCFB->x[ i ].get_value();
-  }
+ if( v_x.size() < MCFB->get_NArcs() )
+  v_x.resize( MCFB->get_NArcs() );
 
- if( v_pi.size() > 0 ) {
-  if( v_pi.size() != MCFB->get_NNodes() )
-   throw( std::invalid_argument( "incompatible potential size" ) );
+ auto vxi = v_x.begin();
 
-  if( ! MCFB->E.size() )
-   throw( std::invalid_argument( "potential solution not available" ) );
+ // static part
+ for( auto & xi : MCFB->x )
+  *(vxi++) = xi.get_value();
 
-  for( MCFBlock::Index i = 0 ; i < v_pi.size() ; ++i )
-   v_pi[ i ] = MCFB->E[ i ].get_dual();
-  }
+ // dynamic part
+ for( auto & xi : MCFB->dx )
+  *(vxi++) = xi.get_value();
+
+ // read potentials - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ if( MCFB->E.empty() && MCFB->dE.empty() )  // no potentials available
+  return;
+
+ if( v_pi.size() < MCFB->get_NNodes() )
+  v_pi.resize( MCFB->get_NNodes() );
+
+ auto vpii = v_pi.begin();
+ 
+ // static part
+ for( auto & ei : MCFB->E )
+  *(vpii++) = ei.get_dual();
+
+ // dynamic part
+ for( auto & ei : MCFB->dE )
+  *(vpii++) = ei.get_dual();
+
  }  // end( MCFSolution::read )
 
 /*--------------------------------------------------------------------------*/
@@ -3179,34 +3442,60 @@ void MCFSolution::write( Block * const block )
  if( ! MCFB )
   throw( std::invalid_argument( "block is not a MCFBlock" ) );
 
+ // write flows - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  if( v_x.size() > 0 ) {
-  if( v_x.size() != MCFB->get_NArcs() )
+  if( v_x.size() < MCFB->get_NStaticArcs() )
    throw( std::invalid_argument( "incompatible flow size" ) );
 
-  for( MCFBlock::Index i = 0 ; i < v_x.size() ; ++i )
-   if( ! MCFB->x[ i ].is_fixed() )
-    MCFB->x[ i ].set_value( v_x[ i ] );
+  auto vxi = v_x.begin();
+
+  // static part
+  for( auto & xi : MCFB->x )
+   xi.set_value( *(vxi++) );
+
+  // dynamic part
+  for( auto dxi = MCFB->dx.begin() ;
+       ( dxi != MCFB->dx.end() ) && ( vxi != v_x.end() ) ; )
+   (*(dxi++)).set_value( *(vxi++) );
   }
 
- if( v_pi.size() > 0 ) {
-  if( v_pi.size() != MCFB->get_NNodes() )
-   throw( std::invalid_argument( "incompatible potential size" ) );
+ // write potentials- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ if( v_pi.empty() )  // no potentials to write
+  return;
 
-  if( ! MCFB->E.size() )
-   throw( std::invalid_argument( "potential solution not available" ) );
+ if( MCFB->E.empty() && MCFB->dE.empty() )  // no Constraint to write to
+  return;
 
-  for( MCFBlock::Index i = 0 ; i < v_pi.size() ; ++i )
-   MCFB->E[ i ].set_dual( v_pi[ i ] );
+ if( v_pi.size() < MCFB->get_NStaticNodes() )
+  throw( std::invalid_argument( "incompatible potential size" ) );
 
-  if( MCFB->get_static_constraints().size() > 1 ) {
-   auto lbc = boost::any_cast<std::vector<LB0Constraint> *>(
-				     & MCFB->get_static_constraints()[ 1 ] );
-   assert( lbc );
-   for( MCFBlock::Index i = 0 ; i < MCFB->get_NArcs() ; ++i )
-    (**lbc)[ i ].set_dual( MCFB->C[ i ] - v_pi[ MCFB->SN[ i ] ]
-		                        + v_pi[ MCFB->EN[ i ] ] );
-   }
-  }
+ auto vpii = v_pi.begin();
+
+ // static part
+ for( auto & ei : MCFB->E )
+  ei.set_dual( *(vpii++) );
+
+ // dynamic part
+ for( auto dei = MCFB->dE.begin() ;
+      ( dei != MCFB->dE.end() ) && ( vpii != v_pi.end() ) ; )
+  (*(dei++)).set_dual( *(vpii++) );
+
+ // write reduced costs (if any)- - - - - - - - - - - - - - - - - - - - - - -
+  
+ if( MCFB->UB.empty() && MCFB->dUB.empty() )  // no bounds to write to
+  return;
+
+ MCFBlock::Index i = 0;
+
+ // static part
+ for( auto ubi = MCFB->UB.begin() ; ubi != MCFB->UB.end() ; ++i )
+  *(ubi++).set_dual( MCFB->get_C( i ) + v_pi( MCFB->SN[ i ] - 1 )
+		                      - v_pi( MCFB->EN[ i ] - 1 ) );
+ // dynamic part
+ for( auto dubi = MCFB->dUB.begin() ;
+      ( dubi != MCFB->dUB.end() ) && ( i < MCFB->get_NArcs() ) ; ++i )
+  *(dubi++).set_dual( MCFB->get_C( i ) + v_pi( MCFB->SN[ i ] - 1 )
+		                       - v_pi( MCFB->EN[ i ] - 1 ) );
  }  // end( MCFSolution::write )
 
 /*--------------------------------------------------------------------------*/

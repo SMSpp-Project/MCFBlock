@@ -977,10 +977,10 @@ public:
  /// gets a contiguous interval of the flow solution
  /** Method to get the flow solution; upon return, FSol[ i ] contains the
   * current value of the flow solution for arc strt + i for all 0 <= i < 
-  * min( stp , get_NArcs() ). */
+  * min( stop , get_NArcs() ). */
 
  void get_x( Vec_FNumber & FSol , c_Index strt = 0 ,
-	                          c_Index stp = Inf<Index>() );
+	                          c_Index stop = Inf<Index>() );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the flow solution for an arbitrary subset of arcs
@@ -1007,12 +1007,12 @@ public:
  /// gets a contiguous interval of the potential solution
  /** Method to get the potential solution; upon return, PSol[ i ] contains the
   * current value of the potential solution for node strt + i for all 0 <= i <
-  * min( stp , get_NNodes() ). Note that "node names" here go from 0 to
+  * min( stop , get_NNodes() ). Note that "node names" here go from 0 to
   * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
   * "names" between 1 and get_NNodes(). */
 
  void get_pi( Vec_CNumber & PSol , c_Index strt = 0 ,
-	                           c_Index stp = Inf<Index>() );
+	                           c_Index stop = Inf<Index>() );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the flow potential for an arbitrary subset of nodes
@@ -1047,10 +1047,10 @@ public:
  /// gets a contiguous interval of the reduced costs
  /** Method to get the reduced costs; upon return, RC[ i ] contains the
   * current value of the reduced cost for arc strt + i for all 0 <= i < 
-  * min( stp , get_NArcs() ). */
+  * min( stop , get_NArcs() ). */
 
  void get_rc( Vec_CNumber & RC , c_Index strt = 0 ,
-	                         c_Index stp = Inf<Index>() );
+	                         c_Index stop = Inf<Index>() );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the reduced costs for an arbitrary subset of arcs
@@ -1063,7 +1063,21 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the reduced costs of the given arc
 
- CNumber get_rc( c_Index arc );
+ CNumber get_rc( c_Index arc ) {
+  if( E.empty() && dE.empty() )
+   throw( std::logic_error( "reduced costs unavailable if Constraint aren't"
+			   ) );
+  if( arc >= get_NArcs() )
+   throw( std::invalid_argument( "invalid arc name" ) );
+
+  if( UB.empty() && dUB.empty() )
+   return( get_C( arc ) + get_pi( SN[ arc ] - 1 ) - get_pi( EN[ arc ] - 1 ) );
+  else
+   if( arc < get_NStaticArcs() )
+    return( UB[ arc ].get_dual() );
+   else
+    return( std::next( dUB.begin() , arc - get_NStaticArcs() )->get_dual() );
+  }
 
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the flow solution
@@ -1072,14 +1086,7 @@ public:
   * the flow variable x[ strt + i ]. This is typically used by a Solver. */
 
  void set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
-	     c_Index strt = 0 )
- {
-  if( std::distance( fstop , fstrt ) + strt > get_NArcs() )
-   throw( std::invalid_argument( "too many values provided" ) );
-
-  for( auto xi = x.begin() + strt ; fstrt < fstop ; )
-   (xi++)->set_value( *(fstrt++) );
-  }
+	     c_Index strt = 0 );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// sets the flow solution of the given arc
@@ -1121,10 +1128,13 @@ public:
   if( ! E.size() )  // nowhere to put the value
    return;          // cowardly (and silently) return
 
-  if( nde >= get_NNodes() )
-   throw( std::invalid_argument( "invalid node name" ) );
+  if( arc >= get_NArcs() )
+   throw( std::invalid_argument( "invalid arc name" ) );
 
-  return( E[ nde ].set_dual( PSol ) );
+  if( nde < get_NStaticNodes() )
+   E[ nde ].set_dual( PSol );
+  else
+   std::next( dE.begin() , nde - get_NStaticNodes() )->set_dual( PSol );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1140,7 +1150,19 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// sets the reduced cost of the given arc
 
- void set_rc( c_CNumber RC , c_Index arc );
+ void set_rc( c_CNumber RC , c_Index arc ) {
+ if( UB.empty() && dUB.empty() )  // nowhere to put the value in
+  return;                         // cowardly (and silently) return
+
+ if( arc >= get_NArcs() )
+  throw( std::invalid_argument( "invalid arc name" ) );
+
+ if( arc < get_NStaticArcs() )
+  UB[ arc ].set_dual( RC );
+ else
+  std::next( dUx.begin() , arc - get_NStaticArcs() )->set_dual( RC );
+
+ }  // end( MCFBlock::set_rc( one ) )
 
 /*@} -----------------------------------------------------------------------*/
 /*-------------------- Methods for handling Modification -------------------*/
@@ -1289,8 +1311,7 @@ public:
   * the "physical" one is a MCFBlockSbstMod). */
 
  void chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
-		 const bool ordered = false ,
-		 c_ModParam issueMod = eNoBlck ,
+		 const bool ordered = false , c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -1630,9 +1651,11 @@ public:
 
  std::vector<ColVariable> x;     ///< the static flow variables
  std::vector<FRowConstraint> E;  ///< the static flow conservation constrs.
-
+ std::vector<LB0Constraint> UB;  ///< the static bound constraints
+ 
  std::list<ColVariable> dx;      ///< the dynamic flow variables
  std::list<FRowConstraint> dE;   ///< the dynamic flow conservation constrs.
+ std::list<LB0Constraint> dUB;   ///< the dynamic bound constraints
 
  FRealObjective c;               ///< the (linear) objective function
 
@@ -1646,21 +1669,37 @@ public:
 /*-------------------------- PRIVATE METHODS -------------------------------*/
 /*--------------------------------------------------------------------------*/
 
- bool HasStaticX( void ) { return( get_NStaticArcs() ); }
+ inline bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
 
- bool HasDynamicX( void ) { return( get_NArcs() > get_NStaticArcs() ); }
+ inline bool HasDynamicX( void ) const {
+  return( get_NArcs() > get_NStaticArcs() );
+  }
 
- bool MayHaveDynX( void ) { return( get_MaxNArcs() > get_NStaticArcs() ); }
+ inline bool MayHaveDynX( void ) const {
+  return( get_MaxNArcs() > get_NStaticArcs() );
+  }
 
- bool HasStaticE( void ) { return( get_NStaticNodes() ); }
+ inline bool HasStaticE( void ) const { return( get_NStaticNodes() ); }
 
- bool HasDynamicE( void ) { return( get_NNodes() > get_NStaticNodes() ); }
+ inline bool HasDynamicE( void ) const {
+  return( get_NNodes() > get_NStaticNodes() );
+  }
 
- bool MayHaveDynE( void ) { return( get_MaxNNodes() > get_NStaticNodes() ); }
+ inline bool MayHaveDynE( void ) const {
+  return( get_MaxNNodes() > get_NStaticNodes() );
+  }
 
- inline Index p2i( Variable * const var );
+ inline Index p2i_x( Variable * const var ) const;
 
- inline Variable * i2p( c_Index i );
+ inline ColVariable * i2p_x( c_Index i ) const;
+
+ inline Index p2i_ub( Constraint * const cns ) const;
+
+ inline LB0Constraint * i2p_ub( c_Index i ) const;
+
+ inline Index p2i_e( Constraint * const cns ) const;
+
+ inline FRowConstraint * i2p_e( c_Index i ) const;
 
  void guts_of_destructor( void );
 
