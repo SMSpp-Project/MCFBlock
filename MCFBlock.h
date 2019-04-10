@@ -301,7 +301,11 @@ public:
   * - n    is the number of nodes of the network
   *
   * - pSn  is the vector of the arc starting nodes;
-  * - pEn  is the vector of the arc ending nodes;
+  *
+  * - pEn  is the vector of the arc ending nodes: pSn and pEn must have the
+  *        same size (although they can be empty if there are dynamic arcs,
+  *        see below), and their common size is denoted as "m" in the rest
+  *        of the comments;
   *
   * - pU   is the vector of the arc upper capacities; capacities must be
   *        nonnegative, but can be infinite; if pU is empty, then all
@@ -317,12 +321,16 @@ public:
   * - dn   the current number (<= n, default 0) of dynamic nodes: all the
   *        nodes between 0 and n - dn - 1 are static, i.e., they cannot be
   *        deleted (and re-created), whereas all those from n - dn to n - 1
-  *        are dynamic, i.e., they can deleted and later on re-created;
+  *        are dynamic, i.e., they can deleted and later on re-created; if
+  *        dn > n, then it is intended that dn == n, i.e., all nodes are
+  *        dynamic (but still n is taken as the current number of nodes);
   *
-  * - dm   the current number (<= m,  default 0) of dynamic arcs: all the
+  * - dm   the current number (<= m, default 0) of dynamic arcs: all the
   *        arcs between 0 and m - dm - 1 are static, i.e., they cannot be
   *        deleted (and re-created), whereas all those from m - dm to m - 1
-  *        are dynamic, i.e., they can deleted and later on re-created;
+  *        are dynamic, i.e., they can deleted and later on re-created; if
+  *        dm > m, then it is intended that dm == m, i.e., all arcs are
+  *        dynamic (but still m is taken as the current number of arcs);
   *
   * - mdn  the maximum number of dynamic nodes (default 0, if mdn < dn
   *        then the value is ignored and dn is used): data in the MCFBlock
@@ -394,13 +402,17 @@ public:
   *   nodes: all the nodes between 0 and "NNodes" - "DynNNodes" - 1 are
   *   static, i.e., they cannot be deleted (and re-created), whereas all
   *   those from "NNodes" + "DynNNodes" to "NNodes" - 1 are dynamic, i.e.,
-  *   they can deleted and later on re-created;
+  *   they can deleted and later on re-created; if "DynNNodes" > "NNodes",
+  *   then it is intended that "DynNNodes" == "NNodes", i.e., all nodes are
+  *   dynamic (but still "NNodes" is taken as the current number of nodes);
   *
   * - the dimension "DynNArcs" containing the current number of dynamic
   *   arcs: all the arcs between 0 and "NArcs" - "DynNArcs" - 1 are
   *   static, i.e., they cannot be deleted (and re-created), whereas all
   *   those from "NArcs" + "DynNArcs" to "NArcs" - 1 are dynamic, i.e.,
-  *   they can deleted and later on re-created;
+  *   they can deleted and later on re-created; if "DynNArcs" > "NArcs",
+  *   then it is intended that "DynNArcs" == "NArcs", i.e., all arcs are
+  *   dynamic (but still "NArcs" is taken as the current number of arcs);
   *
   * - the dimension "MaxDynNNodes" containing the maximum number of dynamic
   *   nodes: data in the MCFBlock is allocated to accommodate for the fact
@@ -423,7 +435,7 @@ public:
   * deficits are assumed to be 0. Finally, all the dimensions "DynNNodes",
   * "DynNArcs", "MaxDynNNodes" and "MaxDynNArcs" are optional: if they are
   * missing they are treated as being 0 (this happening for all four means
-  * that the graph is "fully static" and cannot be changed. */
+  * that the graph is "fully static" and cannot be changed). */
 
  virtual void deserialize( netCDF::NcGroup&& group ,
 			   Block *father = nullptr ) override;
@@ -1109,17 +1121,7 @@ public:
   * constraint) strt + i. This is typically used by a Solver. */
 
  void set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
-	      c_Index strt = 0 )
- {
-  if( ! E.size() )  // nowhere to put the value
-   return;          // cowardly (and silently) return
-
-  if( std::distance( pstop , pstrt ) + strt > get_NNodes() )
-   throw( std::invalid_argument( "too many values provided" ) );
-
-  for( auto Ei = E.begin() + strt ; pstrt < pstop ; )
-   (Ei++)->set_dual( *(pstrt++) );
-  }
+	      c_Index strt = 0 );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// sets the potential solution of the given node
@@ -1128,8 +1130,8 @@ public:
   if( ! E.size() )  // nowhere to put the value
    return;          // cowardly (and silently) return
 
-  if( arc >= get_NArcs() )
-   throw( std::invalid_argument( "invalid arc name" ) );
+  if( nde >= get_NNodes() )
+   throw( std::invalid_argument( "invalid node name" ) );
 
   if( nde < get_NStaticNodes() )
    E[ nde ].set_dual( PSol );
@@ -1160,7 +1162,7 @@ public:
  if( arc < get_NStaticArcs() )
   UB[ arc ].set_dual( RC );
  else
-  std::next( dUx.begin() , arc - get_NStaticArcs() )->set_dual( RC );
+  std::next( dUB.begin() , arc - get_NStaticArcs() )->set_dual( RC );
 
  }  // end( MCFBlock::set_rc( one ) )
 

@@ -92,9 +92,7 @@ static MCFBlock::FNumber read_UB( std::istream & iStrm )
 /*--------------------------------------------------------------------------*/
 // returns the number of elements where two vectors differ
 template< typename T >
-static inline MCFBlock::Index countdiff( std::vector<T>:const_iterator beg ,
-					 std::vector<T>:const_iterator end ,
-					 std::vector<T>:const_iterator cmp )
+static inline MCFBlock::Index countdiff( T beg , T end , T cmp )
 {
  MCFBlock::Index ndiff = 0;
  for( ; beg != end ; )
@@ -109,15 +107,15 @@ static inline MCFBlock::Index countdiff( std::vector<T>:const_iterator beg ,
 // being given as a base vector and a subset of indices
 template< typename T >
 static inline MCFBlock::Index countdiff( std::vector<T> & vec ,
-					 MCFBlock::c_Vec_Index & nms ,
-					 std::vector<T>:const_iterator cmp ,
-					 MCFBlock::c_Index n_max )
+				MCFBlock::c_Vec_Index & nms ,
+				typename std::vector<T>::const_iterator cmp ,
+				MCFBlock::c_Index n_max )
 {
  MCFBlock::Index ndiff = 0;
- for( auto beg = nms.begin() ; beg != nms.end() ; ) {
-  if( nms[ *beg ] >= n_max )
+ for( auto nm : nms ) {
+  if( nm >= n_max )
    throw( std::invalid_argument( "invalid name in nms" ) );
-  if( vec[ *(beg++) ] != *(cmp++) )
+  if( vec[ nm ] != *(cmp++) )
    ndiff++;
   }
 
@@ -127,12 +125,12 @@ static inline MCFBlock::Index countdiff( std::vector<T> & vec ,
 /*--------------------------------------------------------------------------*/
 // copys one vector to a given subset of another
 template< typename T >
-static inline MCFBlock::Index copyidx( std::vector<T> & vec ,
-				       MCFBlock::c_Vec_Index & nms ,
-				       std::vector<T>:const_iterator cpy )
+static inline void copyidx( std::vector<T> & vec ,
+			    MCFBlock::c_Vec_Index & nms ,
+			    typename std::vector<T>::const_iterator cpy )
 {
- for( auto nit = nms.begin() ; nit < nms.end() ; )
-  vec[ *(nit++) ] = *(cpy++);
+ for( auto nm : nms )
+  vec[ nm ] = *(cpy++);
  }
 
 /*--------------------------------------------------------------------------*/
@@ -178,8 +176,8 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
  NArcs = pSn.size();
  MaxNNodes = NNodes + ( mdn > dn ? mdn - dn : 0 );
  c_Index MaxNArcs = NArcs + ( mdm > dm ? mdm - dm : 0 );
- NStaticNodes = dn > n : 0 ? n - dn;
- NStaticArcs = dm > m : 0 ? m - dm;
+ NStaticNodes = dn > n ? 0 : n - dn;
+ NStaticArcs = dm > NArcs ? 0 : NArcs - dm;
 
  SN.resize( MaxNArcs , 0 );
  std::copy( pSn.begin() , pSn.end() , SN.begin() );
@@ -587,7 +585,7 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
    UB[ i ].set_Block( this );  // this is done last ==> no Modification
    }
 
-  add_static_constraint( &LB );
+  add_static_constraint( UB );
   }
 
  // dynamic part
@@ -602,7 +600,7 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
    cnst.set_Block( this );  // this is done last ==> no Modification
    }
 
-  add_dynamic_constraint( &dUB );
+  add_dynamic_constraint( dUB );
   }
  }  // end( MCFBlock::generate_abstract_constraints )
 
@@ -640,7 +638,7 @@ void MCFBlock::generate_objective( Configuration *objc )
   Index i = 0;
 
   // static part
-  if( HasStaticX() )
+  if( HasStaticX() ) {
    if( C.size() )
     for( ; i < get_NStaticArcs() ; ++i ) {
      p[ i ].first = &x[ i ];
@@ -651,6 +649,7 @@ void MCFBlock::generate_objective( Configuration *objc )
      p[ i ].first = &x[ i ];
      p[ i ].second = 0;
      }
+   }
 
   // dynamic part
   if( HasDynamicX() ) {
@@ -752,7 +751,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
   // static part
-  if( HasStaticX() )
+  if( HasStaticX() ) {
    if( UB.empty() ) {
     for( const auto & var : x )
      if( ! var.is_feasible() )
@@ -762,9 +761,10 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
     for( const auto & cnst : UB )
      if( cnst.rel_viol() > feps )
       return( false );
+   }
 
   // dynamic part
-  if( HasDynamicX() )
+  if( HasDynamicX() ) {
    if( dUB.empty() ) {
     for( const auto & var : dx )
      if( ! var.is_feasible() )
@@ -774,13 +774,14 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
     for( const auto & cnst : dUB )
      if( cnst.rel_viol() > feps )
       return( false );
+   }
   }
- else
+ else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
   Index i = 0;
 
   // static part
-  for(  ; i < get_NStaticArcs() ; ++i ) {
+  for( ; i < get_NStaticArcs() ; ++i ) {
    c_FNumber Ui = get_U( i );
    c_FNumber xi = x[ i ].get_value();
    if( Ui >= Inf<FNumber>() ) {
@@ -813,6 +814,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
      }
     }
    }
+  }
 
  return( true );
 
@@ -876,13 +878,13 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
   // do it using the physical representation- - - - - - - - - - - - - - - - -
 
   Vec_CNumber RC;
-  get_RC( RC );
+  get_rc( RC );
   Vec_CNumber Pi;
   get_pi( Pi );
 
   for( Index i = 0 ; i < get_NArcs() ; ++i ) {
    c_CNumber Ci = get_C( i );
-   c_CNumber RCi = Ci + Pi( SN[ i ] - 1 ) - Pi( EN[ i ] - 1 );
+   c_CNumber RCi = Ci + Pi[ SN[ i ] - 1 ] - Pi[ EN[ i ] - 1 ];
    c_CNumber df = std::abs( RCi - RC[ i ] );
    c_CNumber mx = std::max( std::abs( Ci ) , df );
    if( mx == 0 ) {
@@ -905,8 +907,8 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 					bool useabstract )
 {
  Vec_CNumber RC;
- get_RC( RC );
-  
+ get_rc( RC );
+
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
@@ -922,34 +924,35 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   Index i = 0;
 
   // static part
-  if( HasStaticX() )
+  if( HasStaticX() ) {
    if( UB.empty() ) {
     for( ; i < get_NStaticArcs() ; ++i ) {
      c_CNumber Ci = lfo->get_coefficient( &x[ i ] );
      CNumber RCi = RC[ i ];
      if( Ci )
       RCi /= Ci;
-     if( ( x[ i ]->get_value() > feps ) && ( RCi < - ceps ) )
+     if( ( x[ i ].get_value() > feps ) && ( RCi < - ceps ) )
       return( false );
      }
     }
-  else
-   for( ; i < get_NStaticArcs() ; ++i ) {
-    c_CNumber Ci = lfo->get_coefficient( &x[ i ] );
-    CNumber RCi = RC[ i ];
-    if( Ci )
-     RCi /= Ci;
-    c_FNumber xiv = x[ i ]->get_value();
-    c_FNumber UBi = UB[ i ].get_rhs();
-    if( UBi >= Inf<RowConstraint::RHSValue>() ) {
-     if( ( xiv > feps ) && ( RCi < - ceps ) )
-      return( false );
-     }
-    else {
-     c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
-     if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
-	 ( ( UBi - xiv > sfeps ) && ( RCi > ceps ) ) )
-      return( false );
+   else
+    for( ; i < get_NStaticArcs() ; ++i ) {
+     c_CNumber Ci = lfo->get_coefficient( &x[ i ] );
+     CNumber RCi = RC[ i ];
+     if( Ci )
+      RCi /= Ci;
+     c_FNumber xiv = x[ i ].get_value();
+     c_FNumber UBi = UB[ i ].get_rhs();
+     if( UBi >= Inf<RowConstraint::RHSValue>() ) {
+      if( ( xiv > feps ) && ( RCi < - ceps ) )
+       return( false );
+      }
+     else {
+      c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
+      if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
+	  ( ( UBi - xiv > sfeps ) && ( RCi > ceps ) ) )
+       return( false );
+      }
      }
     }
 
@@ -959,24 +962,24 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 
    if( dUB.empty() ) {
     for( ; i < get_NStaticArcs() ; ++i ) {
-     c_CNumber Ci = lfo->get_coefficient( *dxi );
+     c_CNumber Ci = lfo->get_coefficient( &(*dxi) );
      CNumber RCi = RC[ i ];
      if( Ci )
       RCi /= Ci;
-     if( ( (*(dxi++))->get_value() > feps ) && ( RCi < - ceps ) )
+     if( ( (dxi++)->get_value() > feps ) && ( RCi < - ceps ) )
       return( false );
      }
     }
    else {
-    auto dubi = dU.begin();
+    auto dubi = dUB.begin();
 
     for( ; i < get_NArcs() ; ++i ) {
-     c_CNumber Ci = lfo->get_coefficient( *dxi );
+     c_CNumber Ci = lfo->get_coefficient( &(*dxi) );
      CNumber RCi = RC[ i ];
      if( Ci )
       RCi /= Ci;
-     c_FNumber dxiv = (*(dxi++))->get_value();
-     c_FNumber UBi = (*(dubi++)).get_rhs();
+     c_FNumber dxiv = (dxi++)->get_value();
+     c_FNumber UBi = (dubi++)->get_rhs();
      if( UBi >= Inf<RowConstraint::RHSValue>() ) {
       if( ( dxiv > feps ) && ( RCi < - ceps ) )
        return( false );
@@ -1216,7 +1219,7 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
   // note that if MCFB->dE is longer than this->dE the last part is
   // ignored, while if the converse happens it is filled with zeros
   if( HasDynamicE() ) {
-   auto dei = de.begin();
+   auto dei = dE.begin();
 
    for( auto r3bdei = MCFB->dE.begin() ;
 	( dei != dE.end() ) && ( r3bdei != MCFB->dE.end() ) ; )
@@ -1232,32 +1235,34 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
    throw( std::invalid_argument( "incompatible static reduced cost size" ) );
 
   // static part
-  if( HasStaticX() && ( ! UB.empty() ) )
+  if( HasStaticX() && ( ! UB.empty() ) ) {
    if( MCFB->UB.empty() ) {
     for( auto & cnst : UB )
-     cnst.set_dual( 0 );
+     cnst.set_dual();
     }
    else
     for( auto drci = UB.begin() , r3bdrci = MCFB->UB.begin() ;
 	 drci != UB.end() ; )
       (drci++)->set_dual( (r3bdrci++)->get_dual() );
+   }
 
   // dynamic part
-  if( HasDynamicX() && ( ! dUB.empty() ) )
+  if( HasDynamicX() && ( ! dUB.empty() ) ) {
    if( MCFB->dUB.empty() ) {
     for( auto & cnst : dUB )
-     cnst.set_dual( 0 );
+     cnst.set_dual();
     }
    else {
-    auto drci = dUC.begin();
+    auto drci = dUB.begin();
     for( auto r3bdrci = MCFB->dUB.begin() ;
 	 ( drci != dUB.end() ) && ( r3bdrci != MCFB->dUB.end() ) ;
 	 ++drci , ++r3bdrci )
      drci->set_dual( r3bdrci->get_dual() );
  
     while( drci != dUB.end() )
-     (drci++)->set_dual( 0 );
+     (drci++)->set_dual();
     }
+   }
   }
  }  // end( MCFBlock::map_back_solution )
 
@@ -1336,7 +1341,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
   if( MCFB->HasDynamicE() ) {
    auto r3bdei = MCFB->dE.begin();
 
-   for( auto dei = de.begin() ;
+   for( auto dei = dE.begin() ;
 	( dei != dE.end() ) && ( r3bdei != MCFB->dE.end() ) ; )
     (r3bdei++)->set_dual( (dei++)->get_dual() );
  
@@ -1350,7 +1355,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
    throw( std::invalid_argument( "incompatible static reduced cost size" ) );
 
   // static part
-  if( MCFB->HasStaticX() && ( ! MCFB->UB.empty() ) )
+  if( MCFB->HasStaticX() && ( ! MCFB->UB.empty() ) ) {
    if( UB.empty() ) {
     for( auto & cnst : MCFB->UB )
      cnst.set_dual( 0 );
@@ -1359,9 +1364,10 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
     for( auto drci = UB.begin() , r3bdrci = MCFB->UB.begin() ;
 	 drci != UB.end() ; )
       (r3bdrci++)->set_dual( (drci++)->get_dual() );
+   }
 
   // dynamic part
-  if( MCFB->HasDynamicX() && ( ! MCFB->dUB.empty() ) )
+  if( MCFB->HasDynamicX() && ( ! MCFB->dUB.empty() ) ) {
    if( UB.empty() ) {
     for( auto & cnst : MCFB->dUB )
      cnst.set_dual( 0 );
@@ -1376,6 +1382,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
     while( r3bdrci != MCFB->dUB.end() )
      (r3bdrci++)->set_dual( 0 );
     }
+   }
   }
  }  // end( MCFBlock::map_forward_solution )
 
@@ -1800,7 +1807,7 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
    }
   else
    while( nmsi != nms.end() ) 
-    *(FSi++) = UB[ *(nmsi++) ].get_dual();
+    *(RCi++) = UB[ *(nmsi++) ].get_dual();
 
  }  // end( MCFBlock::get_rc( subset ) )
 
@@ -1809,7 +1816,7 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
 void MCFBlock::set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
 		      c_Index strt )
 {
- if( std::distance( rcstop , rcstrt ) + strt > get_NArcs() )
+ if( std::distance( fstrt , fstop ) + strt > get_NArcs() )
   throw( std::invalid_argument( "too many values provided" ) );
 
  Index i = strt;
@@ -1819,14 +1826,14 @@ void MCFBlock::set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
        ( fstrt != fstop ) && ( i < get_NStaticArcs() ) ; ++i )
    (xi++)->set_value( *(fstrt++) );
 
- if( ( rcstrt == rcstop ) || ( ! HasDynamicX() ) )
+ if( ( fstrt == fstop ) || ( ! HasDynamicX() ) )
   return;
 
  auto dxi = dx.begin();
  if( i > get_NStaticArcs() )
   dxi = std::next( dxi , i - get_NStaticArcs() );
 
- while( ; rcstrt < rcstop ; )
+ while( fstrt != fstop )
   (dxi++)->set_value( *(fstrt++) );
 
  }  // end( MCFBlock::set_x( range ) )
@@ -1839,7 +1846,7 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
  if( E.empty() && dE.empty() )  // nowhere to put the value in
   return;                       // cowardly (and silently) return
 
- if( std::distance( pstop , pstrt ) + strt > get_NArcs() )
+ if( std::distance( pstrt , pstop ) + strt > get_NNodes() )
   throw( std::invalid_argument( "too many values provided" ) );
 
  Index i = strt;
@@ -1854,12 +1861,12 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
 
  auto dei = dE.begin();
  if( i > get_NStaticArcs() )
-  dEi = std::next( dEi , i - get_NStaticArcs() );
+  dei = std::next( dei , i - get_NStaticArcs() );
 
- while( ; pstrt < pstop ; )
-  (dei++)->set_value( *(fpstrt++) );
+ while( pstrt != pstop )
+  (dei++)->set_dual( *(pstrt++) );
 
- }  // end( MCFBlock::set_x( range ) )
+ }  // end( MCFBlock::set_pi( range ) )
 
 /*--------------------------------------------------------------------------*/
 
@@ -1869,7 +1876,7 @@ void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
  if( UB.empty() && dUB.empty() )  // nowhere to put the value in
   return;                         // cowardly (and silently) return
 
- if( std::distance( rcstop , rcstrt ) + strt > get_NArcs() )
+ if( std::distance( rcstrt , rcstop ) + strt > get_NArcs() )
   throw( std::invalid_argument( "too many values provided" ) );
 
  Index i = strt;
@@ -1886,7 +1893,7 @@ void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
  if( i > get_NStaticArcs() )
   dubi = std::next( dubi , i - get_NStaticArcs() );
 
- while( ; rcstrt < rcstop ; )
+ while( rcstrt != rcstop )
   (dubi++)->set_dual( *(rcstrt++) );
 
  }  // end( MCFBlock::set_rc( range ) )
@@ -1921,14 +1928,14 @@ void MCFBlock::serialize( netCDF::NcGroup && group ) const
  if( get_NNodes() > get_NStaticNodes() )
   group.addDim( "DynNNodes" , get_NNodes() - get_NStaticNodes() );
 
- if( get_NArcs() > get_NStaticNArcs() )
-  group.addDim( "DynNArcs" , get_NArcs() - get_NStaticNArcs() );
+ if( get_NArcs() > get_NStaticArcs() )
+  group.addDim( "DynNArcs" , get_NArcs() - get_NStaticArcs() );
 
  if( get_MaxNNodes() > get_NStaticNodes() )
   group.addDim( "MaxDynNNodes" , get_MaxNNodes() - get_NStaticNodes() );
 
- if( get_MaxNArcs() > get_NStaticNArcs() )
-  group.addDim( "MaxDynNArcs" , get_MaxNArcs() - get_NStaticNArcs() );
+ if( get_MaxNArcs() > get_NStaticArcs() )
+  group.addDim( "MaxDynNArcs" , get_MaxNArcs() - get_NStaticArcs() );
  
  std::vector<size_t> startp = { 0 };
  std::vector<size_t> countpa = { get_NArcs() };
@@ -2008,13 +2015,13 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
 
     if( strt < get_NStaticArcs()  )
      for( auto xi = x.begin() + strt ; xi != x.end() ; ) {
-      (*pi).first = *(xi++);
+      (*pi).first = &(*(xi++));
       (*(pi++)).second = *(NCost++);
       }
 
-    for( auto dxi = dx.begin() ;
-	 dxi != dx.begin() + ( stop - get_NStaticArcs() ) ; ) {
-     (*pi).first = *(dxi++);
+    Index i = stop - get_NStaticArcs();
+    for( auto dxi = dx.begin() ; i-- ; ) {
+     (*pi).first = &(*(dxi++));
      (*(pi++)).second = *(NCost++);
      }
 
@@ -2102,7 +2109,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
      }
 
     // sort the vector for increasing index
-    std::sort( pairs.begin() , pairs.end ,
+    std::sort( pairs.begin() , pairs.end() ,
 	       []( index_pair i , index_pair j )
 	       { return( i.first < j.first ); } );
 
@@ -2117,7 +2124,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
 
     // dynamic part
     auto dxi = dx.begin();
-    for( Index i = get_NStaticArcs() ; pairs != pairs.end() ; ++i , ++dxi )
+    for( Index i = get_NStaticArcs() ; pit != pairs.end() ; ++i , ++dxi )
      if( (*pit).first == i ) {
       if( C[ i ] != (*pit).second ) {
        C[ i ] = (*pit).second;
@@ -2216,14 +2223,14 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
   return;
 
  if( ! U.size() ) {
-  if( std::all_of( NCap , NCap + nms.size() ,
+  if( std::all_of( NCap , NCap + ( stop - strt ) ,
 		   []( c_FNumber cap ) { return( cap >= Inf<FNumber>() ); } ) )
    return;
 
   U.resize( get_MaxNArcs() , Inf<FNumber>() );
   }
 
- c_Index ndiff = countdiff( NCap , NCap + ( stop - strt ) , U.begin() + strt );
+ c_Index ndiff = countdiff( NCap , NCap + ( stop - strt ) , U.cbegin() + strt );
  if( ! ndiff )
   return;
 
@@ -2250,7 +2257,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
   for( auto dubi = dUB.begin() ; i < stop ; ++i , ++NCap , ++dubi )
    if( U[ i ] != *NCap ) {
     U[ i ] = *NCap;
-    *(dubi++).set_rhs( *NCap , ampar );
+    (dubi++)->set_rhs( *NCap , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2315,7 +2322,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
      if( *nit == i ) {
       if( U[ i ] != *NCap ) {
        U[ i ] = *NCap;
-       (*dubi).set_rhs( *NCap , ampar );
+       dubi->set_rhs( *NCap , ampar );
        }
       nit++;
       NCap++;
@@ -2329,26 +2336,26 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
      pairs[ i ] = std::make_pair( nms[ i ] , *(NCap++) );
 
     // sort the vector for increasing index
-    std::sort( pairs.begin() , pairs.end ,
+    std::sort( pairs.begin() , pairs.end() ,
 	       []( index_pair i , index_pair j )
 	       { return( i.first < j.first ); } );
 
     // static part
     auto pit = pairs.begin();
-    for( ; ( pit != pairs.end() ) && ( (*pit).first < get_NStaticArcs() ) ;
+    for( ; ( pit != pairs.end() ) && ( pit->first < get_NStaticArcs() ) ;
 	 ++pit )
-     if( U[ (*pit).first ] != (*pit).second ) {
-      U[ (*pit).first ] = (*pit).second;
-      UB[ *nit ].set_rhs( *NCap , ampar );
+     if( U[ pit->first ] != pit->second ) {
+      U[ pit->first ] = pit->second;
+      UB[ pit->first ].set_rhs( *NCap , ampar );
       }
 
     // dynamic part
     auto dubi = dUB.begin();
-    for( Index i = get_NStaticArcs() ; pairs != pairs.end() ; ++i , ++dubi )
-     if( (*pit).first == i ) {
-      if( U[ i ] != (*pit).second ) {
-       U[ i ] = (*pit).second;
-       (*dubi).set_rhs( (*pit).second , ampar );
+    for( Index i = get_NStaticArcs() ; pit != pairs.end() ; ++i , ++dubi )
+     if( pit->first == i ) {
+      if( U[ i ] != pit->second ) {
+       U[ i ] = pit->second;
+       dubi->set_rhs( pit->second , ampar );
        }
       pit++;
       }
@@ -2439,7 +2446,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
   }
 
  c_Index ndiff = countdiff( NDfct , NDfct + ( stop - strt ) ,
-			    B.begin() + strt );
+			    B.cbegin() + strt );
  if( ! ndiff )
   return;
 
@@ -2448,6 +2455,8 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
   // in the meantime, if so instructed also issue abstract Modification
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+
+  Index i = strt;
 
   // static part
   for( ; i < std::min( stop , get_NStaticNodes() ) ;  ++i , ++NDfct )
@@ -2460,7 +2469,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
   for( auto dei = dE.begin() ; i < stop ; ++i , ++NDfct , ++dei )
    if( B[ i ] != *NDfct ) {
     B[ i ] = *NDfct;
-    *(dei++).set_both( *NDfct , ampar );
+    (dei++)->set_both( *NDfct , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2517,11 +2526,11 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
 
     // dynamic part
     auto dei = dE.begin();
-    for( Index i = get_NStaticNodes() ; nit != nms.end() ; ++i , ++dubi )
+    for( Index i = get_NStaticNodes() ; nit != nms.end() ; ++i , ++dei )
      if( *nit == i ) {
       if( B[ i ] != *NDfct ) {
        B[ i ] = *NDfct;
-       (*dei).set_both( *NDfct , ampar );
+       dei->set_both( *NDfct , ampar );
        }
       nit++;
       NDfct++;
@@ -2535,26 +2544,26 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
      pairs[ i ] = std::make_pair( nms[ i ] , *(NDfct++) );
 
     // sort the vector for increasing index
-    std::sort( pairs.begin() , pairs.end ,
+    std::sort( pairs.begin() , pairs.end() ,
 	       []( index_pair i , index_pair j )
 	       { return( i.first < j.first ); } );
 
     // static part
     auto pit = pairs.begin();
-    for( ; ( pit != pairs.end() ) && ( (*pit).first < get_NStaticArcs() ) ;
+    for( ; ( pit != pairs.end() ) && ( pit->first < get_NStaticArcs() ) ;
 	 ++pit )
-     if( B[ (*pit).first ] != (*pit).second ) {
-      B[ (*pit).first ] = (*pit).second;
-      E[ *nit ].set_both( *NCap , ampar );
+     if( B[ pit->first ] != pit->second ) {
+      B[ pit->first ] = pit->second;
+      E[ pit->first ].set_both( pit->second , ampar );
       }
 
     // dynamic part
     auto dei = dE.begin();
-    for( Index i = get_NStaticNodes() ; pairs != pairs.end() ; ++i , ++dubi )
-     if( (*pit).first == i ) {
-      if( B[ i ] != (*pit).second ) {
-       B[ i ] = (*pit).second;
-       (*dei).set_both( (*pit).second , ampar );
+    for( Index i = get_NStaticNodes() ; pit != pairs.end() ; ++i , ++dei )
+     if( pit->first == i ) {
+      if( B[ i ] != pit->second ) {
+       B[ i ] = pit->second;
+       dei->set_both( pit->second , ampar );
        }
       pit++;
       }
@@ -2604,7 +2613,7 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
  if( not_dry_run( issueMod ) )
   B[ nde ] = NDfct;  // change the physical representation- - - - - - - - - -
 
- if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) )
+ if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
   if( nde < get_NStaticNodes() )
@@ -2612,6 +2621,7 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
   else
    std::next( dE.begin() , nde - get_NStaticNodes() )->set_both( NDfct ,
 								 issueAMod );
+  }
  
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
@@ -2646,7 +2656,7 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 
   // dynamic part
   for( auto dxi = dx.begin() ; i++ < stop ; )
-   if( ! (*(dxi++)).is_fixed() )
+   if( ! (dxi++)->is_fixed() )
     ndiff++;
 
   if( ! ndiff )
@@ -2666,9 +2676,9 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 
   // dynamic part
   for( auto dxi = dx.begin() ; i++ < stop ; ++dxi )
-   if( ! (*dxi).is_fixed() ) {
-    (*dxi).set_value( 0 );
-    (*dxi).is_fixed( true , ampar );
+   if( ! dxi->is_fixed() ) {
+    dxi->set_value( 0 );
+    dxi->is_fixed( true , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2715,7 +2725,7 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
   auto dxi = dx.begin();
   for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
    if( *nit == i ) {
-    if( ! (*dxi).is_fixed() )
+    if( ! dxi->is_fixed() )
      ndiff++;
     ++nit;
     }
@@ -2740,9 +2750,9 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
   dxi = dx.begin();
   for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
    if( *nit == i ) {
-    if( ! (*dxi).is_fixed() ) {
-     (*dxi).set_value( 0 );
-     (*dxi).is_fixed( true , ampar );
+    if( ! dxi->is_fixed() ) {
+     dxi->set_value( 0 );
+     dxi->is_fixed( true , ampar );
      }
     ++nit;
     }
@@ -2772,15 +2782,15 @@ void MCFBlock::close_arc( c_Index arc ,
  if( not_dry_run( issueAMod ) ) {
   auto xa = i2p_x( arc );
 
-  if( xa.is_fixed() )
+  if( xa->is_fixed() )
    return;
 
-  xa.set_value( 0 );
+  xa->set_value( 0 );
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  xa.is_fixed( true , issueAMod );
+  xa->is_fixed( true , issueAMod );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2816,7 +2826,7 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
 
   // dynamic part
   for( auto dxi = dx.begin() ; i++ < stop ; )
-   if( (*(dxi++)).is_fixed() )
+   if( (dxi++)->is_fixed() )
     ndiff++;
 
   if( ! ndiff )
@@ -2834,8 +2844,8 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
 
   // dynamic part
   for( auto dxi = dx.begin() ; i++ < stop ; ++dxi )
-   if( (*dxi).is_fixed() )
-    (*dxi).is_fixed( false , ampar );
+   if( dxi->is_fixed() )
+    dxi->is_fixed( false , ampar );
 
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
@@ -2881,7 +2891,7 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
   auto dxi = dx.begin();
   for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
    if( *nit == i ) {
-    if( (*dxi).is_fixed() )
+    if( dxi->is_fixed() )
      ndiff++;
     ++nit;
     }
@@ -2904,8 +2914,8 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
   dxi = dx.begin();
   for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
    if( *nit == i ) {
-    if( (*dxi).is_fixed() )
-     (*dxi).is_fixed( false , ampar );
+    if( dxi->is_fixed() )
+     dxi->is_fixed( false , ampar );
     ++nit;
     }
 
@@ -2936,13 +2946,13 @@ void MCFBlock::open_arc( c_Index arc ,
  if( not_dry_run( issueAMod ) ) {
   auto xa = i2p_x( arc );
 
-  if( ! xa.is_fixed() )
+  if( ! xa->is_fixed() )
    return;
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  xa.is_fixed( false , issueAMod );
+  xa->is_fixed( false , issueAMod );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -3030,10 +3040,10 @@ void MCFBlock::print( std::ostream &output ) const
 /*-------------------------- PRIVATE METHODS -------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-inline MCFBlock::Index MCFBlock::p2i_x( Variable * const var )
+inline MCFBlock::Index MCFBlock::p2i_x( Variable * const var ) const
 {
  auto i = std::distance( x.data() ,
-			 static_cast< ColVariable * const >( var ) );
+			 static_cast< const ColVariable * >( var ) );
  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
   return( i );
 
@@ -3048,23 +3058,24 @@ inline MCFBlock::Index MCFBlock::p2i_x( Variable * const var )
 
 /*--------------------------------------------------------------------------*/
 
-inline ColVariable * MCFBlock::i2p_x( c_Index i )
+inline ColVariable * MCFBlock::i2p_x( c_Index i ) const
 {
  if( i >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( i < get_NStaticArcs() )
-  return( &x[ i ] );
+  return( const_cast< ColVariable * >( &x[ i ] ) );
  else
-  return( &( *std::next( dx.begin() , i - get_NStaticArcs() ) ) );
+  return( const_cast< ColVariable * >(
+		   &( *std::next( dx.begin() , i - get_NStaticArcs() ) ) ) );
  }
 
 /*--------------------------------------------------------------------------*/
 
-inline MCFBlock::Index MCFBlock::p2i_ub( Constraint * const cns )
+inline MCFBlock::Index MCFBlock::p2i_ub( Constraint * const cns ) const
 {
  auto i = std::distance( UB.data() ,
-			 static_cast< LB0Constraint * const >( cns ) );
+			 static_cast< const LB0Constraint * >( cns ) );
  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
   return( i );
 
@@ -3079,23 +3090,24 @@ inline MCFBlock::Index MCFBlock::p2i_ub( Constraint * const cns )
 
 /*--------------------------------------------------------------------------*/
 
-inline LB0Constraint * MCFBlock::i2p_ub( c_Index i )
+inline LB0Constraint * MCFBlock::i2p_ub( c_Index i ) const
 {
  if( i >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( i < get_NStaticArcs() )
-  return( &UB[ i ] );
+  return( const_cast< LB0Constraint * >( &UB[ i ] ) );
  else
-  return( &( *std::next( dUB.begin() , i - get_NStaticArcs() ) ) );
+  return( const_cast< LB0Constraint * >(
+		  &( *std::next( dUB.begin() , i - get_NStaticArcs() ) ) ) );
  }
 
 /*--------------------------------------------------------------------------*/
 
-inline MCFBlock::Index MCFBlock::p2i_e( Constraint * const cns )
+inline MCFBlock::Index MCFBlock::p2i_e( Constraint * const cns ) const
 {
  auto i = std::distance( E.data() ,
-			 static_cast< LB0Constraint * const >( cns ) );
+			 static_cast< const FRowConstraint * >( cns ) );
  if( ( i >= 0 ) && ( i < get_NStaticNodes() ) )
   return( i );
 
@@ -3110,15 +3122,16 @@ inline MCFBlock::Index MCFBlock::p2i_e( Constraint * const cns )
 
 /*--------------------------------------------------------------------------*/
 
-inline FRowConstraint * MCFBlock::i2p_e( c_Index i )
+inline FRowConstraint * MCFBlock::i2p_e( c_Index i ) const
 {
  if( i >= get_NNodes() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( i < get_NStaticNodes() )
-  return( &E[ i ] );
+  return( const_cast< FRowConstraint * >( &E[ i ] ) );
  else
-  return( &( *std::next( dE.begin() , i - get_NStaticArcs() ) ) );
+  return( const_cast< FRowConstraint * >(
+		   &( *std::next( dE.begin() , i - get_NStaticArcs() ) ) ) );
  }
 
 /*--------------------------------------------------------------------------*/
@@ -3255,7 +3268,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
       for( ; ( i < tmod->v_vars.size() ) &&
 	     ( tmod->v_vars[ i ] < &(x.back()) ) ; ++i ) {
        nC[ i ] = cp[ nI[ i ] ].second;
-       nI[ i ] = p2i_i( tmod->v_vars[ i ] );
+       nI[ i ] = p2i_x( tmod->v_vars[ i ] );
        }
 
       // last part: variables after x.back() (if any)
@@ -3489,13 +3502,13 @@ void MCFSolution::write( Block * const block )
 
  // static part
  for( auto ubi = MCFB->UB.begin() ; ubi != MCFB->UB.end() ; ++i )
-  *(ubi++).set_dual( MCFB->get_C( i ) + v_pi( MCFB->SN[ i ] - 1 )
-		                      - v_pi( MCFB->EN[ i ] - 1 ) );
+  (ubi++)->set_dual( MCFB->get_C( i ) + v_pi[ MCFB->SN[ i ] - 1 ]
+		                      - v_pi[ MCFB->EN[ i ] - 1 ] );
  // dynamic part
  for( auto dubi = MCFB->dUB.begin() ;
       ( dubi != MCFB->dUB.end() ) && ( i < MCFB->get_NArcs() ) ; ++i )
-  *(dubi++).set_dual( MCFB->get_C( i ) + v_pi( MCFB->SN[ i ] - 1 )
-		                       - v_pi( MCFB->EN[ i ] - 1 ) );
+  (dubi++)->set_dual( MCFB->get_C( i ) + v_pi[ MCFB->SN[ i ] - 1 ]
+		                       - v_pi[ MCFB->EN[ i ] - 1 ] );
  }  // end( MCFSolution::write )
 
 /*--------------------------------------------------------------------------*/
