@@ -3319,7 +3319,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
  {
   const auto tmod = std::dynamic_pointer_cast<RowConstraintMod>( mod );
   if( tmod ) {
-   if( ! ( E.empty() && dE.empty() ) )
+   if( E.empty() && dE.empty() )
     throw( std::invalid_argument(
 			     "Modification to non-constructed Constraint" ) );
 
