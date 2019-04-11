@@ -239,11 +239,11 @@ public:
 		         "MCFSolver:set_Block: block must be a MCFBlock" ) );
 
    // load the new MCFBlock into the :MCFClass object
-   MCFC::LoadNet( MCFB->get_NNodes() , MCFB->get_NArcs() ,
+   MCFC::LoadNet( MCFB->get_MaxNNodes() , MCFB->get_MaxNArcs() ,
 		  MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		  MCFB->get_U().size() ? MCFB->get_U().data() : nullptr ,
-		  MCFB->get_C().size() ? MCFB->get_C().data() : nullptr ,
-		  MCFB->get_B().size() ? MCFB->get_B().data() : nullptr ,
+		  MCFB->get_U().empty() ? nullptr : MCFB->get_U().data() ,
+		  MCFB->get_C().empty() ? nullptr : MCFB->get_C().data() ,
+		  MCFB->get_B().empty() ? nullptr : MCFB->get_B().data() ,
 		  MCFB->get_SN().data() , MCFB->get_EN().data() );
    MCFC::PreProcess();
 
@@ -351,14 +351,14 @@ public:
 
  virtual void get_var_solution( Configuration *solc = nullptr ) override
  {
+  if( ! f_Block )  // no [MCF]Block to write to
+   return;         // cowardly and silently return
+
   auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
   if( tsolc && ( tsolc->f_value == 2 ) )
    return;
 
   auto MCFB = static_cast< MCFBlock * >( f_Block );
-  if( ! MCFB )
-   return;
-
   MCFBlock::Vec_FNumber X( MCFB->get_NArcs() );
   this->MCFGetX( X.data() );
   MCFB->set_x( X.begin() , X.end() );
@@ -378,14 +378,14 @@ public:
 
  virtual void get_dual_solution( Configuration *solc = nullptr ) override
  {
+  if( ! f_Block )  // no [MCF]Block to write to
+   return;         // cowardly and silently return
+
   auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
   if( tsolc && ( tsolc->f_value == 1 ) )
    return;
 
   auto MCFB = static_cast< MCFBlock * >( f_Block );
-  if( ! MCFB )
-   return;
-  
   MCFBlock::Vec_CNumber Pi( MCFB->get_NNodes() );
   this->MCFGetPi( Pi.data() );
   MCFB->set_pi( Pi.begin() , Pi.end() );
@@ -812,11 +812,11 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
     const auto tmod = std::dynamic_pointer_cast<NBModification>( mod );
     if( tmod ) {
      // this is the "nuclear option": the MCFBlock has been re-loaded
-     MCFC::LoadNet( MCFB->get_NNodes() , MCFB->get_NArcs() ,
+     MCFC::LoadNet( MCFB->get_MaxNNodes() , MCFB->get_MaxNArcs() ,
 		    MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		    MCFB->get_U().size() ? MCFB->get_U().data() : nullptr ,
-		    MCFB->get_C().size() ? MCFB->get_C().data() : nullptr ,
-		    MCFB->get_B().size() ? MCFB->get_B().data() : nullptr ,
+		    MCFB->get_U().empty() ? nullptr : MCFB->get_U().data() ,
+		    MCFB->get_C().empty() ? nullptr : MCFB->get_C().data() ,
+		    MCFB->get_B().empty() ? nullptr : MCFB->get_B().data() ,
 		    MCFB->get_SN().data() , MCFB->get_EN().data() );
      MCFC::PreProcess();
      return;

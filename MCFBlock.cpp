@@ -179,29 +179,35 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
  NStaticNodes = dn > n ? 0 : n - dn;
  NStaticArcs = dm > NArcs ? 0 : NArcs - dm;
 
- SN.resize( MaxNArcs , 0 );
+ SN.resize( MaxNArcs );
  std::copy( pSn.begin() , pSn.end() , SN.begin() );
 
- EN.resize( get_MaxNArcs() , 0 );
+ EN.resize( get_MaxNArcs() );
  std::copy( pEn.begin() , pEn.end() , EN.begin() );
 
  if( std::any_of( pC.begin() , pC.end() ,
 		  []( c_CNumber ci ) { return( ci != 0 ); } ) ) {
-  C.resize( get_MaxNArcs() , 0 );
+  C.resize( get_MaxNArcs() );
   std::copy( pC.begin() , pC.end() , C.begin() );
   }
+ else
+  C.clear();
 
  if( std::any_of( pU.begin() , pU.end() ,
 		  []( c_FNumber ui ) { return( ui < Inf<FNumber>() ); } ) ) {
-  U.resize( get_MaxNArcs() , Inf<FNumber>() );
+  U.resize( get_MaxNArcs() );
   std::copy( pU.begin() , pU.end() , U.begin() );
   }
+ else
+  U.clear();
 
  if( std::any_of( pB.begin() , pB.end() ,
 		  []( c_FNumber bi ) { return( bi != 0 ); } ) ) {
-  B.resize( get_MaxNNodes() , 0 );
+  B.resize( get_MaxNNodes() );
   std::copy( pB.begin() , pB.end() , B.begin() );
   }
+ else
+  B.clear();
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -221,7 +227,7 @@ void MCFBlock::load( std::istream &input )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
- if( NNodes )
+ if( MaxNNodes || ( ! SN.empty() ) )
   guts_of_destructor();
 
  // read first non-comment line - - - - - - - - - - - - - - - - - - - - - - -
@@ -247,9 +253,9 @@ void MCFBlock::load( std::istream &input )
 
  SN.resize( NArcs );
  EN.resize( NArcs );
- C.resize( NArcs , 0 );
- U.resize( NArcs , Inf<FNumber>() );
- B.resize( NNodes , 0 );
+ C.assign( NArcs , 0 );
+ U.assign( NArcs , Inf<FNumber>() );
+ B.assign( NNodes , 0 );
 
  NStaticNodes = MaxNNodes = NNodes;
  NStaticArcs = NArcs;
@@ -420,7 +426,7 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
 
  netCDF::NcVar cst = group.getVar( "C" );
  if( ! cst.isNull() ) {
-  C.resize( MaxNArcs , 0 );
+  C.resize( MaxNArcs );
   cst.getVar( start , counta , C.data() );
   if( std::all_of( C.begin() , C.begin() + NArcs ,
 		   []( c_CNumber ci ) { return( ci == 0 ); } ) )
@@ -429,7 +435,7 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
 
  netCDF::NcVar cap = group.getVar( "U" );
  if( ! cap.isNull() ) {
-  U.resize( MaxNArcs , Inf<FNumber>() );
+  U.resize( MaxNArcs );
   cap.getVar( start , counta , U.data() );
   if( std::all_of( U.begin() , U.begin() + NArcs ,
 		   []( c_FNumber ui ) { return( ui == Inf<FNumber>() ); } ) )
@@ -438,7 +444,7 @@ void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
 
  netCDF::NcVar dfc = group.getVar( "B" );
  if( ! dfc.isNull() ) {
-  B.resize( MaxNNodes , 0 );
+  B.resize( MaxNNodes );
   std::vector<size_t> countn = { NNodes };
   dfc.getVar( start , countn , B.data() );
   if( std::all_of( B.begin() , B.begin() + NNodes ,
@@ -1582,7 +1588,11 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     // one should check that the Block is this MCFBlock, but it cannot
     // be otherwise, can it?
 
-    MCFB->load( get_NNodes() , EN , SN , U , C , B );
+    MCFB->load( get_NNodes() , EN , SN , U , C , B ,
+		get_NNodes() - get_NStaticNodes() ,
+		get_NArcs() - get_NStaticArcs() ,
+		get_MaxNNodes() - get_NStaticNodes() ,
+		get_MaxNArcs() - get_NStaticArcs() );
     return( true );
     }
    }
@@ -1973,7 +1983,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
 		   []( c_CNumber cst ) { return( cst == 0 ); } ) )
    return;
 
-  C.resize( get_MaxNArcs() , 0 );
+  C.assign( get_MaxNArcs() , 0 );
   }
 
  if( not_dry_run( issueAMod ) && ( ! get_objective().empty() ) ) {
@@ -2056,7 +2066,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
 		   []( c_CNumber cst ) { return( cst == 0 ); } ) )
    return;
 
-  C.resize( get_MaxNArcs() , 0 );
+  C.assign( get_MaxNArcs() , 0 );
   }
 
  if( not_dry_run( issueAMod ) && ( ! get_objective().empty() ) ) {
@@ -2179,7 +2189,7 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( ( ! C.size() ) && NCost )
-  C.resize( get_MaxNArcs() , 0 );
+  C.assign( get_MaxNArcs() , 0 );
 
  if( C[ arc ] == NCost )
   return;
@@ -2227,7 +2237,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
 		   []( c_FNumber cap ) { return( cap >= Inf<FNumber>() ); } ) )
    return;
 
-  U.resize( get_MaxNArcs() , Inf<FNumber>() );
+  U.assign( get_MaxNArcs() , Inf<FNumber>() );
   }
 
  c_Index ndiff = countdiff( NCap , NCap + ( stop - strt ) , U.cbegin() + strt );
@@ -2287,7 +2297,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
 		   []( c_FNumber cap ) { return( cap >= Inf<FNumber>() ); } ) )
    return;
 
-  U.resize( get_MaxNArcs() , Inf<FNumber>() );
+  U.assign( get_MaxNArcs() , Inf<FNumber>() );
   }
 
  Index ndiff = countdiff( U , nms , NCap , get_NArcs() );
@@ -2398,7 +2408,7 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( ( ! U.size() ) && ( NCap < Inf<FNumber>() ) )
-  U.resize( get_MaxNArcs() , Inf<FNumber>() );
+  U.assign( get_MaxNArcs() , Inf<FNumber>() );
 
  if( U[ arc ] == NCap )
   return;
@@ -2442,7 +2452,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
 		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
 
-  B.resize( get_MaxNNodes() , 0 );
+  B.assign( get_MaxNNodes() , 0 );
   }
 
  c_Index ndiff = countdiff( NDfct , NDfct + ( stop - strt ) ,
@@ -2499,7 +2509,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
 		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
 
-  B.resize( get_MaxNNodes() , 0 );
+  B.assign( get_MaxNNodes() , 0 );
   }
 
  Index ndiff = countdiff( B , nms , NDfct , get_NNodes() );
@@ -2605,7 +2615,7 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
   throw( std::invalid_argument( "invalid node name" ) );
 
  if( ( ! B.size() ) && NDfct )
-  B.resize( get_NNodes() , 0 );
+  B.assign( get_NNodes() , 0 );
 
  if( B[ nde ] == NDfct )
   return;

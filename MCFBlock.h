@@ -612,7 +612,7 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static arcs
- inline Index get_NStaticArcs( void ) const { return( NStaticNodes ); }
+ inline Index get_NStaticArcs( void ) const { return( NStaticArcs ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
