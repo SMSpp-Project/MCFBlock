@@ -17,8 +17,8 @@
 ##############################################################################
 
 # module name
-# NAME can be both main and test, the corresponding .cpp is compiled
-# but the final executable is always called "test"
+# NAME can be main, test and dmx2nc4:, the corresponding .cpp is compiled
+# and the final executable named $(NAME) is constructed 
 NAME = test
 
 # basic directory
@@ -64,7 +64,7 @@ MOBJ =  $(MCFBkOBJ)
 MLIB =  $(MCFBkLIB)
 
 $(NAME): $(MOBJ) $(DIR)$(NAME).o
-	$(CC) -o test $(DIR)$(NAME).o $(MOBJ) $(MLIB) $(SW)
+	$(CC) -o $(NAME) $(DIR)$(NAME).o $(MOBJ) $(MLIB) $(SW)
 
 # dependencies: every .o from its .C + every recursively included .h- - - - -
 

@@ -132,6 +132,8 @@ MCFClass * mcf;                // the MCFClass object
 vector<MCFClass::Index> open;  // names of open (and closed) arcs
 int opened;                    // number of opened arcs
 
+bool isnc4 = false;            // true if the file is a ntCDF one
+
 /*--------------------------------------------------------------------------*/
 /*------------------------------ FUNCTIONS ---------------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -232,28 +234,81 @@ static inline void CreateProb( int Optns )
 
 static inline void load( char * fn )
 {
- ifstream iFile( fn );
- if( ! iFile ) {
-  cerr << "Can't open input file " << fn << endl;
-  exit( 1 );
-  }
-
  try {
-  mcf->LoadDMX( iFile );  // load the MCFClass
+  // note that usually the "original" MCFBlock is loaded, unless mode == 2
+  // (==> original solved, R3 modified) *and* the R3 has been constructed
+  // already, in which case the R3 is loaded; this is perhaps stretching
+  // the concept of "R3Block" close to the breaking point, but in this case
+  // it works because the R3B is a copy *and* always the same instance is
+  // loaded
 
-  iFile.clear();
-  iFile.seekg( 0 );       // rewind the file
+  if( isnc4 ) {
+   netCDF::NcFile f( fn , netCDF::NcFile::read );
+   if( f.isNull() ) {
+    std::cerr << "cannot open nc4 file " << fn << std::endl;
+    exit( 1 );
+    }
 
-  // load the MCFBlock. Usually the "original" one is loaded, unless
-  // mode == 2 (==> original solved, R3 modified) *and* the R3 has been
-  // constructed already, in which case the R3 is loaded; this is perhaps
-  // stretching the concept of "R3Block" close to the breaking point, but
-  // in this case it works because the R3B is a copy *and* always the same
-  // instance is loaded
-  if( ( ( mode & 3 ) == 2 ) && dMCFB )
-   iFile >> *dMCFB;
-  else
-   iFile >> *oMCFB;
+   netCDF::NcGroupAtt gtype = f.getAtt( "SMS++_file_type" );
+   if( gtype.isNull() ) {
+    std::cerr << fn << " is not an SNS++ nc4 file" << std::endl;
+    exit( 1 );
+    }
+
+   int type;
+   gtype.getValues( & type );
+
+   if( type != eBlockFile ) {
+    std::cerr << fn << " is not an SNS++ nc4 Block file" << std::endl;
+    exit( 1 );
+    }
+
+   netCDF::NcGroup bg = f.getGroup( "Block_0");
+   if( bg.isNull() ) {
+    std::cerr << "Block_0 empty or undefined in " << fn << std::endl;
+    exit( 1 );
+    }
+   
+  if( ( ( mode & 3 ) == 2 ) && dMCFB ) {
+   dMCFB->deserialize( std::move( bg ) );  // load the (derived) MCFBlock
+
+    // load the MCFClass out of the MCFBlock using the in-memory interface
+    mcf->LoadNet( dMCFB->get_MaxNNodes() , dMCFB->get_MaxNArcs() ,
+		  dMCFB->get_NNodes() , dMCFB->get_NArcs() ,
+		  dMCFB->get_U().empty() ? nullptr : dMCFB->get_U().data() ,
+		  dMCFB->get_C().empty() ? nullptr : dMCFB->get_C().data() ,
+		  dMCFB->get_B().empty() ? nullptr : dMCFB->get_B().data() ,
+		  dMCFB->get_SN().data() , dMCFB->get_EN().data() );
+    }
+   else {
+    oMCFB->deserialize( std::move( bg ) );  // load the (original) MCFBlock
+
+    // load the MCFClass out of the MCFBlock using the in-memory interface
+    mcf->LoadNet( oMCFB->get_MaxNNodes() , oMCFB->get_MaxNArcs() ,
+		  oMCFB->get_NNodes() , oMCFB->get_NArcs() ,
+		  oMCFB->get_U().empty() ? nullptr : oMCFB->get_U().data() ,
+		  oMCFB->get_C().empty() ? nullptr : oMCFB->get_C().data() ,
+		  oMCFB->get_B().empty() ? nullptr : oMCFB->get_B().data() ,
+		  oMCFB->get_SN().data() , oMCFB->get_EN().data() );
+    }
+   }
+  else {
+   ifstream iFile( fn );
+   if( ! iFile ) {
+    cerr << "Can't open dmx file " << fn << endl;
+    exit( 1 );
+    }
+
+   mcf->LoadDMX( iFile );  // load the MCFClass
+
+   iFile.clear();
+   iFile.seekg( 0 );       // rewind the file
+
+   if( ( ( mode & 3 ) == 2 ) && dMCFB )
+    iFile >> *dMCFB;       // load the (derived) MCFBlock
+   else
+    iFile >> *oMCFB;       // load the (original) MCFBlock
+   }
 
   if( mode & 4 ) {
    // if so instructed, generate abstract representation for oMCFB
@@ -275,8 +330,6 @@ static inline void load( char * fn )
   cerr << "Error: unknown exception thrown" << endl;
   exit( 1 );
   }
-
- iFile.close();
 
  // open[ 0 .. opened - 1 ] = names of open arcs
  // open[ opened ... m ] = names of closed arcs
@@ -414,7 +467,7 @@ int main( int argc , char **argv )
   case( 4 ): Str2Sthg( argv[ 3 ] , mode );
   case( 3 ): Str2Sthg( argv[ 2 ] , seed );
   case( 2 ): break;
- default: cerr << "Usage: " << argv[ 0 ] <<
+  default: cerr << "Usage: " << argv[ 0 ] <<
 	   " <dmx file> [seed mode wchg #rounds #chng %chng optns]"
 		<< endl <<
 	   "       mode: 0 = only one, 1 = orig -> solve, 2 = solve -> orig"
@@ -465,6 +518,17 @@ int main( int argc , char **argv )
  assert( oMCFB );
 
  // load the instance - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ // first of check if the file is a .dmx (default) or a .nc4 one
+
+ std::string name( argv[ 1 ] );
+ if( name.size() > 4 ) {
+  std::string sffx = name.substr( name.size() - 4 , 4 );
+  std::string nc4( ".nc4" );
+
+  isnc4 = std::equal( sffx.begin() , sffx.end() , nc4.begin() ,
+		      []( auto a , auto b ){
+		       return( std::tolower( a ) == std::tolower( b ) ); } );
+  }
 
  load( argv[ 1 ] );
 

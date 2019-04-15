@@ -615,6 +615,169 @@ public:
  inline Index get_NStaticArcs( void ) const { return( NStaticArcs ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns true if there are static nodes (= flow constraints if constructed)
+
+ inline bool HasStaticE( void ) const { return( get_NStaticNodes() ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns true if there are dynamic nodes (= flow constraints)
+
+ inline bool HasDynamicE( void ) const {
+  return( get_NNodes() > get_NStaticNodes() );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns true if there may ever be dynamic nodes  (= flow constraints)
+
+ inline bool MayHaveDynE( void ) const {
+  return( get_MaxNNodes() > get_NStaticNodes() );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns true if there are static arcs (= flow variables if constructed)
+
+ inline bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns true if there are dynamic arcs (= flow variables if constructed)
+
+ inline bool HasDynamicX( void ) const {
+  return( get_NArcs() > get_NStaticArcs() );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns true if there may ever be dynamic arcs  (= flow variables)
+
+ inline bool MayHaveDynX( void ) const {
+  return( get_MaxNArcs() > get_NStaticArcs() );
+  }
+
+/*--------------------------------------------------------------------------*/
+ /// given a pointer to a flow Variable, returns the index of the arc
+ /** Given a pointer to a flow Variable (formally a Variable *, but
+  * immediately static_cast-ed to a ColVariable * right inside), returns the
+  * index of the corresponding arc. Throws exception if the pointer is not to
+  * a [Col]Variable of the MCFBlock. */
+
+ inline Index p2i_x( Variable * const var ) const
+ {
+  auto i = std::distance( x.data() ,
+			 static_cast< const ColVariable * >( var ) );
+  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
+   return( i );
+
+  i = get_NStaticArcs();
+  for( auto dxi = dx.begin() ; dxi != dx.end() ; ++i , ++dxi )
+   if( &(*dxi) == static_cast< ColVariable * >( var ) )
+    return( i );
+
+  throw( std::invalid_argument( "invalid arc pointer" ) );
+  return( 0 );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// given an arc, returns the pointer to the corresponding flow variable
+ /** Given the index of an arc, returns the pointer to the corresponding flow
+  * variable (a ColVariable *). This ASSUMES THE Variable ARE CONSTRUCTED IN
+  * THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE. */
+
+ inline ColVariable * i2p_x( c_Index i ) const
+ {
+  if( i >= get_NArcs() )
+   throw( std::invalid_argument( "invalid arc name" ) );
+
+  if( i < get_NStaticArcs() )
+   return( const_cast< ColVariable * >( &x[ i ] ) );
+  else
+   return( const_cast< ColVariable * >(
+		   &( *std::next( dx.begin() , i - get_NStaticArcs() ) ) ) );
+  }
+
+/*--------------------------------------------------------------------------*/
+ /// given a pointer to a UB Constraint, returns the index of the arc
+ /** Given a pointer to a UB Constraint (formally a Constraint *, but
+  * immediately static_cast-ed to a LB0Constraint * right inside), returns the
+  * index of the corresponding arc. Throws exception if the pointer is not to
+  * a [LB0]Constraint of the MCFBlock. */
+
+ inline Index p2i_ub( Constraint * const cns ) const
+ {
+  auto i = std::distance( UB.data() ,
+			  static_cast< const LB0Constraint * >( cns ) );
+  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
+   return( i );
+
+  i = get_NStaticArcs();
+  for( auto dubi = dUB.begin() ; dubi != dUB.end() ; ++i , ++dubi )
+   if( &(*dubi) == static_cast< LB0Constraint * >( cns ) )
+    return( i );
+
+  throw( std::invalid_argument( "invalid ub constraint pointer" ) );
+  return( 0 );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// given an arc, returns the pointer to the corresponding UB Constraint
+ /** Given the index of an arc, returns the pointer to the corresponding UB
+  * Constraint (a LB0Constraint *). This ASSUMES THE Constraint ARE
+  * CONSTRUCTED IN THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE.
+  */
+
+ inline LB0Constraint * i2p_ub( c_Index i ) const
+ {
+  if( i >= get_NArcs() )
+   throw( std::invalid_argument( "invalid arc name" ) );
+
+  if( i < get_NStaticArcs() )
+   return( const_cast< LB0Constraint * >( &UB[ i ] ) );
+  else
+   return( const_cast< LB0Constraint * >(
+		  &( *std::next( dUB.begin() , i - get_NStaticArcs() ) ) ) );
+  }
+
+/*--------------------------------------------------------------------------*/
+ /// given a pointer to a flow Constraint, returns the index of the arc
+ /** Given a pointer to a flow Constraint (formally a Constraint *, but
+  * immediately static_cast-ed to a FRowConstraint * right inside), returns the
+  * index of the corresponding arc. Throws exception if the pointer is not to
+  * a [FRow]Constraint of the MCFBlock. */
+
+ inline Index p2i_e( Constraint * const cns ) const
+ {
+  auto i = std::distance( E.data() ,
+			  static_cast< const FRowConstraint * >( cns ) );
+  if( ( i >= 0 ) && ( i < get_NStaticNodes() ) )
+   return( i );
+
+  i = get_NStaticNodes();
+  for( auto dei = dE.begin() ; dei != dE.end() ; ++i , ++dei )
+   if( &(*dei) == static_cast< FRowConstraint * >( cns ) )
+    return( i );
+
+  throw( std::invalid_argument( "invalid flow constraint pointer" ) );
+  return( 0 );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// given a node, returns the pointer to the corresponding UB Constraint
+ /** Given the index of n node, returns the pointer to the corresponding flow
+  * Constraint (a FRowConstraint *). This ASSUMES THE Constraint ARE
+  * CONSTRUCTED IN THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE.
+  */
+
+ inline FRowConstraint * i2p_e( c_Index i ) const
+ {
+  if( i >= get_NNodes() )
+   throw( std::invalid_argument( "invalid arc name" ) );
+
+  if( i < get_NStaticNodes() )
+   return( const_cast< FRowConstraint * >( &E[ i ] ) );
+  else
+   return( const_cast< FRowConstraint * >(
+		   &( *std::next( dE.begin() , i - get_NStaticArcs() ) ) ) );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
  inline c_Vec_Index & get_SN( void ) const { return( SN ); }
 
@@ -1670,38 +1833,6 @@ public:
 /*--------------------------------------------------------------------------*/
 /*-------------------------- PRIVATE METHODS -------------------------------*/
 /*--------------------------------------------------------------------------*/
-
- inline bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
-
- inline bool HasDynamicX( void ) const {
-  return( get_NArcs() > get_NStaticArcs() );
-  }
-
- inline bool MayHaveDynX( void ) const {
-  return( get_MaxNArcs() > get_NStaticArcs() );
-  }
-
- inline bool HasStaticE( void ) const { return( get_NStaticNodes() ); }
-
- inline bool HasDynamicE( void ) const {
-  return( get_NNodes() > get_NStaticNodes() );
-  }
-
- inline bool MayHaveDynE( void ) const {
-  return( get_MaxNNodes() > get_NStaticNodes() );
-  }
-
- inline Index p2i_x( Variable * const var ) const;
-
- inline ColVariable * i2p_x( c_Index i ) const;
-
- inline Index p2i_ub( Constraint * const cns ) const;
-
- inline LB0Constraint * i2p_ub( c_Index i ) const;
-
- inline Index p2i_e( Constraint * const cns ) const;
-
- inline FRowConstraint * i2p_e( c_Index i ) const;
 
  void guts_of_destructor( void );
 
