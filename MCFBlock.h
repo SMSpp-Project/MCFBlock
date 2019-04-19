@@ -437,7 +437,7 @@ public:
   * missing they are treated as being 0 (this happening for all four means
   * that the graph is "fully static" and cannot be changed). */
 
- virtual void deserialize( netCDF::NcGroup&& group ,
+ virtual void deserialize( netCDF::NcGroup & group ,
 			   Block *father = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
@@ -661,8 +661,7 @@ public:
 
  inline Index p2i_x( Variable * const var ) const
  {
-  auto i = std::distance( x.data() ,
-			 static_cast< const ColVariable * >( var ) );
+  auto i = p2i_x_s( var );
   if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
    return( i );
 
@@ -702,8 +701,7 @@ public:
 
  inline Index p2i_ub( Constraint * const cns ) const
  {
-  auto i = std::distance( UB.data() ,
-			  static_cast< const LB0Constraint * >( cns ) );
+  auto i = p2i_ub_s( cns );
   if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
    return( i );
 
@@ -744,8 +742,7 @@ public:
 
  inline Index p2i_e( Constraint * const cns ) const
  {
-  auto i = std::distance( E.data() ,
-			  static_cast< const FRowConstraint * >( cns ) );
+  auto i = p2i_e_s( cns );
   if( ( i >= 0 ) && ( i < get_NStaticNodes() ) )
    return( i );
 
@@ -774,7 +771,7 @@ public:
    return( const_cast< FRowConstraint * >( &E[ i ] ) );
   else
    return( const_cast< FRowConstraint * >(
-		   &( *std::next( dE.begin() , i - get_NStaticArcs() ) ) ) );
+		  &( *std::next( dE.begin() , i - get_NStaticNodes() ) ) ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -1399,7 +1396,7 @@ public:
   * MCFBlock. See MCFBlock::deserialize( netCDF::NcGroup ) for details of the
   * format of the created netCDF group. */
 
- virtual void serialize( netCDF::NcGroup&& group ) const override final;
+ virtual void serialize( netCDF::NcGroup & group ) const override final;
 
 /*@} -----------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
@@ -1833,6 +1830,24 @@ public:
 /*--------------------------------------------------------------------------*/
 /*-------------------------- PRIVATE METHODS -------------------------------*/
 /*--------------------------------------------------------------------------*/
+
+ inline int p2i_x_s( Variable * const var ) const
+ {
+  return( std::distance( x.data() ,
+			 static_cast< const ColVariable * >( var ) ) );
+  }
+
+ inline int p2i_ub_s( Constraint * const cns ) const
+ {
+  return( std::distance( UB.data() ,
+			 static_cast< const LB0Constraint * >( cns ) ) );
+  }
+
+ inline int p2i_e_s( Constraint * const cns ) const
+ {
+  return( std::distance( E.data() ,
+			 static_cast< const FRowConstraint * >( cns ) ) );
+  }
 
  void guts_of_destructor( void );
 

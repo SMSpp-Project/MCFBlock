@@ -270,7 +270,7 @@ static inline void load( char * fn )
     }
    
   if( ( ( mode & 3 ) == 2 ) && dMCFB ) {
-   dMCFB->deserialize( std::move( bg ) );  // load the (derived) MCFBlock
+   dMCFB->deserialize( bg );  // load the (derived) MCFBlock
 
     // load the MCFClass out of the MCFBlock using the in-memory interface
     mcf->LoadNet( dMCFB->get_MaxNNodes() , dMCFB->get_MaxNArcs() ,
@@ -281,7 +281,7 @@ static inline void load( char * fn )
 		  dMCFB->get_SN().data() , dMCFB->get_EN().data() );
     }
    else {
-    oMCFB->deserialize( std::move( bg ) );  // load the (original) MCFBlock
+    oMCFB->deserialize( bg );  // load the (original) MCFBlock
 
     // load the MCFClass out of the MCFBlock using the in-memory interface
     mcf->LoadNet( oMCFB->get_MaxNNodes() , oMCFB->get_MaxNArcs() ,
@@ -650,7 +650,7 @@ int main( int argc , char **argv )
      auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
      assert( lf );
      LinearFunction::v_coeff nc = { newcst };
-     lf->modify_coefficients( nc.begin() , arc , arc + 1 );
+     lf->modify_coefficient( mMCFB->i2p_x( arc ) , nc.front() );
      }
     else  // change via call to chg_* method
      mMCFB->chg_cost( newcst , arc );
@@ -675,7 +675,17 @@ int main( int argc , char **argv )
       assert( obj );
       auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
       assert( lf );
-      lf->modify_coefficients( newcsts.begin() , strt , stp );
+      if( mMCFB->HasDynamicX() ) {
+       LinearFunction::v_coeff_pair chg( tochange );
+       for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
+	chg[ i ].first = mMCFB->i2p_x( i + strt );
+	chg[ i ].second = newcsts[ i ];
+        }
+       // chg is ordered only if all arcs are static
+       lf->modify_coefficients( chg , stp <= mMCFB->get_NStaticArcs() );
+       }
+      else
+       lf->modify_coefficients( newcsts.begin() , strt , stp );
       }
      else {  // change via call to chg_* method
       mMCFB->chg_costs( newcsts.begin() , strt , stp );
@@ -703,7 +713,17 @@ int main( int argc , char **argv )
       assert( obj );
       auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
       assert( lf );
-      lf->modify_coefficients( newcsts.begin() , nms );
+      if( mMCFB->HasDynamicX() ) {
+       LinearFunction::v_coeff_pair chg( tochange );
+       for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
+	chg[ i ].first = mMCFB->i2p_x( nms[ i ] );
+	chg[ i ].second = newcsts[ i ];
+        }
+       // chg is ordered only if all arcs are static
+       lf->modify_coefficients( chg , nms.back() < mMCFB->get_NStaticArcs() );
+       }
+      else
+       lf->modify_coefficients( newcsts.begin() , nms );
       }
      else {  // change via call to chg_* method
       mMCFB->chg_costs( newcsts.begin() , std::move( nms ) , true );
@@ -727,10 +747,7 @@ int main( int argc , char **argv )
     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
      // change via abstract representation
      cout << "y(a) - ";
-     auto bnd = boost::any_cast<std::vector<LB0Constraint> *>(
-				    (mMCFB->get_static_constraints())[ 1 ] );
-     assert( bnd );
-     (*bnd)[ arc ].set_rhs( newcap );
+     mMCFB->i2p_ub( arc )->set_rhs( newcap );
      }
     else {  // change via call to chg_* method
      mMCFB->chg_ucap( newcap , arc );
@@ -749,11 +766,8 @@ int main( int argc , char **argv )
      if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
       // change via abstract representation
       cout << "ies(a,r) - ";
-      auto bnd = boost::any_cast<std::vector<LB0Constraint> *>(
-				    (mMCFB->get_static_constraints())[ 1 ] );
-      assert( bnd );
       for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
-       (*bnd)[ i + strt ].set_rhs( newcaps[ i ] );
+       mMCFB->i2p_ub( i + strt )->set_rhs( newcaps[ i ] );
       }
      else {  // change via call to chg_* method
       mMCFB->chg_ucaps( newcaps.begin() , strt , stp );
@@ -779,11 +793,8 @@ int main( int argc , char **argv )
      if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
       // change via abstract representation
       cout << "ies(a,s) - ";
-      auto bnd = boost::any_cast<std::vector<LB0Constraint> *>(
-				    (mMCFB->get_static_constraints())[ 1 ] );
-      assert( bnd );
       for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
-       (*bnd)[ nms[ i ] ].set_rhs( newcaps[ i ] );
+       mMCFB->i2p_ub( nms[ i ] )->set_rhs( newcaps[ i ] );
       }
      else {  // change via call to chg_* method
       mMCFB->chg_ucaps( newcaps.begin() , std::move( nms ) , true );
@@ -838,11 +849,8 @@ int main( int argc , char **argv )
    if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
     // change via abstract representation
     cout << "(a)";
-    auto flw = boost::any_cast<std::vector<FRowConstraint> *>(
-				    (mMCFB->get_static_constraints())[ 0 ] );
-    assert( flw );
-    (*flw)[ posn ].set_both( posd );
-    (*flw)[ negn ].set_both( negd );
+    mMCFB->i2p_e( posn )->set_both( posd );
+    mMCFB->i2p_e( negn )->set_both( negd );
     }
    else {  // change via call to chg_* method
     mMCFB->chg_dfct( posd , posn );
@@ -877,12 +885,10 @@ int main( int argc , char **argv )
     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
      // change via abstract representation
      cout << "(a)";
-     auto x = boost::any_cast<std::vector<ColVariable> *>(
-				      (mMCFB->get_static_variables())[ 0 ] );
-     assert( x );
-     for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
-      (*x)[ nms[ i ] ].set_value( 0 );
-      (*x)[ nms[ i ] ].is_fixed( true );
+     for( auto i : nms ) {
+      auto x = mMCFB->i2p_x( i );
+      x->set_value( 0 );
+      x->is_fixed( true );
       }
      }
     else  // change via call to chg_* method
@@ -916,11 +922,8 @@ int main( int argc , char **argv )
     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
      // change via abstract representation
      cout << "(a)";
-     auto x = boost::any_cast<std::vector<ColVariable> *>(
-				      (mMCFB->get_static_variables())[ 0 ] );
-     assert( x );
-     for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
-      (*x)[ nms[ i ] ].is_fixed( false );
+     for( auto i : nms )
+      mMCFB->i2p_x( i )->is_fixed( false );
      }
     else  // change via call to chg_* method
      mMCFB->open_arcs( std::move( nms ) );

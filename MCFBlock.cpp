@@ -360,7 +360,7 @@ void MCFBlock::load( std::istream &input )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::deserialize( netCDF::NcGroup && group , Block * father )
+void MCFBlock::deserialize( netCDF::NcGroup & group , Block * father )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
@@ -1928,7 +1928,7 @@ void MCFBlock::add_Modification( sp_Mod mod , ChnlName chnl )
 /*------------ METHODS FOR LOADING, PRINTING & SAVING THE MCFBlock ---------*/
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::serialize( netCDF::NcGroup && group ) const
+void MCFBlock::serialize( netCDF::NcGroup & group ) const
 {
  group.putAtt( "type" , "MCFBlock" );
 
@@ -2018,24 +2018,32 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
 			      issueAMod );
     }
    else {
-    // the range mixes static and dynamic: the only way is to use the
-    // subset version of modify_coefficients()
-    LinearFunction::v_coeff_pair pairs;
-    auto pi = pairs.begin();
+    // there are dynamic arcs: the only way is to use the subset version
+    // of modify_coefficients()
+    LinearFunction::v_coeff_pair ccp( stop - strt );
+    auto pi = ccp.begin();
 
-    if( strt < get_NStaticArcs()  )
+    if( strt >= get_NStaticArcs() ) {  // there are only dynamic arcs
+     Index i = stop - strt;
+     for( auto dxi = dx.begin() ; i-- ; ) {
+      (*pi).first = &(*(dxi++));
+      (*(pi++)).second = *(NCost++);
+      }
+     }
+    else {                             // the range mixes static and dynamic
      for( auto xi = x.begin() + strt ; xi != x.end() ; ) {
       (*pi).first = &(*(xi++));
       (*(pi++)).second = *(NCost++);
       }
 
-    Index i = stop - get_NStaticArcs();
-    for( auto dxi = dx.begin() ; i-- ; ) {
-     (*pi).first = &(*(dxi++));
-     (*(pi++)).second = *(NCost++);
+     Index i = stop - get_NStaticArcs();
+     for( auto dxi = dx.begin() ; i-- ; ) {
+      (*pi).first = &(*(dxi++));
+      (*(pi++)).second = *(NCost++);
+      }
      }
 
-    lfo->modify_coefficients( pairs , false , issueAMod );
+    lfo->modify_coefficients( ccp , false , issueAMod );
     }
    }
   else                 // all arcs are static
@@ -2081,32 +2089,44 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
   #endif
 
   LinearFunction::v_coeff_pair ccp( nms.size() );
+  bool myord = ordered;
   Index cnt = 0;
 
-  if( HasDynamicX() )
+  if( HasDynamicX() ) {  // there are dynamic arcs
    if( ordered ) {
     // static part
     auto nit = nms.begin();
     for( ; ( nit != nms.end() ) && ( *nit < get_NStaticArcs() ) ;
 	 ++NCost , ++nit ) {
-     if( *nit >= get_NStaticArcs() )
-      throw( std::invalid_argument( "invalid arc name" ) );
      if( C[ *nit ] != *NCost ) {
       C[ *nit ] = *NCost;
-      ccp[ cnt++ ] = std::make_pair( & x[ *nit ] , *NCost );
+      ccp[ cnt++ ] = std::make_pair( &x[ *nit ] , *NCost );
       }
      }
 
-    // dynamic part
-    auto dxi = dx.begin();
-    for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
-     if( *(nit++) == i ) {
-      if( C[ i ] != *NCost ) {
-       C[ i ] = *NCost;
-       ccp[ cnt++ ] = std::make_pair( &(*dxi) , *NCost );
+    if( nit != nms.end() ) {
+     if( *nit >= get_NArcs() )
+      throw( std::invalid_argument( "invalid arc name" ) );
+
+     // if there are dynamic arcs in nms[], ccp is not ordered
+     // even if nms[] was
+     myord = false;
+
+     // dynamic part
+     auto dxi = dx.begin();
+     for( Index i = get_NStaticArcs() ; ; ++i , ++dxi )
+      if( *nit == i ) {
+       if( C[ i ] != *NCost ) {
+	C[ i ] = *NCost;
+	ccp[ cnt++ ] = std::make_pair( &(*dxi) , *NCost );
+        }
+       ++NCost;
+       if( ++nit == nms.end() )
+	break;
+       if( *nit >= get_NArcs() )
+	throw( std::invalid_argument( "invalid arc name" ) );
        }
-      NCost++;
-      }
+     }
     }
    else {
     // make a vector of pairs < arc index , new cost >
@@ -2132,25 +2152,34 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
       ccp[ cnt++ ] = std::make_pair( & x[ (*pit).first ] , (*pit).second );
       }
 
-    // dynamic part
-    auto dxi = dx.begin();
-    for( Index i = get_NStaticArcs() ; pit != pairs.end() ; ++i , ++dxi )
-     if( (*pit).first == i ) {
-      if( C[ i ] != (*pit).second ) {
-       C[ i ] = (*pit).second;
-       ccp[ cnt++ ] = std::make_pair( &(*dxi) , (*pit).second );
+    if( pit == pairs.end() )
+     // if there are no dynamic arcs in nms[], ccp is ordered
+     // even if nms[] was not (because pairs is)
+     myord = true;
+    else {
+     // dynamic part
+     auto dxi = dx.begin();
+     for( Index i = get_NStaticArcs() ; pit != pairs.end() ; ++i , ++dxi )
+      if( (*pit).first == i ) {
+       if( C[ i ] != (*pit).second ) {
+	C[ i ] = (*pit).second;
+	ccp[ cnt++ ] = std::make_pair( &(*dxi) , (*pit).second );
+        }
+       pit++;
        }
-      pit++;
-      }
-    }
-  else
-   for( auto nit = nms.begin() ; nit != nms.end() ; ++NCost , ++nit ) {
-    if( C[ *nit ] != *NCost ) {
-     if( *nit >= get_NStaticArcs() )
-      throw( std::invalid_argument( "invalid arc name" ) );
-     C[ *nit ] = *NCost;
-     ccp[ cnt++ ] = std::make_pair( & x[ *nit ] , *NCost );
      }
+    }
+   }
+  else  // all arcs are static
+   for( auto nm : nms ) {
+    if( nm >= get_NArcs() )
+     throw( std::invalid_argument( "invalid arc name" ) );
+
+    if( C[ nm ] != *NCost ) {
+     C[ nm ] = *NCost;
+     ccp[ cnt++ ] = std::make_pair( &x[ nm ] , *NCost );
+     }
+    ++NCost;
     }
 
   if( ! cnt )  // actually nothing has changed
@@ -2159,7 +2188,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
   ccp.resize( cnt );
 
   // note that ccp is ordered if nms was
-  lfo->modify_coefficients( ccp , ordered , issueAMod );
+  lfo->modify_coefficients( ccp , myord , issueAMod );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -3140,67 +3169,94 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
 
    if( tmod->v_vars.size() == 1 ) {  // changing just one cost
     const auto var = tmod->v_vars.front();
-    const auto cp = lfo->get_v_var();
     c_Index i = p2i_x( var );
-    chg_cost( cp[ i ].second , i , eNoBlck , eDryRun );
+    chg_cost( get_C( i ) + tmod->v_delta.front() , i , eNoBlck , eDryRun );
     }
    else {                            // changing many costs at once
-    Vec_CNumber nC( tmod->v_vars.size() );
     Vec_Index nI( tmod->v_vars.size() );
     Index i = 0;
 
-    const auto cp = lfo->get_v_var();
-
     if( HasDynamicX() ) {
-     // use nI as a temporary to store the index of the Variable
-     // in the LinearFunction, but it will be overwrittem
-     lfo->map_active( tmod->v_vars , nI , true );
-
      auto dxi = dx.begin();
+     bool toord = true;  // if nI[] must be ordered
 
      if( x.empty() ) {  // there are only dynamic Variable
-      for( Index h = 0 ; i < tmod->v_vars.size() ; ++h , ++dxi )
+      for( Index h = 0 ; i < tmod->v_vars.size() ; ++h , ++dxi ) {
+       if( h > get_NArcs() )
+	throw( std::invalid_argument( "invalid Variable in Modification" ) );
+
        if( tmod->v_vars[ i ] == &(*dxi) ) {
-	nC[ i ] = cp[ nI[ i ] ].second;
+	tmod->v_delta[ i ] += get_C( h );
 	nI[ i++ ] = h;
         }
+       }
       }
      else {
       // there are both static and dynamic Variable, which means that
       // x.front() and x.back() are well-defined
-      Index h = 0;
+      // nI[] comes out ordered only if all Variable are static ones
+      toord = ( tmod->v_vars.front() < &(x.front()) ) ||
+              ( tmod->v_vars.back() > &(x.back()) );
+      Index h = get_NStaticArcs();
 
       // first part: variables before x.front() (if any)
       for( ; ( i < tmod->v_vars.size() ) &&
-	     ( tmod->v_vars[ i ] < &(x.front()) ) ; ++h , ++dxi )
+	     ( tmod->v_vars[ i ] < &(x.front()) ) ; ++h , ++dxi ) {
+       if( h > get_NArcs() )
+	throw( std::invalid_argument( "invalid Variable in Modification" ) );
+
        if( tmod->v_vars[ i ] == &(*dxi) ) {
-	nC[ i ] = cp[ nI[ i ] ].second;
+	tmod->v_delta[ i ] += get_C( h );
 	nI[ i++ ] = h;
         }
+       }
 
       // middle part: variables in x (if any)
       for( ; ( i < tmod->v_vars.size() ) &&
-	     ( tmod->v_vars[ i ] < &(x.back()) ) ; ++i ) {
-       nC[ i ] = cp[ nI[ i ] ].second;
-       nI[ i ] = p2i_x( tmod->v_vars[ i ] );
-       }
+	     ( tmod->v_vars[ i ] <= &(x.back()) ) ; ++i )
+       tmod->v_delta[ i ] += get_C( nI[ i ] = p2i_x( tmod->v_vars[ i ] ) );
 
       // last part: variables after x.back() (if any)
-      for( ; i < tmod->v_vars.size() ; ++h , ++dxi )
+      for( ; i < tmod->v_vars.size() ; ++h , ++dxi ) {
+       if( h > get_NArcs() )
+	throw( std::invalid_argument( "invalid Variable in Modification" ) );
+
        if( tmod->v_vars[ i ] == &(*dxi) ) {
-	nC[ i ] = cp[ nI[ i ] ].second;
+	tmod->v_delta[ i ] += get_C( h );
 	nI[ i++ ] = h;
-        }      
+        }
+       }
+      }
+
+     // now, if nI[] is not ordered, order it (to do the consecutive check)
+     if( toord ) {
+      // make a vector of pairs < arc index , new cost >
+      typedef std::pair< Index , CNumber > index_pair;
+      std::vector< index_pair > pairs( nI.size() );
+      for( Index i = 0 ; i < nI.size() ; ++i ) {
+       pairs[ i ].first = nI[ i ];
+       pairs[ i ].second = tmod->v_delta[ i ];
+       }
+
+      // sort the vector for increasing index
+      std::sort( pairs.begin() , pairs.end() ,
+	       []( index_pair i , index_pair j )
+	       { return( i.first < j.first ); } );
+      
+      // map back the sorted vector
+      for( Index i = 0 ; i < nI.size() ; ++i ) {
+       nI[ i ] = pairs[ i ].first;
+       tmod->v_delta[ i ] = pairs[ i ].second;
+       }
       }
      }
     else  // there are only static Variable
      for( const auto & var : tmod->v_vars ) {
-      nI[ i ] = p2i_x( var );
-      nC[ i ] = cp[ nI[ i ] ].second;
+      tmod->v_delta[ i ] += get_C( nI[ i ] = p2i_x_s( var ) );
       i++;
       }
 
-    // check if nI is consecutive, if so use the ranged version
+    // check if nI[] is consecutive, if so use the ranged version
     bool cnsctv = true;
     for( auto itnI = nI.begin() ; ; ) {
      auto nxtitnI = ++itnI;
@@ -3210,9 +3266,11 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
      }
 
     if( cnsctv )
-     chg_costs( nC.begin() , nI.front() , nI.back() + 1 , eNoBlck , eDryRun );
+     chg_costs( tmod->v_delta.begin() , nI.front() , nI.back() + 1 ,
+		eNoBlck , eDryRun );
     else
-     chg_costs( nC.begin() , std::move( nI ) , true , eNoBlck , eDryRun );
+     chg_costs( tmod->v_delta.begin() , std::move( nI ) , true ,
+		eNoBlck , eDryRun );
     }
 
    return;
@@ -3230,7 +3288,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    if( tmod->f_type == RowConstraintMod::eChgRHS ) {
     auto cp = dynamic_cast<LB0Constraint * const>( tmod->f_constraint );
     if( ! cp )
-     throw( std::invalid_argument( "Invalid Modification to Constraint" ) );
+     throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
     chg_ucap( cp->get_rhs() , p2i_ub( cp ) , eNoBlck , eDryRun );
     return;
@@ -3239,7 +3297,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    if( tmod->f_type == RowConstraintMod::eChgBTS ) {
     auto cp = static_cast<FRowConstraint * const>( tmod->f_constraint );
     if( ! cp )
-     throw( std::invalid_argument( "Invalid Modification to Constraint" ) );
+     throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
     chg_dfct( cp->get_rhs() , p2i_e( cp ) , eNoBlck , eDryRun );
     return;
