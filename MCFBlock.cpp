@@ -2024,8 +2024,8 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
     auto pi = ccp.begin();
 
     if( strt >= get_NStaticArcs() ) {  // there are only dynamic arcs
-     Index i = stop - strt;
-     for( auto dxi = dx.begin() ; i-- ; ) {
+     auto dxi = std::next( dx.begin() , strt - get_NStaticArcs() );
+     for( Index i = stop - strt ; i-- ; ) {
       (*pi).first = &(*(dxi++));
       (*(pi++)).second = *(NCost++);
       }
@@ -3182,7 +3182,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
 
      if( x.empty() ) {  // there are only dynamic Variable
       for( Index h = 0 ; i < tmod->v_vars.size() ; ++h , ++dxi ) {
-       if( h > get_NArcs() )
+       if( h >= get_NArcs() )
 	throw( std::invalid_argument( "invalid Variable in Modification" ) );
 
        if( tmod->v_vars[ i ] == &(*dxi) ) {
@@ -3202,7 +3202,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
       // first part: variables before x.front() (if any)
       for( ; ( i < tmod->v_vars.size() ) &&
 	     ( tmod->v_vars[ i ] < &(x.front()) ) ; ++h , ++dxi ) {
-       if( h > get_NArcs() )
+       if( h >= get_NArcs() )
 	throw( std::invalid_argument( "invalid Variable in Modification" ) );
 
        if( tmod->v_vars[ i ] == &(*dxi) ) {
@@ -3214,11 +3214,11 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
       // middle part: variables in x (if any)
       for( ; ( i < tmod->v_vars.size() ) &&
 	     ( tmod->v_vars[ i ] <= &(x.back()) ) ; ++i )
-       tmod->v_delta[ i ] += get_C( nI[ i ] = p2i_x( tmod->v_vars[ i ] ) );
+       tmod->v_delta[ i ] += get_C( nI[ i ] = p2i_x_s( tmod->v_vars[ i ] ) );
 
       // last part: variables after x.back() (if any)
       for( ; i < tmod->v_vars.size() ; ++h , ++dxi ) {
-       if( h > get_NArcs() )
+       if( h >= get_NArcs() )
 	throw( std::invalid_argument( "invalid Variable in Modification" ) );
 
        if( tmod->v_vars[ i ] == &(*dxi) ) {
@@ -3259,10 +3259,9 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     // check if nI[] is consecutive, if so use the ranged version
     bool cnsctv = true;
     for( auto itnI = nI.begin() ; ; ) {
-     auto nxtitnI = ++itnI;
-     if( nxtitnI == nI.end() ) break;
-     if( *nxtitnI - *itnI != 1 ) { cnsctv = false; break; }
-     itnI = nxtitnI;
+     auto prvitnI = itnI++;
+     if( itnI == nI.end() ) break;
+     if( *itnI - *prvitnI != 1 ) { cnsctv = false; break; }
      }
 
     if( cnsctv )

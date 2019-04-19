@@ -684,8 +684,14 @@ int main( int argc , char **argv )
        // chg is ordered only if all arcs are static
        lf->modify_coefficients( chg , stp <= mMCFB->get_NStaticArcs() );
        }
-      else
+      else {
+       // note that all static Variable are consecutive, but not
+       // necessarily the first ones as dynamic Variable may come first
+       auto dlt = lf->is_active( mMCFB->i2p_x( 0 ) );
+       strt += dlt;
+       stp += dlt;
        lf->modify_coefficients( newcsts.begin() , strt , stp );
+       }
       }
      else {  // change via call to chg_* method
       mMCFB->chg_costs( newcsts.begin() , strt , stp );
