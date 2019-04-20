@@ -621,9 +621,6 @@ int main( int argc , char **argv )
 
  srand48( seed );  // seed the pseudo-random number generator
 
- MCFBlock::Vec_CNumber newcsts( n_change );
- MCFBlock::Vec_FNumber newcaps( max( n_change , n ) );
-
  while( n_repeat-- ) {
 
   cout << "Changing: ";
@@ -658,6 +655,7 @@ int main( int argc , char **argv )
     cout << " - ";
     }
    else {
+    MCFBlock::Vec_CNumber newcsts( tochange );
     for( MCFBlock::Index i = 0 ; i < tochange ; i++ )
      newcsts[ i ] = c_min +
                           MCFBlock::CNumber( drand48() * ( c_max - c_min ) );
@@ -760,7 +758,9 @@ int main( int argc , char **argv )
      cout << "y - ";
      }
     }
-   else
+   else {
+    MCFBlock::Vec_FNumber newcaps( tochange );
+
     // in 50% of the cases do a ranged change, in the others a sparse change
     if( drand48() <= 0.5 ) {
      MCFBlock::Index strt = drand48() * ( m - tochange );
@@ -807,6 +807,7 @@ int main( int argc , char **argv )
       cout << "ies(s) - ";
       }
      }
+    }
    }  // end( if( change capacities ) )
 
   // change deficits- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -820,17 +821,18 @@ int main( int argc , char **argv )
    MCFClass::FNumber negd;
 
    if( nzdfct ) {  // if there are nonzero deficits
-    mcf->MCFDfcts( newcaps.data() );
+    MCFBlock::Vec_FNumber dfcts( n );
+    mcf->MCFDfcts( dfcts.data() );
 
     do
      posn = MCFClass::Index( drand48() * n );  // select node with positive
-    while( newcaps[ posn ] <= 0 );             // deficit (one must exist)
-    posd = newcaps[ posn ];
+    while( dfcts[ posn ] <= 0 );               // deficit (one must exist)
+    posd = dfcts[ posn ];
 
     do
      negn = MCFClass::Index( drand48() * n );  // select node with negative
-    while( newcaps[ negn ] >= 0 );             // deficit (one must exist)
-    negd = newcaps[ negn ];
+    while( dfcts[ negn ] >= 0 );               // deficit (one must exist)
+    negd = dfcts[ negn ];
     }
    else {
     posn = MCFClass::Index( drand48() * n );   // just select at random

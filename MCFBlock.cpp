@@ -3173,21 +3173,37 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     chg_cost( get_C( i ) + tmod->v_delta.front() , i , eNoBlck , eDryRun );
     }
    else {                            // changing many costs at once
+    // complicated part: has to retrieve the arc indices of the Variable
+    // for dynamic ones, the least bad way of doing it is to scann all
+    // of them and for each search in tmod->v_vars, since that is ordered
+    // (and possibly small) and therefore the search is quick; besides, if
+    // one of the extremes is found, the interval can be shrank in later
+    // searches
     Vec_Index nI( tmod->v_vars.size() );
-    Index i = 0;
 
     if( HasDynamicX() ) {
+     auto lb = tmod->v_vars.begin();
+     auto ub = tmod->v_vars.end();
+     Index i = tmod->v_vars.size();
      auto dxi = dx.begin();
      bool toord = true;  // if nI[] must be ordered
 
      if( x.empty() ) {  // there are only dynamic Variable
-      for( Index h = 0 ; i < tmod->v_vars.size() ; ++h , ++dxi ) {
+      for( Index h = get_NStaticArcs() ; i ; ++h , ++dxi ) {
        if( h >= get_NArcs() )
 	throw( std::invalid_argument( "invalid Variable in Modification" ) );
 
-       if( tmod->v_vars[ i ] == &(*dxi) ) {
-	tmod->v_delta[ i ] += get_C( h );
-	nI[ i++ ] = h;
+       auto vi = std::lower_bound( lb , ub , &(*dxi) );
+       if( ( vi != ub ) && ( *vi == &(*dxi) ) ) {
+	auto idx = std::distance( tmod->v_vars.begin() , vi );
+	tmod->v_delta[ idx ] += get_C( h );
+	nI[ idx ] = h;
+	--i;
+	if( vi == lb )
+	 ++lb;
+	else
+	 if( vi == ub - 1 )
+	  ub = vi;
         }
        }
       }
@@ -3197,33 +3213,48 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
       // nI[] comes out ordered only if all Variable are static ones
       toord = ( tmod->v_vars.front() < &(x.front()) ) ||
               ( tmod->v_vars.back() > &(x.back()) );
-      Index h = get_NStaticArcs();
 
-      // first part: variables before x.front() (if any)
-      for( ; ( i < tmod->v_vars.size() ) &&
-	     ( tmod->v_vars[ i ] < &(x.front()) ) ; ++h , ++dxi ) {
-       if( h >= get_NArcs() )
-	throw( std::invalid_argument( "invalid Variable in Modification" ) );
+      auto sttcbeg = std::lower_bound( lb , ub , &(x.front()) );
+      auto sttcend = std::upper_bound( lb , ub , &(x.back()) );
 
-       if( tmod->v_vars[ i ] == &(*dxi) ) {
-	tmod->v_delta[ i ] += get_C( h );
-	nI[ i++ ] = h;
-        }
+      // first deal with the Variable in x, if any
+      for( auto sttcit = sttcbeg ; sttcit != sttcend ; ++sttcit ) {
+       auto idx = std::distance( lb , sttcit );
+       tmod->v_delta[ idx ] += get_C( nI[ idx ] = p2i_x_s( *sttcit ) );
        }
 
-      // middle part: variables in x (if any)
-      for( ; ( i < tmod->v_vars.size() ) &&
-	     ( tmod->v_vars[ i ] <= &(x.back()) ) ; ++i )
-       tmod->v_delta[ i ] += get_C( nI[ i ] = p2i_x_s( tmod->v_vars[ i ] ) );
-
-      // last part: variables after x.back() (if any)
-      for( ; i < tmod->v_vars.size() ; ++h , ++dxi ) {
+      i -= std::distance( sttcbeg , sttcend );
+      
+      // then deal with the Variable in dx, if any
+      for( Index h = get_NStaticArcs() ; i ; ++h , ++dxi ) {
        if( h >= get_NArcs() )
 	throw( std::invalid_argument( "invalid Variable in Modification" ) );
 
-       if( tmod->v_vars[ i ] == &(*dxi) ) {
-	tmod->v_delta[ i ] += get_C( h );
-	nI[ i++ ] = h;
+       auto vi = std::lower_bound( lb , sttcbeg , &(*dxi) );
+       if( ( vi != sttcbeg ) && ( *vi == &(*dxi) ) ) {
+	auto idx = std::distance( tmod->v_vars.begin() , vi );
+	tmod->v_delta[ idx ] += get_C( h );
+	nI[ idx ] = h;
+	--i;
+	if( vi == lb )
+	 ++lb;
+	else
+	 if( vi == sttcbeg - 1 )
+	  sttcbeg = vi;
+	continue;
+        }
+
+       vi = std::lower_bound( sttcend , ub , &(*dxi) );
+       if( ( vi != ub ) && ( *vi == &(*dxi) ) ) {
+	auto idx = std::distance( tmod->v_vars.begin() , vi );
+	tmod->v_delta[ idx ] += get_C( h );
+	nI[ idx ] = h;
+	--i;
+	if( vi == sttcend )
+	 ++sttcend;
+	else
+	 if( vi == ub - 1 )
+	  ub = vi;
         }
        }
       }
@@ -3250,11 +3281,13 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
        }
       }
      }
-    else  // there are only static Variable
+    else {  // there are only static Variable
+     Index i = 0;
      for( const auto & var : tmod->v_vars ) {
       tmod->v_delta[ i ] += get_C( nI[ i ] = p2i_x_s( var ) );
       i++;
       }
+     }
 
     // check if nI[] is consecutive, if so use the ranged version
     bool cnsctv = true;
