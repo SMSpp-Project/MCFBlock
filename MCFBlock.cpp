@@ -146,24 +146,28 @@ SMSpp_insert_in_factory_cpp_1( MCFBlock );
 /*-------------------------- OTHER INITIALIZATIONS -------------------------*/
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
+void MCFBlock::load( c_Index n , c_Index m ,
+		     c_Vec_Index & pEn , c_Vec_Index & pSn ,
 		     c_Vec_FNumber & pU , c_Vec_CNumber & pC ,
 		     c_Vec_FNumber & pB , c_Index dn , c_Index dm ,
 		     c_Index mdn , c_Index mdm )
 {
  // sanity checks - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- if( pEn.size() != pSn.size() )
-  throw( std::invalid_argument( "pEn size != pSn size" ) );
+ if( pSn.size() < m )
+  throw( std::invalid_argument( "pSn too small" ) );
 
- if( ( pC.size() > 0 ) && ( pC.size() != pSn.size() ) )
-  throw( std::invalid_argument( "pCn size != pSn size" ) );
+ if( pEn.size() < m )
+  throw( std::invalid_argument( "pEn too small" ) );
 
- if( ( pU.size() > 0 ) && ( pU.size() != pSn.size() ) )
-  throw( std::invalid_argument( "pUn size != pSn size" ) );
+ if( ( pC.size() > 0 ) && ( pC.size() < m ) )
+  throw( std::invalid_argument( "pC nonempty but too small" ) );
 
- if( ( pB.size() > 0 ) && ( pB.size() != n ) )
-  throw( std::invalid_argument( "pB size != n" ) );
+ if( ( pU.size() > 0 ) && ( pU.size() < m ) )
+  throw( std::invalid_argument( "pU nonempty but too small" ) );
+
+ if( ( pB.size() > 0 ) && ( pB.size() < n ) )
+  throw( std::invalid_argument( "pB nonempty but too small" ) );
 
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
@@ -173,7 +177,7 @@ void MCFBlock::load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
  // copy over problem data - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  NNodes = n;
- NArcs = pSn.size();
+ NArcs = m;
  MaxNNodes = NNodes + ( mdn > dn ? mdn - dn : 0 );
  c_Index MaxNArcs = NArcs + ( mdm > dm ? mdm - dm : 0 );
  NStaticNodes = dn > n ? 0 : n - dn;
@@ -1142,7 +1146,7 @@ Block * MCFBlock::get_R3_Block( Configuration *r3bc )
 
  auto MCFB = new MCFBlock();
 
- MCFB->load( get_NNodes() , EN , SN , U , C , B ,
+ MCFB->load( get_NNodes() , get_NArcs() , EN , SN , U , C , B ,
 	     get_NNodes() - get_NStaticNodes() ,
 	     get_NArcs() - get_NStaticArcs() ,
 	     get_MaxNNodes() - get_NStaticNodes() ,
@@ -1588,7 +1592,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     // one should check that the Block is this MCFBlock, but it cannot
     // be otherwise, can it?
 
-    MCFB->load( get_NNodes() , EN , SN , U , C , B ,
+    MCFB->load( get_NNodes() , get_NArcs() , EN , SN , U , C , B ,
 		get_NNodes() - get_NStaticNodes() ,
 		get_NArcs() - get_NStaticArcs() ,
 		get_MaxNNodes() - get_NStaticNodes() ,

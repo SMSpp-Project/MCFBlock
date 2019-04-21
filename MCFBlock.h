@@ -298,63 +298,63 @@ public:
  /// loads the MCF instance from memory
  /** Loads the MCF instance from memory. The parameters are what you expect:
   *
-  * - n    is the number of nodes of the network
+  * - n    is the current number of nodes of the network
   *
-  * - pSn  is the vector of the arc starting nodes;
+  * - m    is the current number of arcs of the network
   *
-  * - pEn  is the vector of the arc ending nodes: pSn and pEn must have the
-  *        same size (although they can be empty if there are dynamic arcs,
-  *        see below), and their common size is denoted as "m" in the rest
-  *        of the comments;
+  * - pSn  is the vector of the arc starting nodes, which must have size at
+  *        least m
+  *
+  * - pEn  is the vector of the arc ending nodes, which must have size at
+  *        least m
   *
   * - pU   is the vector of the arc upper capacities; capacities must be
-  *        nonnegative, but can be infinite; if pU is empty, then all
-  *        capacities are taken to be infinite;
+  *        nonnegative, but can be infinite; it must either have size at
+  *        least m or be empty, in the latter case all capacities are taken
+  *        to be infinite
   *
-  * - pC   is the vector of the arc costs; if pC is empty, then all arc costs
-  *        are taken to be 0;
+  * - pC   is the vector of the arc costs; it must either have size at
+  *        least m or be empty, in the latter case all arc costs are taken
+  *        to be 0
   *
   * - pB   is the vector of the node deficits; source nodes have negative
-  *        deficits and sink nodes have positive deficits; if pB is empty,
-  *        then all deficits are taken to be 0 (a circulation problem).
+  *        deficits and sink nodes have positive deficits; it must either
+  *        have size at least n or be empty, in the latter case all deficits
+  *        are taken to be 0 (a circulation problem)
   *
   * - dn   the current number (<= n, default 0) of dynamic nodes: all the
   *        nodes between 0 and n - dn - 1 are static, i.e., they cannot be
   *        deleted (and re-created), whereas all those from n - dn to n - 1
   *        are dynamic, i.e., they can deleted and later on re-created; if
   *        dn > n, then it is intended that dn == n, i.e., all nodes are
-  *        dynamic (but still n is taken as the current number of nodes);
+  *        dynamic (but still n is taken as the current number of nodes)
   *
   * - dm   the current number (<= m, default 0) of dynamic arcs: all the
   *        arcs between 0 and m - dm - 1 are static, i.e., they cannot be
   *        deleted (and re-created), whereas all those from m - dm to m - 1
   *        are dynamic, i.e., they can deleted and later on re-created; if
   *        dm > m, then it is intended that dm == m, i.e., all arcs are
-  *        dynamic (but still m is taken as the current number of arcs);
+  *        dynamic (but still m is taken as the current number of arcs)
   *
   * - mdn  the maximum number of dynamic nodes (default 0, if mdn < dn
   *        then the value is ignored and dn is used): data in the MCFBlock
   *        is allocated to accommodate for the fact that further mdn - dn
   *        nodes can later on be dynamically created (and deleted); if
   *        mdn < dn the parameter is ignored and n is taken as the maximum
-  *        overall number of nodes;
+  *        overall number of nodes
   *
   * - mdm  the maximum number of dynamic arcs (default 0, if mdm < dm
   *        then the value is ignored and dm is used): data in the MCFBlock
   *        is allocated to accommodate for the fact that further mdm - dm
   *        arcs can later on be dynamically created (and deleted); if
   *        mdm < dm the parameter is ignored and m is taken as the maximum
-  *        overall number of arcs.
-  *
-  * The number m of arcs of the graph need not be explicitly provided because
-  * it is the length of pEn and sEn; while pU and pC can be empty, they cannot
-  * (unless the graph is empty of arcs). Conversely, n must be explicitly
-  * provided because the only n-vector is pB, which can be empty.
+  *        overall number of arcs
   *
   * Like load( std::istream & ), if there is any Solver attached to this
   * MCFBlock then a NBModification (the "nuclear option") is issued. */
 
- virtual void load( c_Index n , c_Vec_Index & pEn , c_Vec_Index & pSn ,
+ virtual void load( c_Index n , c_Index m ,
+		    c_Vec_Index & pEn , c_Vec_Index & pSn ,
 		    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
 		    c_Vec_FNumber & pB = {} ,
 		    c_Index dn = 0 , c_Index dm = 0 ,
