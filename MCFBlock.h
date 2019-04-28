@@ -283,10 +283,12 @@ public:
   * the void constructor. */
 
  MCFBlock( Block *father = nullptr ) : Block( father ) , NNodes( 0 ) ,
-  NArcs( 0 ) , MaxNNodes( 0 ) , NStaticNodes( 0 ) , NStaticArcs( 0 ) { }
+  NArcs( 0 ) , MaxNNodes( 0 ) , NStaticNodes( 0 ) , NStaticArcs( 0 ) ,
+  AR( 0 ) { }
 
 /*--------------------------------------------------------------------------*/
  /// destructor of MCFBlock: deletes the abstract representation, if any
+
  virtual ~MCFBlock() { guts_of_destructor(); }
 
 /*@} -----------------------------------------------------------------------*/
@@ -459,7 +461,7 @@ public:
   * dynamic Variable is there ready for when this happens. */
 
  virtual void generate_abstract_variables( Configuration *stvv = nullptr )
-  override final;
+  override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the static constraint of the MCF
@@ -530,7 +532,7 @@ public:
   * "abstract" Modification. */
  
  virtual void generate_abstract_constraints( Configuration *stcc = nullptr )
-  override final;
+  override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the objective of the MCF
@@ -582,8 +584,7 @@ public:
   * THEREFORE, ADDING THEM) IS NOT ALLOWED, the MCFBlock will throw exception
   * while processing the corresponding "abstract" Modification. */
 
- virtual void generate_objective( Configuration *objc = nullptr )
-  override final;
+ virtual void generate_objective( Configuration *objc = nullptr ) override;
 
 /*@} -----------------------------------------------------------------------*/
 /*-------------- Methods for reading the data of the MCFBlock --------------*/
@@ -793,7 +794,7 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc costs
  /** Returns a const reference to the vector of arc costs. Note that the
-  * returned vector can either be of size get_NArcs() or be of size 0, in
+  * returned vector can either be of size get_MaxNArcs() or of size 0, in
   * which case all arc costs are assumed to be 0. */
 
  inline c_Vec_CNumber & get_C( void ) const { return( C ); }
@@ -805,7 +806,7 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc upper bounds
  /** Returns a const reference to the vector of arc upper bounds. Note that
-  * the returned vector can either be of size get_NArcs() or be of size 0, in
+  * the returned vector can either be of size get_MaxNArcs() or of size 0, in
   * which case all arc upper bounds are assumed to be +Inf. */
 
  inline c_Vec_FNumber & get_U( void ) const { return( U ); }
@@ -819,7 +820,7 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of node deficits
  /** Returns a const reference to the vector of node deficits. Note that the
-  * returned vector can either be of size get_NNodes() or be of size 0, in
+  * returned vector can either be of size get_MaxNNodes() or of size 0, in
   * which case all node deficits are assumed to be 0. Also, note that the
   * position i (0 <= i < get_NNodes()) in this vector correspond to the node
   * whose name is i + 1 as returned from get_SN() and get_EN(). */
@@ -923,7 +924,7 @@ public:
   * - otherwise, it is 0. */
  
  virtual bool is_feasible( bool useabstract = false ,
-			   Configuration *fsbc = nullptr ) override final;
+			   Configuration *fsbc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is (approximately) optimal
@@ -957,7 +958,7 @@ public:
   * - otherwise, ceps == feps == 0. */
  
  virtual bool is_optimal( bool useabstract = false  ,
-			  Configuration *optc = nullptr ) override final;
+			  Configuration *optc = nullptr ) override;
 
 /*@} -----------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
@@ -973,7 +974,7 @@ public:
   *
   */
 
- virtual Block * get_R3_Block( Configuration *r3bc = nullptr ) override final;
+ virtual Block * get_R3_Block( Configuration *r3bc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /// maps back the solution from a copy MCFBlock to the current one
@@ -1008,8 +1009,7 @@ public:
   * this throws an exception. */ 
 
  virtual void map_back_solution( Block *R3B , Configuration *r3bc = nullptr ,
-				 Configuration *solc = nullptr )
-  override final;
+				 Configuration *solc = nullptr ) override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// maps the solution of the current MCFBlock to a copy MCFBlock
@@ -1045,8 +1045,7 @@ public:
 
  virtual void map_forward_solution( Block *R3B ,
 				    Configuration *r3bc = nullptr ,
-				    Configuration *solc = nullptr )
-  override final;
+				    Configuration *solc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
@@ -1083,7 +1082,7 @@ public:
 					Configuration *r3bc = nullptr ,
 					c_ModParam issuePMod = eNoBlck ,
 					c_ModParam issueAMod = eModBlck )
-  override final;
+  override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
@@ -1096,7 +1095,7 @@ public:
 				     Configuration *r3bc = nullptr ,
 				     c_ModParam issuePMod = eNoBlck ,
 				     c_ModParam issueAMod = eModBlck )
-  override final;
+  override;
 
 /*@} -----------------------------------------------------------------------*/
 /*----------------------- Methods for handling Solution --------------------*/
@@ -1143,7 +1142,7 @@ public:
   * information declared in the latter. */ 
 
  virtual Solution * get_Solution( Configuration *solc = nullptr ,
-				  bool emptys = true ) override final;
+				  bool emptys = true ) override;
 
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the flow solution
@@ -1206,7 +1205,7 @@ public:
   if( nde >= get_NNodes() )
    throw( std::invalid_argument( "invalid node name" ) );
 
-  if( ( ! E.size() ) && ( ! dE.size() ) )
+  if( ! ( AR & HasFlw ) )
    throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
   if( nde < get_NStaticNodes() )
@@ -1287,8 +1286,8 @@ public:
  /// sets the potential solution of the given node
 
  void set_pi( CNumber PSol , c_Index nde ) {
-  if( ! E.size() )  // nowhere to put the value
-   return;          // cowardly (and silently) return
+  if( ! ( AR & HasFlw ) )  // nowhere to put the value
+   return;                 // cowardly (and silently) return
 
   if( nde >= get_NNodes() )
    throw( std::invalid_argument( "invalid node name" ) );
@@ -1313,8 +1312,8 @@ public:
  /// sets the reduced cost of the given arc
 
  void set_rc( c_CNumber RC , c_Index arc ) {
- if( UB.empty() && dUB.empty() )  // nowhere to put the value in
-  return;                         // cowardly (and silently) return
+ if( ! ( AR & HasBnd ) )  // nowhere to put the value in
+  return;                 // cowardly (and silently) return
 
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
@@ -1375,15 +1374,13 @@ public:
   * Any other Modification reaching the MCFBlock will lead to exception
   * being thrown. */
 
- virtual void add_Modification( sp_Mod mod , ChnlName chnl = 0 )
-  override final;
+ virtual void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
 
 /*@} -----------------------------------------------------------------------*/
 /*---------------------- Methods for handling Solver -----------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for handling Solver
     @{ */
-
 
 /*@} -----------------------------------------------------------------------*/
 /*------------ METHODS FOR LOADING, PRINTING & SAVING THE MCFBlock ---------*/
@@ -1396,7 +1393,7 @@ public:
   * MCFBlock. See MCFBlock::deserialize( netCDF::NcGroup ) for details of the
   * format of the created netCDF group. */
 
- virtual void serialize( netCDF::NcGroup & group ) const override final;
+ virtual void serialize( netCDF::NcGroup & group ) const override;
 
 /*@} -----------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
@@ -1483,7 +1480,7 @@ public:
   * Note that this can issue only one Modification of each type; the
   * "physical" one is a MCFBlockRngdMod with stop = start + 1. */
 
- void chg_cost( c_CNumber NCost , c_Index arc , 
+ void chg_cost( c_CNumber NCost , c_Index arc ,
 		c_ModParam issueMod = eNoBlck ,
 		c_ModParam issueAMod = eNoBlck );
 
@@ -1510,7 +1507,6 @@ public:
   * Note that, according to the Configuration of the static Constraint, the
   * capacity of the arcs cannot be changed: trying to do that will result in
   * an exception being thrown.
-  *
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
@@ -1667,9 +1663,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with stop = start + 1. */
 
- void close_arc( c_Index arc ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void close_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
+		               c_ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
 /// re-opens a contiguous interval of arcs
@@ -1731,9 +1726,81 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with stop = start + 1. */
 
- void open_arc( c_Index arc ,
+ void open_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
+		              c_ModParam issueAMod = eNoBlck );
+
+/*--------------------------------------------------------------------------*/
+ /// add a new arc
+ /** Method to add a new arc, providing its starting and ending nodes, cost
+  * and capacity.
+  *
+  * If get_NArcs() < get_MaxNArcs() then the new arc gets "name" get_NArcs(),
+  * which is returned by the method, and the value returned by get_NArcs()
+  * increases by one; this is then the "name" by which the arc has to be
+  * addressed in all methods (like chg_[cost/ucap](), [open/close]_arc(),
+  * get_[x/rc]()). Otherwise the arc is not actually added, and the method
+  * returns Inf<FNumber>().
+  *
+  * Successfully adding a new arc causes the issuing of several Modification,
+  * unless the issueMod and issueAMod parameters prevent this to happen:
+  *
+  * - a "physical" MCFBlockRngdMod with type eAddArc;
+  *
+  * - an "abstract" GroupModification containing up to:
+  *
+  *   = a BlockModAD with type eAddVar corresponding to the addition of a
+  *     new dynamic Variable (the flow Variable of the arc);
+  *
+  *   = possibly, a BlockModAD with type eAddConst corresponding to the
+  *     addition of a new dynamic Constraint (the bound Constraint of the
+  *     arc, if it is defined);
+  *
+  *   = three C05FunctionModVars corresponding to having added the new
+  *     Variable to the two flow conservation constraints of its starting
+  *     and ending node and to the objective.
+  *
+  *   (of course, all these are only issued if the corresponding part of the
+  *   "abstract" representation is constructed). */
+ 
+ Index add_arc( c_Index sn , c_Index en , c_CNumber cst = 0 ,
+		c_FNumber cap = Inf<FNumber>() ,
 		c_ModParam issueMod = eNoBlck ,
 		c_ModParam issueAMod = eNoBlck );
+
+/*--------------------------------------------------------------------------*/
+ /// removes an existing arc
+ /** Method to remove the arc which given name. It must be
+  * get_NStaticArcs() <= arc < get_MaxNArcs(), otherwise exception is thrown.
+  *
+  * After (successfull) removal, the value returned by get_NArcs() is
+  * decreased by one. All (dynamic) arcs with "name" > arc, if any, are
+  * shifted left by one, i.e., their "name" after the removal  (by which they
+  * have to be addressed in all methods like chg_[cost/ucap](),
+  * [open/close]_arc(), get_[x/rc]()) is the previous "name" - 1.
+  *
+  * Removing an existing arc causes the issuing of several Modification,
+  * unless the issueMod and issueAMod parameters prevent this to happen:
+  *
+  * - a "physical" MCFBlockRngdMod with type eRmvArc;
+  *
+  * - an "abstract" GroupModification containing up to:
+  *
+  *   = a BlockModAD with type eDelVar corresponding to the removal of an
+  *     existing dynamic Variable (the flow Variable of the arc);
+  *
+  *   = possibly, a BlockModAD with type eDelConst corresponding to the
+  *     removal of an existing dynamic Constraint (the bound Constraint of
+  *     the arc, if it is defined);
+  *
+  *   = three C05FunctionModVars corresponding to having removed the existing
+  *     Variable from the two flow conservation constraints of its starting
+  *     and ending node and from the objective.
+  *
+  *   (of course, all these are only issued if the corresponding part of the
+  *   "abstract" representation is constructed). */
+ 
+ void remove_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
+		                c_ModParam issueAMod = eNoBlck );
 
 /*@} -----------------------------------------------------------------------*/
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
@@ -1755,7 +1822,7 @@ public:
  /** Protected method to print information about the MCFBlock; with the
   * "complete" level it outputs the MCFBlock in DIMACS formar. */
 
- virtual void print( std::ostream &output ) const override final;
+ virtual void print( std::ostream &output ) const override;
 
 /*--------------------------------------------------------------------------*/
  /// loads the MCF instance from file in DIMACS standard format
@@ -1792,7 +1859,7 @@ public:
   * Like load( memory ), if there is any Solver attached to this MCFBlock
   * then a NBModification (the "nuclear option") is issued. */
 
- virtual void load( std::istream &input ) override final;
+ virtual void load( std::istream &input ) override;
 
 /*@}------------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
@@ -1810,6 +1877,17 @@ public:
  Vec_CNumber C;                  ///< vector of arc costs
  Vec_FNumber U;                  ///< vector of arc upper capacities
  Vec_FNumber B;                  ///< vector of node deficits
+
+ unsigned char AR;               ///< bit-wise coded: what abstract is there
+
+ static constexpr unsigned char HasVar = 1;
+ ///< first bit of AR == 1 if the Variable have been constructed
+ static constexpr unsigned char HasObj = 2;
+ ///< second bit of AR == 1 if the Objective has been constructed
+ static constexpr unsigned char HasFlw = 4;
+ ///< third bit of AR == 1 if the Flow Conservation have been constructed
+ static constexpr unsigned char HasBnd = 8;
+ ///< fourth bit of AR == 1 if the Bound have been constructed
 
  std::vector<ColVariable> x;     ///< the static flow variables
  std::vector<FRowConstraint> E;  ///< the static flow conservation constrs.
@@ -1872,16 +1950,18 @@ public:
 /*--------------------------------------------------------------------------*/
 /*-------------------------- CLASS MCFBlockMod -----------------------------*/
 /*--------------------------------------------------------------------------*/
-/// derived class from Modification for "simple" modifications to a MCFBlock
-/** Derived class from Modification to describe "simple" modifications to a
- *  MCFBlock, which is "everything changed". Note that it is derived from
- *  Modification rather than, say, BlockMod (which has the same structure)
- *  because this is a class of "physical Modification". This means that any
- *  MCFBlockMod refers to changes in the "physical representation" of the
- *  MCFBlock; the corresponding changes in the "abstract representation" of
- *  the MCFBlock are dealt with by means of "abstract Modification", i.e.,
- *  derived classes from AModification (as is BlockMod, which is why
- *  MCFBlockMod cannot derive from BlockMod). */
+/// derived class from Modification for modifications to a MCFBlock
+/** Derived class from Modification to describe modifications to a MCFBlock.
+ *  This is acutally "sort of abstract", since it does not say exactly what
+ *  is changed, this being demanded to derived classes (which do this in
+ *  different ways). Note that it is derived from Modification rather than,
+ *  say, BlockMod (which has the same structure) because this is a class of
+ *  "physical Modification". This means that a MCFBlockMod refers to changes
+ *  in the "physical representation" of the MCFBlock; the corresponding
+ *  changes in the "abstract representation" of the MCFBlock are dealt with
+ *  by means of "abstract Modification", i.e., derived classes from
+ *  AModification (as is BlockMod, which is why MCFBlockMod is not derived
+ *  from BlockMod). */
 
 class MCFBlockMod : public Modification
 {
@@ -1891,23 +1971,23 @@ class MCFBlockMod : public Modification
 
 /*---------------------------- PUBLIC TYPES --------------------------------*/
  /// public enum for the types of MCFBlockMod
- /** Actually, this public enum is not used in the base BlockMod class.
-  * However, both MCFBlockRngdMod and MCFBlockSbstMod derive from MCFBlockMod
-  * and require it, so it makes sense to define it only once in the base
-  * class. */
  
  enum MCFB_mod_type {
   eChgCost = 0 ,   ///< change the arc costs
   eChgCaps     ,   ///< change the arc capacities
   eChgDfct     ,   ///< change the node deficits
   eOpenArc     ,   ///< open arcs
-  eCloseArc        ///< close arcs
+  eCloseArc    ,   ///< close arcs
+  eAddArc      ,   ///< add arcs
+  eRmvArc          ///< remove arcs
   };
 
 /*---------------------- CONSTRUCTOR & DESTRUCTOR --------------------------*/
 
- MCFBlockMod( MCFBlock *fblock ) : f_Block( fblock ) {}
- ///< constructor: takes the MCFBlock
+ /// constructor: takes the MCFBlock and the type
+
+ MCFBlockMod( MCFBlock * const fblock , const int type )
+  : f_Block( fblock ) , f_type( type ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -1916,7 +1996,9 @@ class MCFBlockMod : public Modification
 /*---------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
 
  MCFBlock *f_Block;
-             ///< pointer to the MCFBlock to which the MCFBlockMod refers
+               ///< pointer to the MCFBlock to which the MCFBlockMod refers
+
+ int f_type;   ///< type of modification
 
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -1925,7 +2007,16 @@ class MCFBlockMod : public Modification
 /*-------------------------- PROTECTED METHODS -----------------------------*/
  /// print the MCFBlockMod
  virtual inline void print( std::ostream &output ) const {
-  output << "MCFBlockMod[" << this << "]" << std::endl;
+  output << "MCFBlockMod[" << this << "]: ";
+  switch( f_type ) {
+   case( eChgCost ):  output << "change costs "; break;
+   case( eChgCaps ):  output << "change capacities "; break;
+   case( eChgDfct ):  output << "change deficits "; break;
+   case( eOpenArc ):  output << "open arcs "; break;
+   case( eCloseArc ): output << "close arcs "; break;
+   case( eAddArc ):   output << "add arcs "; break;
+   default:           output << "remove arcs ";
+   }
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1948,19 +2039,17 @@ class MCFBlockRngdMod : public MCFBlockMod
 
 /*---------------------- CONSTRUCTOR & DESTRUCTOR --------------------------*/
 
- ///< constructor: takes the MCFBlock, the type, and the range
- MCFBlockRngdMod( MCFBlock *fblock , int type ,
+ /// constructor: takes the MCFBlock, the type, and the range
+
+ MCFBlockRngdMod( MCFBlock * const fblock , const int type ,
 		  MCFBlock::Index strt , MCFBlock::Index stop )
-  : MCFBlockMod( fblock ) , f_type( type ) , f_strt( strt ) , f_stop( stop )
- {}
+  : MCFBlockMod( fblock , type ) , f_strt( strt ) , f_stop( stop ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
  virtual ~MCFBlockRngdMod() { }   ///< destructor, does nothing
 
 /*--------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
-
- int f_type;                 ///< type of modification
 
  MCFBlock::Index f_strt;     ///< begin of the range
  MCFBlock::Index f_stop;     ///< end of the range
@@ -1972,14 +2061,7 @@ class MCFBlockRngdMod : public MCFBlockMod
 /*-------------------------- PROTECTED METHODS -----------------------------*/
  /// print the MCFBlockRngdMod
  virtual inline void print( std::ostream &output ) const {
-  output << "MCFBlockRngdMod[" << this << "]: ";
-  switch( f_type ) {
-   case( eChgCost ): output << "change costs "; break;
-   case( eChgCaps ): output << "change capacities "; break;
-   case( eChgDfct ): output << "change deficits "; break;
-   case( eOpenArc ): output << "open arcs "; break;
-   default:          output << "close arcs ";
-   }
+  MCFBlockMod::print( output );
   output << "[ " << f_strt << ", " << f_stop - 1 << " ]" << std::endl;
   }
 
@@ -2009,16 +2091,15 @@ class MCFBlockSbstMod : public MCFBlockMod
   * && tells, nms is "consumed" by the constructor and its resources become
   * property of the MCFBlockSbstMod object. */
 
- MCFBlockSbstMod( MCFBlock *fblock , int type , MCFBlock::Vec_Index && nms )
-  : MCFBlockMod( fblock ) , f_type( type ) , f_nms( std::move( nms ) ) { }
+ MCFBlockSbstMod( MCFBlock * const fblock , const int type ,
+		  MCFBlock::Vec_Index && nms )
+  : MCFBlockMod( fblock , type ) , f_nms( std::move( nms ) ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
  virtual ~MCFBlockSbstMod() { }   ///< destructor, does nothing
 
 /*--------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
-
- int f_type;                  ///< type of modification
 
  MCFBlock::Vec_Index f_nms;   ///< the subset
  
@@ -2029,14 +2110,7 @@ class MCFBlockSbstMod : public MCFBlockMod
 /*-------------------------- PROTECTED METHODS -----------------------------*/
  /// print the MCFBlockSbstMod
  virtual inline void print( std::ostream &output ) const {
-  output << "MCFBlockSbstMod[" << this << "] ";
-  switch( f_type ) {
-   case( eChgCost ): output << "change costs "; break;
-   case( eChgCaps ): output << "change capacities "; break;
-   case( eChgDfct ): output << "change deficits "; break;
-   case( eOpenArc ): output << "open arcs "; break;
-   default:          output << "close arcs ";
-   }
+  MCFBlockMod::print( output );
   output << "(# " << f_nms.size() << ")" << std::endl;
   }
 

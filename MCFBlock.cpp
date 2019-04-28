@@ -32,6 +32,10 @@
 using namespace SMSpp_di_unipi_it;
 
 /*--------------------------------------------------------------------------*/
+/*-------------------------------- CONSTANTS -------------------------------*/
+/*--------------------------------------------------------------------------*/
+
+/*--------------------------------------------------------------------------*/
 /*-------------------------------- FUNCTIONS -------------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -171,7 +175,7 @@ void MCFBlock::load( c_Index n , c_Index m ,
 
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
- if( NNodes )
+ if( MaxNNodes || get_MaxNArcs() )
   guts_of_destructor();
 		   
  // copy over problem data - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -186,12 +190,12 @@ void MCFBlock::load( c_Index n , c_Index m ,
  SN.resize( MaxNArcs );
  std::copy( pSn.begin() , pSn.end() , SN.begin() );
 
- EN.resize( get_MaxNArcs() );
+ EN.resize( MaxNArcs );
  std::copy( pEn.begin() , pEn.end() , EN.begin() );
 
  if( std::any_of( pC.begin() , pC.end() ,
 		  []( c_CNumber ci ) { return( ci != 0 ); } ) ) {
-  C.resize( get_MaxNArcs() );
+  C.resize( MaxNArcs );
   std::copy( pC.begin() , pC.end() , C.begin() );
   }
  else
@@ -199,7 +203,7 @@ void MCFBlock::load( c_Index n , c_Index m ,
 
  if( std::any_of( pU.begin() , pU.end() ,
 		  []( c_FNumber ui ) { return( ui < Inf<FNumber>() ); } ) ) {
-  U.resize( get_MaxNArcs() );
+  U.resize( MaxNArcs );
   std::copy( pU.begin() , pU.end() , U.begin() );
   }
  else
@@ -207,7 +211,7 @@ void MCFBlock::load( c_Index n , c_Index m ,
 
  if( std::any_of( pB.begin() , pB.end() ,
 		  []( c_FNumber bi ) { return( bi != 0 ); } ) ) {
-  B.resize( get_MaxNNodes() );
+  B.resize( MaxNNodes );
   std::copy( pB.begin() , pB.end() , B.begin() );
   }
  else
@@ -231,7 +235,7 @@ void MCFBlock::load( std::istream &input )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
- if( MaxNNodes || ( ! SN.empty() ) )
+ if( MaxNNodes || get_MaxNArcs() )
   guts_of_destructor();
 
  // read first non-comment line - - - - - - - - - - - - - - - - - - - - - - -
@@ -368,7 +372,7 @@ void MCFBlock::deserialize( netCDF::NcGroup & group , Block * father )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
- if( NNodes )
+ if( MaxNNodes || get_MaxNArcs() )
   guts_of_destructor();
 		   
  // read problem data- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -472,8 +476,8 @@ void MCFBlock::deserialize( netCDF::NcGroup & group , Block * father )
 
 void MCFBlock::generate_abstract_variables( Configuration *stvv )
 {
- if( x.size() || dx.size() )  // the variables are there already
-  return;                     // nothing to do
+ if( AR & HasVar )  // the variables are there already
+  return;           // nothing to do
 
  if( HasStaticX() ) {
   x.resize( get_NStaticArcs() );
@@ -494,88 +498,96 @@ void MCFBlock::generate_abstract_variables( Configuration *stvv )
 
   add_dynamic_variable( dx );
   } 
+
+ AR |= HasVar;
+
  }  // end( MCFBlock::generate_abstract_variables )
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 {
- if( E.size() || dE.size() )  // the constraints are there already
-  return;                     // nothing to do
-
- // count number of nonzeroes in each constraint, i.e., #FS( i ) + #BS( i )
- std::vector<Index> count( get_NNodes() );
+ if( ! ( AR & HasFlw ) ) {
+  // count number of nonzeroes in each constraint, i.e., #FS( i ) + #BS( i )
+  std::vector<Index> count( get_NNodes() );
  
- for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-  count[ SN[ i ] - 1 ]++;
-  count[ EN[ i ] - 1 ]++;
-  }
+  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+   count[ SN[ i ] - 1 ]++;
+   count[ EN[ i ] - 1 ]++;
+   }
 
- // initialize the vectors of coefficients, and reset count[]
- std::vector< LinearFunction::v_coeff_pair > coeffs( get_NNodes() );
+  // initialize the vectors of coefficients, and reset count[]
+  std::vector< LinearFunction::v_coeff_pair > coeffs( get_NNodes() );
 
- for( Index i = 0 ; i < get_NNodes() ; ++i ) {
-  coeffs[ i ].resize( count[ i ] );
-  count[ i ] = 0;
-  }
+  for( Index i = 0 ; i < get_NNodes() ; ++i ) {
+   coeffs[ i ].resize( count[ i ] );
+   count[ i ] = 0;
+   }
 
- // construct the vector of coefficients, static phase
- Index i = 0;
- for( ; i < get_NStaticArcs() ; ++i ) {
-  coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
-                                    std::make_pair( &x[ i ] , double( -1 ) );
-  coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
-                                    std::make_pair( &x[ i ] , double( 1 ) );
-  }
-
- // construct the vector of coefficients, dynamic phase
- if( MayHaveDynX() )
-  for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi ) {
+  // construct the vector of coefficients, static phase
+  Index i = 0;
+  for( ; i < get_NStaticArcs() ; ++i ) {
    coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
-                                    std::make_pair( &(*dxi) , double( -1 ) );
+                                    std::make_pair( &x[ i ] , double( -1 ) );
    coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
+                                    std::make_pair( &x[ i ] , double( 1 ) );
+   }
+
+  // construct the vector of coefficients, dynamic phase
+  if( MayHaveDynX() )
+   for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi ) {
+    coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
+                                    std::make_pair( &(*dxi) , double( -1 ) );
+    coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
                                     std::make_pair( &(*dxi) , double( 1 ) );
+    }
+
+  // generate the node-arc incidence matrix - - - - - - - - - - - - - - - - -
+  // each constraint is an equality, i.e., LHS = RHS = B[ i ]
+
+  // static part
+  if( HasStaticE() ) {
+   E.resize( get_NStaticNodes() );
+
+   for( Index i = 0 ; i < get_NStaticNodes() ; ++i ) {
+    E[ i ].set_both( B.empty() ? 0 : B[ i ] );
+    // note that the pairs are not ordered if there is a dynamic part
+    E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) , 0 ,
+					     ! HasDynamicX() ) );
+    E[ i ].set_Block( this );  // this is done last ==> no Modification
+    }
+
+   add_static_constraint( E );
    }
 
- // generate the node-arc incidence matrix- - - - - - - - - - - - - - - - - -
- // each constraint is an equality, i.e., LHS = RHS = B[ i ]
+  // dynamic part
+  if( MayHaveDynE() ) {
+   dE.resize( get_NNodes() - get_NStaticNodes() );
 
- // static part
- if( HasStaticE() ) {
-  E.resize( get_NStaticNodes() );
+   Index i = get_NStaticNodes();
+   for( auto & cnst : dE ) {
+    cnst.set_both( B.empty() ? 0 : B[ i ] );
+    // note that the pairs are not ordered since there is a dynamic part
+    cnst.set_function( new LinearFunction( std::move( coeffs[ i++ ] ) , 0 ,
+					   false ) );
+    cnst.set_Block( this );  // this is done last ==> no Modification
+    }
 
-  for( Index i = 0 ; i < get_NStaticNodes() ; ++i ) {
-   E[ i ].set_both( B.size() ? B[ i ] : 0 );
-   // note that the pairs are not ordered if there is a dynamic part
-   E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) , 0 ,
-					    ! HasDynamicX() ) );
-   E[ i ].set_Block( this );  // this is done last ==> no Modification
+   add_dynamic_constraint( dE );
    }
 
-  add_static_constraint( E );
-  }
-
- // dynamic part
- if( MayHaveDynE() ) {
-  dE.resize( get_NNodes() - get_NStaticNodes() );
-
-  Index i = get_NStaticNodes();
-  for( auto & cnst : dE ) {
-   cnst.set_both( B.size() ? B[ i ] : 0 );
-   // note that the pairs are not ordered since there is a dynamic part
-   cnst.set_function( new LinearFunction( std::move( coeffs[ i++ ] ) , 0 ,
-					  false ) );
-   cnst.set_Block( this );  // this is done last ==> no Modification
-   }
-
-  add_dynamic_constraint( dE );
+  AR |= HasFlw;
   }
 
  // generate the bound constraints- - - - - - - - - - - - - - - - - - - - - -
- // if upper bounds are not there, the LB0Constraint can be skipped entirely
- // if the Configuration agrees
+
+ if( AR & HasBnd )  // bound constraints there already
+  return;           // nothing to do
 
  if( U.empty() ) {
+  // if upper bounds are not there and the Configuration says so, the
+  // LB0Constraintare not constructed
+
   auto tstcc = dynamic_cast<SimpleConfiguration<int> *>( stcc );
 
   if( ( ! tstcc ) && f_BlockConfig &&
@@ -612,14 +624,17 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 
   add_dynamic_constraint( dUB );
   }
+
+ AR |= HasBnd;
+
  }  // end( MCFBlock::generate_abstract_constraints )
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::generate_objective( Configuration *objc )
 {
- if( ! get_objective().empty() )  // an objective is there already
-  return;                         // cowardly (and silently) return
+ if( AR & HasObj )  // the objective is there already
+  return;           // cowardly (and silently) return
 
  // initialize objective function - - - - - - - - - - - - - - - - - - - - - -
 
@@ -649,30 +664,30 @@ void MCFBlock::generate_objective( Configuration *objc )
 
   // static part
   if( HasStaticX() ) {
-   if( C.size() )
+   if( C.empty() )
     for( ; i < get_NStaticArcs() ; ++i ) {
      p[ i ].first = &x[ i ];
-     p[ i ].second = C[ i ];
+     p[ i ].second = 0;
      }
    else
     for( ; i < get_NStaticArcs() ; ++i ) {
      p[ i ].first = &x[ i ];
-     p[ i ].second = 0;
+     p[ i ].second = C[ i ];
      }
    }
 
   // dynamic part
   if( HasDynamicX() ) {
    auto dxi = dx.begin();
-   if( C.size() )
+   if( C.empty() )
     for( ; i < get_NArcs() ; ++i ) {
      p[ i ].first = &(*(dxi++));
-     p[ i ].second = C[ i ];
+     p[ i ].second = 0;
      }
    else
     for( ; i < get_NArcs() ; ++i ) {
      p[ i ].first = &(*(dxi++));
-     p[ i ].second = 0;
+     p[ i ].second = C[ i ];
      }
    }
   }
@@ -697,6 +712,8 @@ void MCFBlock::generate_objective( Configuration *objc )
 
  set_objective( c , eNoMod );
 
+ AR |= HasObj;
+
  }  // end( MCFBlock::generate_objective )
 
 /*--------------------------------------------------------------------------*/
@@ -708,6 +725,9 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
+  if( ! ( AR & HasFlw ) )
+   throw( std::logic_error( "Constraint required for flow_feasible( , true )"
+			    ) );
   // static part
   for( const auto & cnst : E )
    if( cnst.rel_viol() > feps )
@@ -759,6 +779,10 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
 {
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
+
+  if( ( ! ( AR & ( HasFlw | HasVar ) ) ) )
+   throw( std::logic_error(
+	 "abstract representation not there in bound_feasible( , true )" ) );
 
   // static part
   if( HasStaticX() ) {
@@ -837,13 +861,9 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
-  if( E.empty() && dE.empty() )
-   throw( std::logic_error( "Constraint required for dual_feasible( , true )"
-			    ) );
-
-  if( get_objective().empty() )
-   throw( std::logic_error( "Objective required for dual_feasible( , true )"
-			    ) );
+  if( ( ! ( AR & HasFlw ) ) || ( ! ( AR & HasObj ) ) )
+   throw( std::logic_error(
+	 "abstract representation not there in dual_feasible( , true )" ) );
 
   auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
   assert( obj );
@@ -922,7 +942,11 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
-  assert( ! get_objective().empty() );  // ... which must exist
+  if( ( ! ( AR & HasVar ) ) || ( ! ( AR & HasObj ) ) )
+   throw( std::logic_error(
+    "abstract representation not there in complementary_slackness(( , true )"
+			   ) );
+
   auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
   assert( obj );
   #ifdef NDEBUG
@@ -1182,7 +1206,7 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
  // if required, map back primal solution - - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- if( wsol != 2 ) {
+ if( ( wsol != 2 ) && ( AR & HasVar ) ) {  // ... if any
   if( MCFB->get_NStaticArcs() != get_NStaticArcs() )
    throw( std::invalid_argument( "incompatible static flow size" ) );
 
@@ -1213,7 +1237,7 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
  // if required, map back dual solution - - - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- if( ( wsol != 2 ) && ( E.size() || dE.size() ) ) {  // ... if there is any
+ if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
 
   // map back the potentials- - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1302,7 +1326,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  // if required, map forward primal solution- - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- if( wsol != 2 ) {
+ if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
   if( MCFB->get_NStaticArcs() != get_NStaticArcs() )
    throw( std::invalid_argument( "incompatible static flow size" ) );
 
@@ -1333,8 +1357,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  // if required, map forward dual solution- - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- if( ( wsol != 2 ) && ( E.size() || dE.size() ) ) {  // ... if there is any
-
+ if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
   // map forward the potentials - - - - - - - - - - - - - - - - - - - - - - -
 
   if( MCFB->get_NStaticNodes() != get_NStaticNodes() )
@@ -1485,15 +1508,15 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       if( tmod->f_stop == tmod->f_strt + 1 )
        MCFB->chg_ucap( U[ tmod->f_strt ] , tmod->f_strt , iPM , iPA );
       else
-      MCFB->chg_ucaps( U.begin() + tmod->f_strt , tmod->f_strt ,
-		       tmod->f_stop , iPM , iPA );
+       MCFB->chg_ucaps( U.begin() + tmod->f_strt , tmod->f_strt ,
+			tmod->f_stop , iPM , iPA );
       break;
      case( MCFBlockMod::eChgDfct ):
       if( tmod->f_stop == tmod->f_strt + 1 )
        MCFB->chg_dfct( B[ tmod->f_strt ] , tmod->f_strt , iPM , iPA );
       else
-      MCFB->chg_dfcts( B.begin() + tmod->f_strt , tmod->f_strt ,
-		       tmod->f_stop , iPM , iPA );
+       MCFB->chg_dfcts( B.begin() + tmod->f_strt , tmod->f_strt ,
+			tmod->f_stop , iPM , iPA );
       break;
      case( MCFBlockMod::eOpenArc ):
       if( tmod->f_stop == tmod->f_strt + 1 )
@@ -1506,6 +1529,14 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
        MCFB->close_arc( tmod->f_strt , iPM , iPA );
       else
       MCFB->close_arcs( tmod->f_strt , tmod->f_stop , iPM , iPA );
+      break;
+     case( MCFBlockMod::eAddArc ):
+      MCFB->add_arc( get_SN( tmod->f_strt ) , get_EN( tmod->f_strt ) ,
+		     get_C( tmod->f_strt ) , get_U( tmod->f_strt ) ,
+		     iPM , iPA );
+      break;
+     case( MCFBlockMod::eRmvArc ):
+      MCFB->remove_arc( tmod->f_strt , iPM , iPA );
       break;
      default:
       throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
@@ -1535,7 +1566,6 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       else
        MCFB->chg_costs( NCost.begin() ,
 			std::move( tmod->f_nms ) , iPM , iPA );
-
       break;
       }
      case( MCFBlockMod::eChgCaps ): {
@@ -1689,6 +1719,9 @@ void MCFBlock::get_x( Vec_FNumber & FSol , c_Index strt , c_Index stop )
 
 void MCFBlock::get_x( Vec_FNumber & FSol , c_Vec_Index & nms )
 {
+ if( ! ( AR & HasVar ) )
+  throw( std::logic_error( "flow Variable not available" ) );
+
  auto FSi = FSol.begin();
  auto nmsi = nms.begin();
 
@@ -1716,7 +1749,7 @@ void MCFBlock::get_x( Vec_FNumber & FSol , c_Vec_Index & nms )
 
 void MCFBlock::get_pi( Vec_CNumber & PSol , c_Index strt , c_Index stop )
 {
- if( E.empty() && dE.empty() )
+ if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
  auto PSi = PSol.begin();
@@ -1735,7 +1768,7 @@ void MCFBlock::get_pi( Vec_CNumber & PSol , c_Index strt , c_Index stop )
 
 void MCFBlock::get_pi( Vec_CNumber & PSol , c_Vec_Index & nms )
 {
- if( E.empty() && dE.empty() )
+ if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
  auto PSi = PSol.begin();
@@ -1765,16 +1798,13 @@ void MCFBlock::get_pi( Vec_CNumber & PSol , c_Vec_Index & nms )
 
 void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stop )
 {
- if( E.empty() && dE.empty() )
+ if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
 	 );
 
  auto RCi = RC.begin();
 
- if( UB.empty() && dUB.empty() )
-  for( Index i = strt ; i < std::min( stop , get_NArcs() ) ; ++i )
-   *(RCi++) = get_C( i ) + get_pi( SN[ i ] - 1 ) - get_pi( EN[ i ] - 1 );
- else {
+ if( AR & HasBnd ) {
   Index i = strt;
 
   if( HasStaticX() )
@@ -1787,24 +1817,24 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stop )
     *(RCi++) = (*(dubi++)).get_dual();
    }
   }
+ else
+  for( Index i = strt ; i < std::min( stop , get_NArcs() ) ; ++i )
+   *(RCi++) = get_C( i ) + get_pi( SN[ i ] - 1 ) - get_pi( EN[ i ] - 1 );
+
  }  // end( MCFBlock::get_rc( interval ) )
 
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
 {
- if( E.empty() && dE.empty() )
+ if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
 	 );
 
  auto RCi = RC.begin();
  auto nmsi = nms.begin();
 
- if( UB.empty() && dUB.empty() )
-  for( ; nmsi != nms.end() ; ++nmsi ) 
-   *(RCi++) = get_C( *nmsi ) + get_pi( SN[ *nmsi ] - 1 )
-                             - get_pi( EN[ *nmsi ] - 1 );
- else
+ if( AR & HasBnd ) {
   if( HasDynamicX() ) {
    while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticArcs() ) )
      *(RCi++) = UB[ *(nmsi++) ].get_dual();
@@ -1822,7 +1852,12 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
   else
    while( nmsi != nms.end() ) 
     *(RCi++) = UB[ *(nmsi++) ].get_dual();
-
+  }
+ else
+  for( ; nmsi != nms.end() ; ++nmsi ) 
+   *(RCi++) = get_C( *nmsi ) + get_pi( SN[ *nmsi ] - 1 )
+                             - get_pi( EN[ *nmsi ] - 1 );
+ 
  }  // end( MCFBlock::get_rc( subset ) )
 
 /*--------------------------------------------------------------------------*/
@@ -1830,6 +1865,9 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
 void MCFBlock::set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
 		      c_Index strt )
 {
+ if( ! ( AR & HasVar ) )  // nowhere to put the value in
+  return;                 // cowardly (and silently) return
+
  if( std::distance( fstrt , fstop ) + strt > get_NArcs() )
   throw( std::invalid_argument( "too many values provided" ) );
 
@@ -1857,8 +1895,8 @@ void MCFBlock::set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
 void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
 		       c_Index strt )
 {
- if( E.empty() && dE.empty() )  // nowhere to put the value in
-  return;                       // cowardly (and silently) return
+ if( ! ( AR & HasFlw ) )  // nowhere to put the value in
+  return;                 // cowardly (and silently) return
 
  if( std::distance( pstrt , pstop ) + strt > get_NNodes() )
   throw( std::invalid_argument( "too many values provided" ) );
@@ -1887,8 +1925,8 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
 void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
 		       c_Index strt )
 {
- if( UB.empty() && dUB.empty() )  // nowhere to put the value in
-  return;                         // cowardly (and silently) return
+ if( ! ( AR & HasBnd ) )  // nowhere to put the value in
+  return;                 // cowardly (and silently) return
 
  if( std::distance( rcstrt , rcstop ) + strt > get_NArcs() )
   throw( std::invalid_argument( "too many values provided" ) );
@@ -1960,13 +1998,13 @@ void MCFBlock::serialize( netCDF::NcGroup & group ) const
 
  ( group.addVar( "EN" , netCDF::NcUint64() , na ) ).putVar( startp , countpa ,
 							    EN.data() );
- if( C.size() )
+ if( ! C.empty() )
   ( group.addVar( "C" , netCDF::NcDouble() , na ) ).putVar( startp , countpa ,
 							    C.data() );
- if( U.size() )
+ if( ! U.empty() )
   ( group.addVar( "U" , netCDF::NcDouble() , na ) ).putVar( startp , countpa ,
 							    U.data() );
- if( B.size() )
+ if( ! B.empty() )
   ( group.addVar( "B" , netCDF::NcDouble() , nn ) ).putVar( startp , countpn ,
 							    B.data() );
  }  // end( MCFBlock::serialize )
@@ -1982,7 +2020,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
  if( stop >= get_NArcs() )
   stop = get_NArcs();
 
- if( ! C.size() ) {
+ if( C.empty() ) {
   if( std::all_of( NCost , NCost + ( stop - strt ) ,
 		   []( c_CNumber cst ) { return( cst == 0 ); } ) )
    return;
@@ -1990,7 +2028,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
   C.assign( get_MaxNArcs() , 0 );
   }
 
- if( not_dry_run( issueAMod ) && ( ! get_objective().empty() ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasObj ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification(s)
 
@@ -2073,7 +2111,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
 			  const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- if( ! C.size() ) {
+ if( C.empty() ) {
   if( std::all_of( NCost , NCost + nms.size() ,
 		   []( c_CNumber cst ) { return( cst == 0 ); } ) )
    return;
@@ -2081,7 +2119,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
   C.assign( get_MaxNArcs() , 0 );
   }
 
- if( not_dry_run( issueAMod ) && ( ! get_objective().empty() ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasObj ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -2221,13 +2259,13 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
- if( ( ! C.size() ) && NCost )
+ if( C.empty() && NCost )
   C.assign( get_MaxNArcs() , 0 );
 
  if( C[ arc ] == NCost )
   return;
 
- if( not_dry_run( issueAMod ) && ( ! get_objective().empty() ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasObj ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
   C[ arc ] = NCost;
@@ -2265,7 +2303,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
  if( stop <= strt )
   return;
 
- if( ! U.size() ) {
+ if( U.empty() ) {
   if( std::all_of( NCap , NCap + ( stop - strt ) ,
 		   []( c_FNumber cap ) { return( cap >= Inf<FNumber>() ); } ) )
    return;
@@ -2277,11 +2315,11 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
  if( ! ndiff )
   return;
 
- if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasFlw ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  if( UB.empty() && dUB.empty() )
+  if( ! ( AR & HasBnd ) )
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
@@ -2325,7 +2363,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
 			  const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- if( ! U.size() ) {
+ if( U.empty() ) {
   if( std::all_of( NCap , NCap + nms.size() ,
 		   []( c_FNumber cap ) { return( cap >= Inf<FNumber>() ); } ) )
    return;
@@ -2337,11 +2375,11 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
  if( ! ndiff )
   return;
 
- if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasFlw ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  if( UB.empty() && dUB.empty() )
+  if( ! ( AR & HasBnd ) )
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
@@ -2440,7 +2478,7 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
- if( ( ! U.size() ) && ( NCap < Inf<FNumber>() ) )
+ if( U.empty() && ( NCap < Inf<FNumber>() ) )
   U.assign( get_MaxNArcs() , Inf<FNumber>() );
 
  if( U[ arc ] == NCap )
@@ -2449,11 +2487,11 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
  if( not_dry_run( issueMod ) )
   U[ arc ] = NCap;  // only change the physical representation - - - - - - -
 
- if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasFlw ) ) {
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  if( UB.empty() && dUB.empty() )
+  if( ! ( AR & HasBnd ) )
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
@@ -2480,7 +2518,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
  if( stop >= get_NNodes() )
   stop = get_NNodes();
 
- if( ! B.size() ) {
+ if( B.empty() ) {
   if( std::all_of( NDfct , NDfct + ( stop - strt ) ,
 		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
@@ -2493,7 +2531,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
  if( ! ndiff )
   return;
 
- if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasFlw ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -2537,7 +2575,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
 			  const bool ordered ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- if( ! B.size() ) {
+ if( B.empty() ) {
   if( std::all_of( NDfct , NDfct + nms.size() ,
 		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
@@ -2549,7 +2587,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
  if( ! ndiff )
   return;
 
- if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasFlw ) ) {
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
@@ -2647,7 +2685,7 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
  if( nde >= get_NNodes() )
   throw( std::invalid_argument( "invalid node name" ) );
 
- if( ( ! B.size() ) && NDfct )
+ if( B.empty() && NDfct )
   B.assign( get_NNodes() , 0 );
 
  if( B[ nde ] == NDfct )
@@ -2656,7 +2694,7 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
  if( not_dry_run( issueMod ) )
   B[ nde ] = NDfct;  // change the physical representation- - - - - - - - - -
 
- if( not_dry_run( issueAMod ) && ( ! ( E.empty() && dE.empty() ) ) ) {
+ if( not_dry_run( issueAMod ) && ( AR & HasFlw ) ) {
   // change the abstract representation - - - - - - - - - - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
   if( nde < get_NStaticNodes() )
@@ -3006,6 +3044,231 @@ void MCFBlock::open_arc( c_Index arc ,
  }  // end( MCFBlock::open_arc )
 
 /*--------------------------------------------------------------------------*/
+
+MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
+				   c_CNumber cst , c_FNumber cap ,
+				   c_ModParam issueMod ,
+				   c_ModParam issueAMod )
+{
+ if( get_NArcs() >= get_MaxNArcs() )
+  return( Inf<FNumber>() );
+
+ if( sn >= get_NNodes() )
+  throw( std::invalid_argument( "invalid starting node name" ) );
+ 
+ if( en >= get_NNodes() )
+  throw( std::invalid_argument( "invalid ending node name" ) );
+
+ // change the physical representation- - - - - - - - - - - - - - - - - - - -
+ if( not_dry_run( issueMod ) ) {
+  // set new arc cost
+  if( C.empty() && cst )
+   C.assign( get_MaxNArcs() , 0 );
+
+  if( cst )
+   C[ get_NArcs() ] = cst;
+
+  // set new arc capacity
+  if( U.empty() && ( cap < Inf<FNumber>() ) )
+   U.assign( get_MaxNArcs() , Inf<FNumber>() );
+
+  if( cap < Inf<FNumber>() )
+   U[ get_NArcs() ] = cap;
+
+  // set contribution to flow constraint
+  SN[ get_NArcs() ] = sn;
+  EN[ get_NArcs() ] = en;
+
+  ++NArcs;  // finally, increase arc count
+  }
+
+ // add the new variable- - - - - - - - - - - - - - - - - - - - - - - - - - -
+ dx.emplace_back( this , ColVariable::kNonNegative );
+
+ // change the abstract representation- - - - - - - - - - - - - - - - - - - -
+ // in the meantime, if so instructed also issue abstract Modification(s)
+
+ if( not_dry_run( issueAMod ) && ( AR & ( HasFlw | HasObj ) ) ) {
+
+  c_ModParam ampar = make_amod_param( issueAMod , 4 );
+  auto nx = &(dx.back());
+
+  // issue BlockModAD for the new Variable
+  auto vmod = std::make_shared<BlockModAD>( BlockModAD::eAddVar );
+  vmod->whc_list = &(dx);
+  vmod->mod_list = nx;
+  Block::add_Modification( vmod , Observer::par2chnl( issueMod ) );
+
+  // set new arc cost: abstract part
+  if( AR & HasObj ) {
+   #ifdef NDEBUG
+    auto lfo = static_cast<LinearFunction *>( c.get_function() );
+   #else
+    auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
+    assert( lfo );
+   #endif
+
+   lfo->add_variable( nx , cst , ampar );
+   }
+
+  if( ( cap < Inf<FNumber>() ) && ( AR & HasFlw ) && ( ! ( AR & HasBnd ) ) )
+   throw( std::logic_error( "cannot set finite capacity" ) );
+
+  // set new arc capacity: abstract part
+  if( AR & HasBnd ) {
+   dUB.emplace_back();  // construct new bound constraint
+
+   auto iUB = dUB.rbegin();
+   iUB->set_variable( nx , eNoBlck );
+   iUB->set_rhs( cap , eNoBlck );
+   iUB->set_Block( this );  // this is done last ==> no Modification
+
+   // issue BlockModAD for the new Constraint
+   auto cmod =  std::make_shared<BlockModAD>( BlockModAD::eAddConst );
+   cmod->whc_list = &(dUB);
+   cmod->mod_list = &(*(iUB));
+   Block::add_Modification( cmod , Observer::par2chnl( issueMod ) );
+   }
+
+  // set contribution to flow constraint: abstract part
+  if( AR & HasFlw ) {
+   auto ei = i2p_e( sn );
+   #ifdef NDEBUG
+    auto lfo = static_cast<LinearFunction *>( ei );
+   #else
+    auto lfo = dynamic_cast<LinearFunction *>( ei );
+    assert( lfo );
+   #endif
+   lfo->add_variable( nx , -1 , ampar );
+   ei = i2p_e( en );
+   #ifdef NDEBUG
+    lfo = static_cast<LinearFunction *>( ei );
+   #else
+    lfo = dynamic_cast<LinearFunction *>( ei );
+    assert( lfo );
+   #endif
+   lfo->add_variable( nx , 1 , ampar );
+   }
+
+  unmake_amod_param( issueAMod , ampar , 4 );
+  }
+
+ if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
+  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+				  MCFBlockMod::eAddArc , NArcs - 1 , NArcs ) ,
+			   Observer::par2chnl( issueMod ) );
+
+ return( get_NArcs() );
+
+ }  // end( MCFBlock::add_arc )
+
+/*--------------------------------------------------------------------------*/
+
+void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
+		                         c_ModParam issueAMod )
+{
+ if( ( arc < get_NStaticArcs() ) || ( arc >= get_MaxNArcs() ) )
+  throw( std::invalid_argument( "invalid arc name" ) );
+
+ auto sn = SN[ arc ];
+ auto en = EN[ arc ];
+
+ // change the physical representation- - - - - - - - - - - - - - - - - - - -
+ if( not_dry_run( issueMod ) ) {
+  // delete arc cost
+  if( ! C.empty() )
+   std::copy( C.begin() + arc + 1 , C.end() , C.begin() + arc );
+
+  // delete arc capacity
+  if( ! U.empty() )
+   std::copy( U.begin() + arc + 1 , U.end() , U.begin() + arc );
+
+  // delete flow constraint
+  std::copy( SN.begin() + arc + 1 , SN.end() , SN.begin() + arc );
+  std::copy( EN.begin() + arc + 1 , EN.end() , EN.begin() + arc );
+
+  --NArcs;  // finally, decrease arc count
+  }
+
+ // change the abstract representation- - - - - - - - - - - - - - - - - - - -
+ // in the meantime, if so instructed also issue abstract Modification(s)
+
+ if( not_dry_run( issueAMod ) && ( AR & ( HasFlw | HasObj ) ) ) {
+
+  c_ModParam ampar = make_amod_param( issueAMod , 4 );
+
+  // remove the variable
+  std::list<ColVariable> rmvd;
+  rmvd.splice( rmvd.begin() , dx ,
+	       std::next( dx.begin() , arc - get_NStaticArcs() ) );
+  auto rx = &(rmvd.front());
+
+  // issue BlockModAD for the Variable
+  auto vmod = std::make_shared<BlockModAD>( BlockModAD::eDelVar );
+  vmod->whc_list = &(dx);
+  vmod->mod_list = rx;
+  Block::add_Modification( vmod , Observer::par2chnl( issueMod ) );
+
+  // delete contribution to arc cost: abstract part
+  if( AR & HasObj ) {
+   #ifdef NDEBUG
+    auto lfo = static_cast<LinearFunction *>( c.get_function() );
+   #else
+    auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
+    assert( lfo );
+   #endif
+
+   lfo->remove_variable( rx , ampar );
+   }
+
+  // delete arc capacity: abstract part
+  if( AR & HasBnd ) {
+   std::list<LB0Constraint> rmvdub;
+   rmvdub.splice( rmvdub.begin() , dUB ,
+		  std::next( dUB.begin() , arc - get_NStaticArcs() ) );
+   auto rub = &(rmvdub.front());
+
+   // issue BlockModAD for the Constraint
+   auto cmod = std::make_shared<BlockModAD>( BlockModAD::eDelConst );
+   cmod->whc_list = &(dUB);
+   cmod->mod_list = rub;
+   Block::add_Modification( cmod , Observer::par2chnl( issueMod ) );
+   }
+
+  // delete contribution to flow constraint: abstract part
+  if( AR & HasFlw ) {
+   auto ei = i2p_e( sn );
+   #ifdef NDEBUG
+    auto lfo = static_cast<LinearFunction *>( ei );
+   #else
+    auto lfo = dynamic_cast<LinearFunction *>( ei );
+    assert( lfo );
+   #endif
+   lfo->remove_variable( rx , ampar );
+   ei = i2p_e( en );
+   #ifdef NDEBUG
+    lfo = static_cast<LinearFunction *>( ei );
+   #else
+    lfo = dynamic_cast<LinearFunction *>( ei );
+    assert( lfo );
+   #endif
+   lfo->remove_variable( rx , ampar );
+   }
+
+  unmake_amod_param( issueAMod , ampar , 4 );
+  }
+ else
+  // just kill the Variable and be done with it - - - - - - - - - - - - - - -
+  dx.pop_back();
+
+ if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
+  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+				     MCFBlockMod::eRmvArc , arc , arc + 1 ) ,
+			   Observer::par2chnl( issueMod ) );
+
+ }  // end( MCFBlock::remove_arc )
+
+/*--------------------------------------------------------------------------*/
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -3021,27 +3284,27 @@ void MCFBlock::print( std::ostream &output ) const
     if( B[ i ] != 0 )
      output << "B[ " << i + 1 << " ] = " << B[ i ] << std::endl;
 
-   if( C.size() )
-    if( U.size() )
+   if( C.empty() )
+    if( U.empty() )
+     output << "all arcs have 0 cost and +Inf upper bound" << std::endl;
+    else
+     for( Index i = 0 ; i < U.size() ; ++i ) {
+      output << "( " << SN[ i ] << " , " << EN[ i ] << " ): U = ";
+      print_UB( output , U[ i ] );
+      output << std::endl;
+      }
+   else
+    if( U.empty() )
+     for( Index i = 0 ; i < C.size() ; ++i )
+      output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
+	     << std::endl;
+    else
      for( Index i = 0 ; i < C.size() ; ++i ) {
       output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
 	     << ", U = ";
       print_UB( output , U[ i ] );
       output << std::endl;
       }
-    else
-     for( Index i = 0 ; i < C.size() ; ++i )
-      output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
-	     << std::endl;
-   else
-    if( U.size() )
-     for( Index i = 0 ; i < U.size() ; ++i ) {
-      output << "( " << SN[ i ] << " , " << EN[ i ] << " ): U = ";
-      print_UB( output , U[ i ] );
-      output << std::endl;
-      }
-    else
-     output << "all arcs have 0 cost and +Inf upper bound" << std::endl;
    }
   }
  else  {
@@ -3054,28 +3317,28 @@ void MCFBlock::print( std::ostream &output ) const
     output << "n\t" << i + 1 << "\t" << - B[ i ] << std::endl;
 
   // print arc descriptors in DIMACS standard format
-  if( C.size() )
-   if( U.size() )
-    for( Index i = 0 ; i < C.size() ; ++i ) {
-     output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
-     print_UB( output , U[ i ] );
-     output << "\t" << C[ i ] << std::endl;
-     }
+  if( C.empty() )
+   if( U.empty() )
+    for( Index i = 0 ; i < SN.size() ; ++i )
+     output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t+Inf\t0"
+	    << std::endl;
    else
-    for( Index i = 0 ; i < C.size() ; ++i )
-     output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t+Inf\t"
-	    << C[ i ] << std::endl;
-  else
-   if( U.size() )
     for( Index i = 0 ; i < U.size() ; ++i ) {
      output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t";
      print_UB( output , U[ i ] );
      output << "\t0" << std::endl;
      }
+  else
+   if( U.empty() )
+    for( Index i = 0 ; i < C.size() ; ++i )
+     output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t+Inf\t"
+	    << C[ i ] << std::endl;
    else
-    for( Index i = 0 ; i < SN.size() ; ++i )
-     output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t+Inf\t0"
-	    << std::endl;
+    for( Index i = 0 ; i < C.size() ; ++i ) {
+     output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
+     print_UB( output , U[ i ] );
+     output << "\t" << C[ i ] << std::endl;
+     }
   }
  }  // end( MCFBlock::print )
 
@@ -3124,6 +3387,8 @@ void MCFBlock::guts_of_destructor( void )
  reset_dynamic_variables();
  reset_objective();
 
+ AR = 0;
+
  }  // end( MCFBlock::guts_of_destructor )
 
 /*--------------------------------------------------------------------------*/
@@ -3163,7 +3428,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
  {
   const auto tmod = std::dynamic_pointer_cast<C05FunctionModLin>( mod );
   if( tmod ) {
-   if( get_objective().empty() )
+   if( ! ( AR & HasObj ) )
     throw( std::invalid_argument( "Modification to non-constructed Objective"
 				  ) );
 
@@ -3317,7 +3582,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
  {
   const auto tmod = std::dynamic_pointer_cast<RowConstraintMod>( mod );
   if( tmod ) {
-   if( E.empty() && dE.empty() )
+   if( ! ( AR & HasFlw ) )
     throw( std::invalid_argument(
 			     "Modification to non-constructed Constraint" ) );
 
@@ -3464,7 +3729,7 @@ void MCFSolution::write( Block * const block )
   throw( std::invalid_argument( "block is not a MCFBlock" ) );
 
  // write flows - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- if( v_x.size() > 0 ) {
+ if( ! v_x.empty() ) {
   if( v_x.size() < MCFB->get_NStaticArcs() )
    throw( std::invalid_argument( "incompatible flow size" ) );
 
@@ -3525,11 +3790,11 @@ MCFSolution * MCFSolution::scale( double factor ) const
 {
  auto * sol = MCFSolution::clone( true );
 
- if( v_x.size() > 0 )
+ if( ! v_x.empty() )
   for( MCFBlock::Index i = 0 ; i < v_x.size() ; ++i )
    sol->v_x[ i ] = v_x[ i ] * factor;
 
- if( v_pi.size() > 0 )
+ if( ! v_pi.empty() )
   for( MCFBlock::Index i = 0 ; i < v_pi.size() ; ++i )
    sol->v_pi[ i ] = v_pi[ i ] * factor;
 
@@ -3545,7 +3810,7 @@ void MCFSolution::sum( const Solution * solution , double multiplier )
  if( ! MCFS )
   throw( std::invalid_argument( "solution is not a MCFSolution" ) );
 
- if( v_x.size() > 0 ) {
+ if( ! v_x.empty() ) {
   if( v_x.size() != MCFS->v_x.size() )
    throw( std::invalid_argument( "incompatible flow size" ) );
 
@@ -3553,7 +3818,7 @@ void MCFSolution::sum( const Solution * solution , double multiplier )
    v_x[ i ] = MCFS->v_x[ i ] * multiplier;
   }
 
- if( v_pi.size() > 0 ) {
+ if( ! v_pi.empty() ) {
   if( v_pi.size() != MCFS->v_pi.size()  )
    throw( std::invalid_argument( "incompatible potential size" ) );
 
@@ -3569,10 +3834,10 @@ MCFSolution * MCFSolution::clone( bool empty ) const
  auto *sol = new MCFSolution();
 
  if( empty ) {
-  if( v_x.size() > 0 )
+  if( ! v_x.empty() )
    sol->v_x.resize( v_x.size() );
 
-  if( v_pi.size() > 0 )
+  if( ! v_pi.empty() )
    sol->v_pi.resize( v_pi.size() );
   }
  else {
