@@ -439,8 +439,7 @@ public:
   * missing they are treated as being 0 (this happening for all four means
   * that the graph is "fully static" and cannot be changed). */
 
- virtual void deserialize( netCDF::NcGroup & group ,
-			   Block *father = nullptr ) override;
+ virtual void deserialize( netCDF::NcGroup & group ) override;
 
 /*--------------------------------------------------------------------------*/
  /// generate the abstract variables of the MCF
@@ -1439,7 +1438,9 @@ public:
   * compute_objective()), then changing the costs can issue up to three
   * different Modification; in particular a LinearFunctionMod for adding a
   * Variable (setting to nonzero a previously zero coefficient), one for
-  * removing Variable (vice-versa), and one for modifying the coefficients.
+  * removing Variable (vice-versa), and one C05FunctionModLin for modifying
+  * the coefficients.
+  *
   * If more than one Modification is actually issued and issueAMod specifies
   * an open channel, then the channel is nested so that the three Modification
   * are grouped into a single GroupModification. Similarly, if instead
@@ -1618,14 +1619,14 @@ public:
   * Closing an already closed arc does nothing.
   *
   * Note that closing multiple arcs can issue as many Modification as there
-  * are arcs in the range, in particular VariableMod with type
-  * Variable::kFixed. If more than one Modification is actually issued and
-  * issueAMod specifies an open channel, then the channel is nested so that
-  * all the Modification are grouped into a single GroupModification.
-  * Similarly, if instead issueAMod specifies the default channel, then a
-  * new channel is opened to group the multiple Modification and immediately
-  * closed when the last one is issued. Of course this only applies if
-  * issueAMod specifies that abstract Modification have to be issued.
+  * are arcs in the range, in particular VariableMod. If more than one
+  * Modification is actually issued and issueAMod specifies an open channel,
+  * then the channel is nested so that all the Modification are grouped into
+  * a single GroupModification. Similarly, if instead issueAMod specifies the
+  * default channel, then a new channel is opened to group the multiple
+  * Modification and immediately closed when the last one is issued. Of course
+  * this only applies if issueAMod specifies that abstract Modification have
+  * to be issued.
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
@@ -1674,14 +1675,13 @@ public:
   * the problem is created) does nothing.
   *
   * Note that opening multiple arcs can issue as many Modification as there
-  * are arcs in the range, in particular VariableMod with type
-  * ColVariable::kContinuous. If more than one Modification is actually
-  * issued and issueAMod specifies an open channel, then the channel is
-  * nested so that all the Modification are grouped into a single
-  * GroupModification. Similarly, if instead issueAMod specifies the default
-  * channel, then a new channel is opened to group the multiple Modification
-  * and immediately closed when the last one is issued. Of course this only
-  * applies if issueAMod specifies that abstract Modification.
+  * are arcs in the range, in particular VariableMod. If more than one
+  * Modification is actually issued and issueAMod specifies an open channel,
+  * then the channel is nested so that all the Modification are grouped into
+  * a single GroupModification. Similarly, if instead issueAMod specifies the
+  * default channel, then a new channel is opened to group the multiple
+  * Modification and immediately closed when the last one is issued. Of course
+  * this only applies if issueAMod specifies that abstract Modification.
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
@@ -1700,13 +1700,12 @@ public:
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * Note that closing multiple arcs can issue as many Modification as there
-  * are arcs in the range, in particular VariableMod with type
-  * Variable::kFixed. If more than one Modification is actually issued and
-  * issueAMod specifies an open channel, then the channel is nested so that
-  * all the Modification are grouped into a single GroupModification.
-  * Similarly, if instead issueAMod specifies the default channel, then a
-  * new channel is opened to group the multiple Modification and immediately
-  * closed when the last one is issued.
+  * are arcs in the range, in particular VariableMod. If more than one
+  * Modification is actually issued and issueAMod specifies an open channel,
+  * then the channel is nested so that all the Modification are grouped into
+  * a single GroupModification. Similarly, if instead issueAMod specifies the
+  * default channel, then a new channel is opened to group the multiple
+  * Modification and immediately closed when the last one is issued.
   * Of course this only applies if issueAMod specifies that abstract
   * Modification have to be issued *and* the abstract Constraint have been
   * constructed.
@@ -1734,12 +1733,17 @@ public:
  /** Method to add a new arc, providing its starting and ending nodes, cost
   * and capacity.
   *
-  * If get_NArcs() < get_MaxNArcs() then the new arc gets "name" get_NArcs(),
-  * which is returned by the method, and the value returned by get_NArcs()
-  * increases by one; this is then the "name" by which the arc has to be
-  * addressed in all methods (like chg_[cost/ucap](), [open/close]_arc(),
-  * get_[x/rc]()). Otherwise the arc is not actually added, and the method
-  * returns Inf<FNumber>().
+  * The method returns the "name" that the new arc has received, which is the
+  * index by which the arc has to be addressed in all methods (such as
+  * chg_[cost/ucap](), [open/close]_arc(), get_[x/rc]()). The chosen name
+  * depends on whether or not there are "deleted" arcs (see remove_arc())
+  * with "name" < get_NArcs() - 1. If there is any such arc, then the "name"
+  * of the new arc will be the smallest index among these; in this case, the
+  * value returned by get_NArcs() does *not* change. Otherwise, if get_NArcs()
+  * < get_MaxNArcs() then the new arc gets "name" get_NArcs(), which is
+  * returned by the method, and the value returned by get_NArcs() increases by
+  * one. Otherwise the arc is not actually added, and the method returns
+  * Inf<FNumber>().
   *
   * Successfully adding a new arc causes the issuing of several Modification,
   * unless the issueMod and issueAMod parameters prevent this to happen:
@@ -1748,19 +1752,33 @@ public:
   *
   * - an "abstract" GroupModification containing up to:
   *
-  *   = a BlockModAD with type eAddVar corresponding to the addition of a
-  *     new dynamic Variable (the flow Variable of the arc);
+  *   = two C05FunctionModVars corresponding to having added the new Variable
+  *     to the two flow conservation constraints of its starting and ending
+  *     node;
   *
-  *   = possibly, a BlockModAD with type eAddConst corresponding to the
-  *     addition of a new dynamic Constraint (the bound Constraint of the
-  *     arc, if it is defined);
+  *   = if the "name" of the arc is == get_NArcs() (before the call):
   *
-  *   = three C05FunctionModVars corresponding to having added the new
-  *     Variable to the two flow conservation constraints of its starting
-  *     and ending node and to the objective.
+  *     * a BlockModAD with type eAddVar corresponding to the addition of a
+  *       new dynamic Variable (the flow Variable of the arc);
   *
-  *   (of course, all these are only issued if the corresponding part of the
-  *   "abstract" representation is constructed). */
+  *     * possibly, a BlockModAD with type eAddConst corresponding to the
+  *       addition of a new dynamic Constraint (the bound Constraint of the
+  *       arc, if it is defined);
+  *
+  *     * one more C05FunctionModVars corresponding to having added the new
+  *       Variable to the objective.
+  *
+  *   = if, instead, the "name" of the arc is < get_NArcs() (before the call):
+  *
+  *     * one C05FunctionModLin for modifying the cost coefficients;
+  *
+  *     * one OneVarConstraintMod with type RowConstraintMod::eChgRHS for
+  *       modifying the flow bound;
+  *
+  *     * one VariableMod making the flow variable "free";
+  *       
+  *  Of course, all the "abstract" Modification are only issued if the
+  *  corresponding part of the "abstract" representation is constructed. */
  
  Index add_arc( c_Index sn , c_Index en , c_CNumber cst = 0 ,
 		c_FNumber cap = Inf<FNumber>() ,
@@ -1770,13 +1788,26 @@ public:
 /*--------------------------------------------------------------------------*/
  /// removes an existing arc
  /** Method to remove the arc which given name. It must be
-  * get_NStaticArcs() <= arc < get_MaxNArcs(), otherwise exception is thrown.
+  * get_NStaticArcs() <= arc < get_NArcs(), otherwise exception is thrown.
   *
-  * After (successfull) removal, the value returned by get_NArcs() is
-  * decreased by one. All (dynamic) arcs with "name" > arc, if any, are
-  * shifted left by one, i.e., their "name" after the removal  (by which they
-  * have to be addressed in all methods like chg_[cost/ucap](),
-  * [open/close]_arc(), get_[x/rc]()) is the previous "name" - 1.
+  * The operation is performed differently in the case where arc ==
+  * get_NArcs() - 1, i.e., the very last arc is eliminated, or
+  * arc < get_NArcs() - 1.
+  *
+  * In the latter case, the elimination of the arc is "virtual", in the
+  * sense that the flow variable is kept, together with all corresponding
+  * parts of the "abstract" representation (if constructed). Only, the
+  * value of the flow Variable is changed to 0 and the Variable is fixed, as
+  * when the arc is closed. Furthermore, its starting and ending nodes (as
+  * returned by get_SN() and get_EN()) are set to Inf<Index>(). This means
+  * that the value returned by get_NArcs() does *not* change.
+  *
+  * In the former case, the elimination of the arc is "physical": not only
+  * of that arc, but also of and all the "deleted" arcs with smaller name
+  * up until the first non-deleted arc (or get_NStaticArcs()). The value
+  * of get_NArcs() changes accordingly, and all the corresponding parts of
+  * the "abstract" representation (Variable, bound constraints, coefficients
+  * in the objective function and the constraints) are removed.
   *
   * Removing an existing arc causes the issuing of several Modification,
   * unless the issueMod and issueAMod parameters prevent this to happen:
@@ -1785,20 +1816,29 @@ public:
   *
   * - an "abstract" GroupModification containing up to:
   *
-  *   = a BlockModAD with type eDelVar corresponding to the removal of an
-  *     existing dynamic Variable (the flow Variable of the arc);
+  *   = for each of the removed arcs, two C05FunctionModVars corresponding
+  *     to having removed the existing Variable from the two flow
+  *     conservation constraints of its starting and ending node;
   *
-  *   = possibly, a BlockModAD with type eDelConst corresponding to the
-  *     removal of an existing dynamic Constraint (the bound Constraint of
-  *     the arc, if it is defined);
+  *   = if the elimination is "virtual", one VariableMod corresponding to
+  *     fixing the flow variable;
   *
-  *   = three C05FunctionModVars corresponding to having removed the existing
-  *     Variable from the two flow conservation constraints of its starting
-  *     and ending node and from the objective.
+  *   = if the elimination is "physical":
   *
-  *   (of course, all these are only issued if the corresponding part of the
-  *   "abstract" representation is constructed). */
- 
+  *     * a BlockModAD with type eDelVar corresponding to the removal of the
+  *       existing dynamic Variable (the flow Variable of the arcs);
+  *
+  *     * possibly, a BlockModAD with type eDelConst corresponding to the
+  *       removal of the existing dynamic Constraint (the bound Constraint of
+  *       the arcs, if they are defined);
+  *
+  *     * for each of the removed arcs, one more C05FunctionModVars
+  *       corresponding to having removed the existing Variable from the
+  *       objective.
+  *
+  *  Of course, all the "abstract" Modification are only issued if the
+  *  corresponding part of the "abstract" representation is constructed. */
+
  void remove_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
 		                c_ModParam issueAMod = eNoBlck );
 
