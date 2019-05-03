@@ -1967,6 +1967,28 @@ public:
 			 static_cast< const FRowConstraint * >( cns ) ) );
   }
 
+ inline LinearFunction * get_lfo( void )
+ {
+  #ifdef NDEBUG
+   return( static_cast<LinearFunction *>( c.get_function() ) );
+  #else
+   auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
+   assert( lfo );
+   return( lfo );
+  #endif
+  }
+
+ inline LinearFunction * get_lfc( FRowConstraint * cnsti )
+ {
+  #ifdef NDEBUG
+   return( static_cast<LinearFunction *>( cnsti->get_function() ) );
+  #else
+   auto lfc = dynamic_cast<LinearFunction *>( cnsti->get_function() );
+   assert( lfc );
+   return( lfc );
+  #endif
+  }
+  
  void guts_of_destructor( void );
 
  void guts_of_add_Modification( sp_Mod mod );

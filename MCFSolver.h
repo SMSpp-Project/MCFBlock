@@ -740,6 +740,17 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 	MCFC::CloseArc( arc++ );
        break;
 
+      case( MCFBlockMod::eAddArc ):
+       MCFC::AddArc( MCFB->get_SN( tmod->f_strt ) ,
+		     MCFB->get_EN( tmod->f_strt ) ,
+		     MCFB->get_U( tmod->f_strt ) ,
+		     MCFB->get_C( tmod->f_strt ) );
+       break;
+
+      case( MCFBlockMod::eRmvArc ):
+       MCFC::DelArc( tmod->f_stop - 1 );
+       break;
+
       default:
        throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
       }

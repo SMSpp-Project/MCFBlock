@@ -11,9 +11,9 @@
  * closures. The same operations are performed on the two solvers, and the
  * results are compared.
  *
- * \version 1.60
+ * \version 1.70
  *
- * \date 19 - 02 - 2019
+ * \date 03 - 05 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -452,7 +452,7 @@ int main( int argc , char **argv )
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  long int seed = 1;
- int wchg = 31;
+ int wchg = 127;
  double p_change = 0.4;
  MCFClass::Index n_change = 10;
  MCFClass::Index n_repeat = 40;
@@ -479,6 +479,8 @@ int main( int argc , char **argv )
            "       wchg: what to change, coded bit-wise "
 		<< endl <<
            "             0 = cost, 1 = cap, 2 = dfct, 3 = o.arc, 4 = c.arc"
+		<< endl <<
+           "             5 = add arc, 6 = delete arc"
 		<< endl <<
 	   "       optns: bit 0 = re-optimize, other bits MCF-specific" 
 		<< endl <<
@@ -937,6 +939,70 @@ int main( int argc , char **argv )
      mMCFB->open_arcs( std::move( nms ) );
 
     cout << " - ";
+    }
+   }
+
+  // deleting arcs - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  if( ( wchg & 32 ) && ( drand48() <= p_change ) ) {
+   // at most 20% of the existing dynamic ones
+   MCFBlock::Index tochange = drand48() *
+                     ( mMCFB->get_NArcs() - mMCFB->get_NStaticArcs() ) / 5;
+   if( tochange ) {
+    cout << tochange << " delete(";
+
+    if( drand48() < 0.5 ) {
+     // delete somewhere in the middle
+     cout << "m)";
+
+     while( tochange-- ) {
+      MCFBlock::Index arc = mMCFB->get_NStaticArcs() +
+           drand48() * ( mMCFB->get_NArcs() - mMCFB->get_NStaticArcs() );
+      mcf->DelArc( arc );
+      mMCFB->remove_arc( arc );
+      }
+     }
+    else {
+     // delete at the end
+     cout << "e)";
+
+     while( tochange-- ) {
+      MCFBlock::Index arc = mMCFB->get_NArcs() - 1;
+      mcf->DelArc( arc );
+      mMCFB->remove_arc( arc );
+      }
+     }
+
+    cout << " - ";
+    }
+   }
+
+  // creating new arcs - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  if( ( wchg & 64 ) && ( drand48() <= p_change ) ) {
+   // at most 20% of the existing space
+   MCFBlock::Index tochange = drand48() *
+                         ( mMCFB->get_MaxNArcs() - mMCFB->get_NArcs() ) / 5;
+   if( tochange ) {
+    cout << tochange << " create -";
+
+    while( tochange-- ) {
+     // random sn != en
+     MCFBlock::Index sn , en;
+     do {
+      sn = drand48() * mMCFB->get_NNodes() + 1;
+      en = drand48() * mMCFB->get_NNodes() + 1;
+      } while( sn == en );
+
+     // random cost in [ - c_max , c_max ]
+     auto cst = c_max * ( 1  - 2 * drand48() );
+
+     // random capacity <= 1.5 u_max
+     auto cap = 1.5 * u_max * drand48();
+
+     mMCFB->add_arc( sn , en , cst , cap );
+     mcf->AddArc( sn , en , cap , cst );
+     }
     }
    }
 

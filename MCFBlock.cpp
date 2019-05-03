@@ -881,12 +881,7 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
 
   auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
   assert( obj );
-  #ifdef NDEBUG
-   auto lfo = static_cast<const LinearFunction *>( (*obj)->get_function() );
-  #else
-   auto lfo = dynamic_cast<const LinearFunction *>( (*obj)->get_function() );
-   assert( lfo );
-  #endif
+  auto lfo = get_lfo();
 
   for( auto & pi : (*lfo).get_v_var() ) {
    auto xi = pi.first;
@@ -894,15 +889,8 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
    for( Index j = 0 ; j < xi->get_num_active() ; ++j ) {
     ThinVarDepInterface * ci = xi->get_active( j );
     auto rci = dynamic_cast<FRowConstraint *>( ci );
-    if( rci ) {
-     #ifdef NDEBUG
-      auto lfi = static_cast<const LinearFunction *>( rci->get_function() );
-     #else
-      auto lfi = dynamic_cast<const LinearFunction *>( rci->get_function() );
-      assert( lfi );
-     #endif
-     RCi -= rci->get_dual() * lfi->get_coefficient( xi );
-     }
+    if( rci )
+     RCi -= rci->get_dual() * get_lfc( rci )->get_coefficient( xi );
     else {
      auto bci = dynamic_cast<BoxConstraint *>( ci );
      assert( bci );
@@ -966,12 +954,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 
   auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
   assert( obj );
-  #ifdef NDEBUG
-  auto lfo = static_cast<const LinearFunction *>( (*obj)->get_function() );
-  #else
-  auto lfo = dynamic_cast<const LinearFunction *>( (*obj)->get_function() );
-   assert( lfo );
-  #endif
+  auto lfo = get_lfo();
   Index i = 0;
 
   // static part
@@ -1548,7 +1531,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       if( tmod->f_stop == tmod->f_strt + 1 )
        MCFB->close_arc( tmod->f_strt , iPM , iPA );
       else
-      MCFB->close_arcs( tmod->f_strt , tmod->f_stop , iPM , iPA );
+       MCFB->close_arcs( tmod->f_strt , tmod->f_stop , iPM , iPA );
       break;
      case( MCFBlockMod::eAddArc ):
       MCFB->add_arc( get_SN( tmod->f_strt ) , get_EN( tmod->f_strt ) ,
@@ -1556,7 +1539,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 		     iPM , iPA );
       break;
      case( MCFBlockMod::eRmvArc ):
-      MCFB->remove_arc( tmod->f_strt , iPM , iPA );
+      MCFB->remove_arc( tmod->f_stop - 1 , iPM , iPA );
       break;
      default:
       throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
@@ -2052,12 +2035,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification(s)
 
-  #ifdef NDEBUG
-   auto lfo = static_cast<LinearFunction *>( c.get_function() );
-  #else
-   auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
-   assert( lfo );
-  #endif
+  auto lfo = get_lfo();
 
   Index cnt = 0;
   Vec_CNumber_it cit = C.begin() + strt;
@@ -2143,12 +2121,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  #ifdef NDEBUG
-   auto lfo = static_cast<LinearFunction *>( c.get_function() );
-  #else
-   auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
-   assert( lfo );
-  #endif
+  auto lfo = get_lfo();
 
   LinearFunction::v_coeff_pair ccp( nms.size() );
   bool myord = ordered;
@@ -2290,14 +2263,7 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
   // in the meantime, if so instructed also issue abstract Modification
   C[ arc ] = NCost;
 
-  #ifdef NDEBUG
-   auto lfo = static_cast<LinearFunction *>( c.get_function() );
-  #else
-   auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
-   assert( lfo );
-  #endif
-
-  lfo->modify_coefficient( i2p_x( arc ) , NCost , issueAMod );
+  get_lfo()->modify_coefficient( i2p_x( arc ) , NCost , issueAMod );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -3131,16 +3097,8 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
    Block::add_Modification( vmod , ampar );
 
    // add the new coefficient in the objective
-   if( AR & HasObj ) {
-    #ifdef NDEBUG
-     auto lfo = static_cast<LinearFunction *>( c.get_function() );
-    #else
-     auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
-     assert( lfo );
-    #endif
-
-    lfo->add_variable( nx , cst , ampar );
-    }
+   if( AR & HasObj )
+    get_lfo()->add_variable( nx , cst , ampar );
 
    if( ( cap < Inf<FNumber>() ) && ( AR & HasFlw ) && ( ! ( AR & HasBnd ) ) )
     throw( std::logic_error( "cannot set finite capacity" ) );
@@ -3169,23 +3127,14 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
    // un-fix the Variable
    nx->is_fixed( false , ampar );
 
-   
    // recover pointer to the bound Constraint (if any)
    if( AR & HasBnd )
     nUB = const_cast< LB0Constraint * >(
 		  &( *std::next( dUB.begin() , arc - get_NStaticArcs() ) ) );
 
    // change the cost coefficient in the objective
-   if( AR & HasObj ) {
-    #ifdef NDEBUG
-     auto lfo = static_cast<LinearFunction *>( c.get_function() );
-    #else
-     auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
-     assert( lfo );
-    #endif
-
-    lfo->modify_coefficient( nx , cst , ampar );
-    }
+   if( AR & HasObj )
+    get_lfo()->modify_coefficient( nx , cst , ampar );
    }
 
   // set new arc capacity: abstract part
@@ -3194,22 +3143,8 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 
   // set contribution to flow constraint: abstract part
   if( AR & HasFlw ) {
-   auto ei = i2p_e( sn );
-   #ifdef NDEBUG
-    auto lfo = static_cast<LinearFunction *>( ei );
-   #else
-    auto lfo = dynamic_cast<LinearFunction *>( ei );
-    assert( lfo );
-   #endif
-   lfo->add_variable( nx , -1 , ampar );
-   ei = i2p_e( en );
-   #ifdef NDEBUG
-    lfo = static_cast<LinearFunction *>( ei );
-   #else
-    lfo = dynamic_cast<LinearFunction *>( ei );
-    assert( lfo );
-   #endif
-   lfo->add_variable( nx , 1 , ampar );
+   get_lfc( i2p_e( sn ) )->add_variable( nx , -1 , ampar );
+   get_lfc( i2p_e( en ) )->add_variable( nx , 1 , ampar );
    }
 
   unmake_amod_param( issueAMod , ampar , 2 );
@@ -3232,28 +3167,20 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 		                         c_ModParam issueAMod )
 {
- if( ( arc < get_NStaticArcs() ) || ( arc >= get_MaxNArcs() ) )
+ if( ( arc < get_NStaticArcs() ) || ( arc >= get_NArcs() ) )
   throw( std::invalid_argument( "invalid arc name" ) );
+
+ if( SN[ arc ] >= Inf<Index>() )  // arc deleted already
+  return;                         // nothing to do
 
  auto sn = SN[ arc ];
  auto en = EN[ arc ];
 
+ Index rmvdarcs = 1;  // how many arcs are removed in the end
+
  // change the physical representation- - - - - - - - - - - - - - - - - - - -
- if( not_dry_run( issueMod ) ) {
-  // delete arc cost
-  if( ! C.empty() )
-   std::copy( C.begin() + arc + 1 , C.end() , C.begin() + arc );
-
-  // delete arc capacity
-  if( ! U.empty() )
-   std::copy( U.begin() + arc + 1 , U.end() , U.begin() + arc );
-
-  // delete flow constraint
-  std::copy( SN.begin() + arc + 1 , SN.end() , SN.begin() + arc );
-  std::copy( EN.begin() + arc + 1 , EN.end() , EN.begin() + arc );
-
-  --NArcs;  // finally, decrease arc count
-  }
+ if( not_dry_run( issueMod ) )
+  SN[ arc ] = EN[ arc ] = Inf<Index>();
 
  // change the abstract representation- - - - - - - - - - - - - - - - - - - -
  // in the meantime, if so instructed also issue abstract Modification(s)
@@ -3262,73 +3189,85 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 
   c_ModParam ampar = make_amod_param( issueAMod , 4 );
 
-  // remove the variable
-  std::list<ColVariable> rmvd;
-  rmvd.splice( rmvd.begin() , dx ,
-	       std::next( dx.begin() , arc - get_NStaticArcs() ) );
-  auto rx = &(rmvd.front());
+  ColVariable * rx;  // variable of the (first) removed arc
+  
+  if( arc == get_NArcs() - 1 ) {
+   // removing the last arc (and possibly more)
+   auto rx = &(dx.back());
 
-  // issue BlockModAD for the Variable
-  auto vmod = std::make_shared<BlockModAD>( BlockModAD::eDelVar );
-  vmod->whc_list = &(dx);
-  vmod->mod_list = rx;
-  Block::add_Modification( vmod , Observer::par2chnl( issueMod ) );
-
-  // delete contribution to arc cost: abstract part
-  if( AR & HasObj ) {
-   #ifdef NDEBUG
-    auto lfo = static_cast<LinearFunction *>( c.get_function() );
-   #else
-    auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
-    assert( lfo );
-   #endif
-
-   lfo->remove_variable( rx , ampar );
-   }
-
-  // delete arc capacity: abstract part
-  if( AR & HasBnd ) {
+   // list holding the removed variables
+   std::list<ColVariable> rmvd;
+   // list holding the removed constraints (if any)
    std::list<LB0Constraint> rmvdub;
-   rmvdub.splice( rmvdub.begin() , dUB ,
-		  std::next( dUB.begin() , arc - get_NStaticArcs() ) );
-   auto rub = &(rmvdub.front());
+   // pointer to LinearFunction in the objective (if any)
+   LinearFunction * lfo;
+   if( AR & HasObj )
+    lfo = get_lfo();
 
-   // issue BlockModAD for the Constraint
-   auto cmod = std::make_shared<BlockModAD>( BlockModAD::eDelConst );
-   cmod->whc_list = &(dUB);
-   cmod->mod_list = rub;
-   Block::add_Modification( cmod , Observer::par2chnl( issueMod ) );
+   // scan from the end backwards, eliminate all deleted arcs
+   for( ; ; ++rmvdarcs ) {
+    auto rxi = &(dx.back());
+
+    rmvd.splice( rmvd.begin() , dx , std::prev( dx.end() ) );
+
+    // delete contribution to objective (if any)
+    if( AR & HasObj )
+     lfo->remove_variable( rxi , ampar );
+    
+    // delete arc capacity constraint (if any)
+    if( AR & HasBnd )
+     rmvdub.splice( rmvdub.begin() , dUB , std::prev( dUB.end() ) );
+
+    if( rmvdarcs >= get_NArcs() - get_NStaticArcs() )
+     break;
+
+    if( SN[ get_NArcs() - rmvdarcs - 1 ] < Inf<Index>() )
+     break;
+    }
+
+   // issue BlockModAD for the Variable(s)
+   auto vmod = std::make_shared<BlockModAD>( BlockModAD::eDelVar );
+   vmod->whc_list = &(dx);
+   vmod->mod_list = rmvd;
+   Block::add_Modification( vmod , Observer::par2chnl( ampar ) );
+
+   // issue BlockModAD for the Constraint(s) (if any)
+   if( AR & HasBnd ) {
+    auto cmod = std::make_shared<BlockModAD>( BlockModAD::eDelConst );
+    cmod->whc_list = &(dUB);
+    cmod->mod_list = rmvdub;
+    Block::add_Modification( cmod , Observer::par2chnl( ampar ) );
+    }
+   }
+  else {
+   auto rx = const_cast< ColVariable * >(
+		  &( *std::next( dx.begin() , arc - get_NStaticArcs() ) ) );
+
+   rx->set_value( 0 );            // fix the Variable (to 0)
+   rx->is_fixed( true , ampar );  // close the arc
    }
 
-  // delete contribution to flow constraint: abstract part
+  // delete contribution to flow constraint (if any)
   if( AR & HasFlw ) {
-   auto ei = i2p_e( sn );
-   #ifdef NDEBUG
-    auto lfo = static_cast<LinearFunction *>( ei );
-   #else
-    auto lfo = dynamic_cast<LinearFunction *>( ei );
-    assert( lfo );
-   #endif
-   lfo->remove_variable( rx , ampar );
-   ei = i2p_e( en );
-   #ifdef NDEBUG
-    lfo = static_cast<LinearFunction *>( ei );
-   #else
-    lfo = dynamic_cast<LinearFunction *>( ei );
-    assert( lfo );
-   #endif
-   lfo->remove_variable( rx , ampar );
+   get_lfc( i2p_e( sn ) )->remove_variable( rx , ampar );
+   get_lfc( i2p_e( en ) )->remove_variable( rx , ampar );
    }
-
+  
   unmake_amod_param( issueAMod , ampar , 4 );
   }
- else
-  // just kill the Variable and be done with it - - - - - - - - - - - - - - -
-  dx.pop_back();
+ else {
+  // at the very least ensure the value is 0
+  /*!!
+  auto rx = const_cast< ColVariable * >(
+		  &( *std::next( dx.begin() , arc - get_NStaticArcs() ) ) );
+  rx->set_value( 0 );
+  !!*/
+  std::next( dx.begin() , arc - get_NStaticArcs() )->set_value( 0 );
+  }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				     MCFBlockMod::eRmvArc , arc , arc + 1 ) ,
+		      MCFBlockMod::eRmvArc , arc - rmvdarcs + 1 , arc + 1 ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::remove_arc )
