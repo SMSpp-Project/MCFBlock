@@ -453,7 +453,7 @@ int main( int argc , char **argv )
 
  long int seed = 1;
  int wchg = 127;
- double p_change = 0.4;
+ double p_change = 0.5;
  MCFClass::Index n_change = 10;
  MCFClass::Index n_repeat = 40;
  int optns = 1;
@@ -567,8 +567,8 @@ int main( int argc , char **argv )
  // compute min/max cost & max deficit- - - - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- MCFClass::cIndex n = mcf->MCFn();
- MCFClass::cIndex m = mcf->MCFm();
+ MCFClass::Index n = mcf->MCFn();
+ MCFClass::Index m = mcf->MCFm();
 
  cout << ", n = " << n << ", m = " << m << endl;
  if( n_change > m )
@@ -626,6 +626,20 @@ int main( int argc , char **argv )
  while( n_repeat-- ) {
 
   cout << "Changing: ";
+
+  // re-load number of nodes & arcs - - - - - - - - - - - - - - - - - - - - -
+
+  n = mcf->MCFn();
+  if( n != mMCFB->get_NNodes() ) {
+   cout << "Error: different number of nodes" << std::endl;
+   exit( 1 );
+   }
+
+  m = mcf->MCFm();
+  if( m != mMCFB->get_NArcs() ) {
+   cout << "Error: different number of arcs" << std::endl;
+   exit( 1 );
+   }
 
   // change costs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -984,7 +998,7 @@ int main( int argc , char **argv )
    MCFBlock::Index tochange = drand48() *
                          ( mMCFB->get_MaxNArcs() - mMCFB->get_NArcs() ) / 5;
    if( tochange ) {
-    cout << tochange << " create -";
+    cout << tochange << " create - ";
 
     while( tochange-- ) {
      // random sn != en

@@ -190,13 +190,13 @@ void MCFBlock::load( c_Index n , c_Index m ,
  SN.resize( MaxNArcs );
  std::copy( pSn.begin() , pSn.end() , SN.begin() );
  for( auto sn : SN )
-  if( ( sn < 1 ) || ( sn >= NNodes ) )
+  if( ( sn < 1 ) || ( sn > NNodes ) )
    throw( std::invalid_argument( "wrong starting node" ) );
 
  EN.resize( MaxNArcs );
  std::copy( pEn.begin() , pEn.end() , EN.begin() );
  for( auto en : EN )
-  if(  ( en < 1 ) || ( en >= NNodes ) )
+  if(  ( en < 1 ) || ( en > NNodes ) )
    throw( std::invalid_argument( "wrong ending node" ) );
 
  if( std::any_of( pC.begin() , pC.end() ,
@@ -523,7 +523,7 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
     }
 
   for( Index i = NStaticArcs ; i < get_NArcs() ; ++i )
-   if( SN[ i ] < Inf<Index>() ) {
+   if( ! is_deleted( i ) ) {
     count[ SN[ i ] - 1 ]++;
     count[ EN[ i ] - 1 ]++;
     }
@@ -548,7 +548,7 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   // construct the vector of coefficients, dynamic phase
   if( MayHaveDynX() )
    for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi )
-    if( SN[ i ] < Inf<Index>() ) {
+    if( ! is_deleted( i ) ) {
      coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
                                     std::make_pair( &(*dxi) , double( -1 ) );
      coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
@@ -767,8 +767,8 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
   // dynamic part
   if( HasDynamicX() ) {
    auto dxi = dx.begin();
-   for(  ; i < get_NArcs() ; ++i , ++dxi )
-    if( SN[ i ] < Inf<Index>() ) {
+   for( ; i < get_NArcs() ; ++i , ++dxi )
+    if( ! is_deleted( i ) ) {
      c_FNumber xi = dxi->get_value();
      tB[ SN[ i ] - 1 ] += xi;
      tB[ EN[ i ] - 1 ] -= xi;
@@ -915,7 +915,7 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
   get_pi( Pi );
 
   for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-   if( SN[ i ] >= Inf<Index>() )
+   if( is_deleted( i ) )
     continue;
 
    c_CNumber Ci = get_C( i );
@@ -996,7 +996,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 
    if( dUB.empty() ) {
     for( ; i < get_NStaticArcs() ; ++i )
-     if( SN[ i ] < Inf<Index>() ) {
+     if( ! is_deleted( i ) ) {
       c_CNumber Ci = lfo->get_coefficient( &(*dxi) );
       CNumber RCi = RC[ i ];
       if( Ci )
@@ -1009,7 +1009,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
     auto dubi = dUB.begin();
 
     for( ; i < get_NArcs() ; ++i )
-     if( SN[ i ] < Inf<Index>() ) {
+     if( ! is_deleted( i ) ) {
       c_CNumber Ci = lfo->get_coefficient( &(*dxi) );
       CNumber RCi = RC[ i ];
       if( Ci )
@@ -1061,7 +1061,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
    auto dxi = dx.begin();
 
    for( ; i < get_NArcs() ; ++i , ++dxi )
-    if( SN[ i ] < Inf<Index>() ) {
+    if( ! is_deleted( i ) ) {
      c_FNumber dxiv = dxi->get_value();
      c_CNumber Ci = get_C( i );
      CNumber RCi = RC[ i ];
@@ -3043,7 +3043,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
   throw( std::invalid_argument( "invalid ending node name" ) );
 
  Index arc = get_NStaticArcs();
- while( ( arc < get_NArcs() ) && ( SN[ arc ] < Inf<Index>() ) )
+ while( ( arc < get_NArcs() ) && ( ! is_deleted( arc ) ) )
   ++arc;
 
  if( arc >= get_MaxNArcs() )
@@ -3091,6 +3091,8 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
    nx = &(dx.back());
 
    // issue BlockModAD for the new Variable
+   // do this first thing, so that if Modification are processed in FIFO
+   // order it is seen before
    auto vmod = std::make_shared<BlockModAD>( BlockModAD::eAddVar );
    vmod->whc_list = &(dx);
    vmod->mod_list = nx;
@@ -3143,8 +3145,8 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 
   // set contribution to flow constraint: abstract part
   if( AR & HasFlw ) {
-   get_lfc( i2p_e( sn ) )->add_variable( nx , -1 , ampar );
-   get_lfc( i2p_e( en ) )->add_variable( nx , 1 , ampar );
+   get_lfc( i2p_e( sn - 1 ) )->add_variable( nx , -1 , ampar );
+   get_lfc( i2p_e( en - 1 ) )->add_variable( nx ,  1 , ampar );
    }
 
   unmake_amod_param( issueAMod , ampar , 2 );
@@ -3170,11 +3172,11 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
  if( ( arc < get_NStaticArcs() ) || ( arc >= get_NArcs() ) )
   throw( std::invalid_argument( "invalid arc name" ) );
 
- if( SN[ arc ] >= Inf<Index>() )  // arc deleted already
-  return;                         // nothing to do
+ if( is_deleted( arc ) )  // arc deleted already
+  return;                 // nothing to do
 
- auto sn = SN[ arc ];
- auto en = EN[ arc ];
+ auto sn = SN[ arc ]; sn--;
+ auto en = EN[ arc ]; en--;
 
  Index rmvdarcs = 1;  // how many arcs are removed in the end
 
@@ -3193,7 +3195,7 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
   
   if( arc == get_NArcs() - 1 ) {
    // removing the last arc (and possibly more)
-   auto rx = &(dx.back());
+   rx = &(dx.back());
 
    // list holding the removed variables
    std::list<ColVariable> rmvd;
@@ -3215,32 +3217,39 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
      lfo->remove_variable( rxi , ampar );
     
     // delete arc capacity constraint (if any)
-    if( AR & HasBnd )
-     rmvdub.splice( rmvdub.begin() , dUB , std::prev( dUB.end() ) );
+    if( AR & HasBnd ) {
+     auto tbrmvd = std::prev( dUB.end() );
+     // since there is no guarantee about the order in which the
+     // Modification are processed, be sure to clear() it now
+     tbrmvd->clear();
+     rmvdub.splice( rmvdub.begin() , dUB , tbrmvd );
+     }
 
     if( rmvdarcs >= get_NArcs() - get_NStaticArcs() )
      break;
 
-    if( SN[ get_NArcs() - rmvdarcs - 1 ] < Inf<Index>() )
+    if( ! is_deleted( get_NArcs() - rmvdarcs - 1 ) )
      break;
+    }
+
+   // issue BlockModAD for the Constraint(s) (if any)
+   // do this before issuing that for Variable(s), so that if they are
+   // processed in FIFO order it is seen before
+   if( AR & HasBnd ) {
+    auto cmod = std::make_shared<BlockModAD>( BlockModAD::eDelConst );
+    cmod->whc_list = &(dUB);
+    cmod->mod_list = std::move( rmvdub );
+    Block::add_Modification( cmod , Observer::par2chnl( ampar ) );
     }
 
    // issue BlockModAD for the Variable(s)
    auto vmod = std::make_shared<BlockModAD>( BlockModAD::eDelVar );
    vmod->whc_list = &(dx);
-   vmod->mod_list = rmvd;
+   vmod->mod_list = std::move( rmvd );
    Block::add_Modification( vmod , Observer::par2chnl( ampar ) );
-
-   // issue BlockModAD for the Constraint(s) (if any)
-   if( AR & HasBnd ) {
-    auto cmod = std::make_shared<BlockModAD>( BlockModAD::eDelConst );
-    cmod->whc_list = &(dUB);
-    cmod->mod_list = rmvdub;
-    Block::add_Modification( cmod , Observer::par2chnl( ampar ) );
-    }
    }
   else {
-   auto rx = const_cast< ColVariable * >(
+   rx = const_cast< ColVariable * >(
 		  &( *std::next( dx.begin() , arc - get_NStaticArcs() ) ) );
 
    rx->set_value( 0 );            // fix the Variable (to 0)
@@ -3255,15 +3264,11 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
   
   unmake_amod_param( issueAMod , ampar , 4 );
   }
- else {
-  // at the very least ensure the value is 0
-  /*!!
-  auto rx = const_cast< ColVariable * >(
-		  &( *std::next( dx.begin() , arc - get_NStaticArcs() ) ) );
-  rx->set_value( 0 );
-  !!*/
+ else  // at the very least ensure the value is 0
   std::next( dx.begin() , arc - get_NStaticArcs() )->set_value( 0 );
-  }
+
+ if( arc == get_NArcs() - 1 )
+  NArcs -= rmvdarcs;  // decrease arc count
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
@@ -3293,7 +3298,7 @@ void MCFBlock::print( std::ostream &output ) const
      output << "all arcs have 0 cost and +Inf upper bound" << std::endl;
     else {
      for( Index i = 0 ; i < get_NArcs() ; ++i )
-      if( SN[ i ] < Inf<Index>() ) {
+      if( ! is_deleted( i ) ) {
        output << "( " << SN[ i ] << " , " << EN[ i ] << " ): U = ";
        print_UB( output , U[ i ] );
        output << std::endl;
@@ -3302,13 +3307,13 @@ void MCFBlock::print( std::ostream &output ) const
    else
     if( U.empty() )
      for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-      if( SN[ i ] < Inf<Index>() )
+      if( ! is_deleted( i ) )
        output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
 	      << std::endl;
       }
     else
      for( Index i = 0 ; i < get_NArcs() ; ++i )
-      if( SN[ i ] < Inf<Index>() ) {
+      if( ! is_deleted( i ) ) {
        output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
 	      << ", U = ";
        print_UB( output , U[ i ] );
@@ -3322,7 +3327,7 @@ void MCFBlock::print( std::ostream &output ) const
   if( HasDynamicX() ) {
    Index narcs = get_NStaticArcs();
    for( Index i = narcs ; i < get_NArcs() ; )
-    if( SN[ i++ ] < Inf<Index>() )
+    if( ! is_deleted( i++ ) )
      ++narcs;
    
    output << narcs << std::endl;
@@ -3339,13 +3344,13 @@ void MCFBlock::print( std::ostream &output ) const
   if( C.empty() )
    if( U.empty() )
     for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-     if( SN[ i ] < Inf<Index>() )
+     if( ! is_deleted( i ) )
       output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t+Inf\t0"
 	     << std::endl;
      }
    else {
     for( Index i = 0 ; i < get_NArcs()  ; ++i )
-     if( SN[ i ] < Inf<Index>() ) {
+     if( ! is_deleted( i ) ) {
       output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t";
       print_UB( output , U[ i ] );
       output << "\t0" << std::endl;
@@ -3354,13 +3359,13 @@ void MCFBlock::print( std::ostream &output ) const
   else
    if( U.empty() ) {
     for( Index i = 0 ; i < get_NArcs() ; ++i )
-     if( SN[ i ] < Inf<Index>() )
+     if( ! is_deleted( i ) )
       output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t+Inf\t"
 	     << C[ i ] << std::endl;
     }
    else
     for( Index i = 0 ; i < get_NArcs() ; ++i )
-     if( SN[ i ] < Inf<Index>() ) {
+     if( ! is_deleted( i ) ) {
       output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
       print_UB( output , U[ i ] );
       output << "\t" << C[ i ] << std::endl;

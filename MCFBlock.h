@@ -756,6 +756,22 @@ public:
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns true if the arc is closed
+
+ inline bool is_closed( c_Index arc ) const
+ {
+  return( i2p_x( arc )->is_fixed() );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns true if the arc is deleted
+
+ inline bool is_deleted( c_Index arc ) const
+ {
+  return( SN[ arc ] >= Inf<Index>() );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// given a node, returns the pointer to the corresponding UB Constraint
  /** Given the index of n node, returns the pointer to the corresponding flow
   * Constraint (a FRowConstraint *). This ASSUMES THE Constraint ARE
@@ -773,6 +789,8 @@ public:
    return( const_cast< FRowConstraint * >(
 		  &( *std::next( dE.begin() , i - get_NStaticNodes() ) ) ) );
   }
+
+
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
