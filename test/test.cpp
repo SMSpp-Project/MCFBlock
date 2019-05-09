@@ -7,13 +7,13 @@
  * An instance of a MCF in DIMACS format is read from file in both an object
  * of class MCFC derived from MCFClass, and a MCFBlock to which a
  * MCFSolver<MCFC> is attached. The MCF problem is then repeatedly solved
- * with several changes in costs / capacities / deficits and arcs openings /
- * closures. The same operations are performed on the two solvers, and the
- * results are compared.
+ * with several changes in costs / capacities / deficits, arcs openings /
+ * closures and arcs additions / deletions. The same operations are performed
+ * on the two solvers, and the results are compared.
  *
- * \version 1.70
+ * \version 2.00
  *
- * \date 03 - 05 - 2019
+ * \date 08 - 05 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -128,9 +128,6 @@ MCFBlock * sMCFB = nullptr;    // MCFBlock that is solved
 MCFBlock * mMCFB = nullptr;    // MCFBlock that is modified
 
 MCFClass * mcf;                // the MCFClass object
-
-vector<MCFClass::Index> open;  // names of open (and closed) arcs
-int opened;                    // number of opened arcs
 
 bool isnc4 = false;            // true if the file is a ntCDF one
 
@@ -263,7 +260,7 @@ static inline void load( char * fn )
     exit( 1 );
     }
 
-   netCDF::NcGroup bg = f.getGroup( "Block_0");
+   netCDF::NcGroup bg = f.getGroup( "Block_0" );
    if( bg.isNull() ) {
     std::cerr << "Block_0 empty or undefined in " << fn << std::endl;
     exit( 1 );
@@ -330,13 +327,6 @@ static inline void load( char * fn )
   cerr << "Error: unknown exception thrown" << endl;
   exit( 1 );
   }
-
- // open[ 0 .. opened - 1 ] = names of open arcs
- // open[ opened ... m ] = names of closed arcs
- open.resize( opened = mcf->MCFm() );  // all arcs are open
- for( int i = 0 ; i < opened ; i++ )
-  open[ i ] = i;
-
  }  // end( load )
 
 /*--------------------------------------------------------------------------*/
@@ -623,23 +613,11 @@ int main( int argc , char **argv )
 
  srand48( seed );  // seed the pseudo-random number generator
 
+ // number of opened dynamic arcs (all dynamic ones at the beginning)
+
  while( n_repeat-- ) {
 
   cout << "Changing: ";
-
-  // re-load number of nodes & arcs - - - - - - - - - - - - - - - - - - - - -
-
-  n = mcf->MCFn();
-  if( n != mMCFB->get_NNodes() ) {
-   cout << "Error: different number of nodes" << std::endl;
-   exit( 1 );
-   }
-
-  m = mcf->MCFm();
-  if( m != mMCFB->get_NArcs() ) {
-   cout << "Error: different number of arcs" << std::endl;
-   exit( 1 );
-   }
 
   // change costs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -888,23 +866,28 @@ int main( int argc , char **argv )
   // closing arcs- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   if( ( wchg & 8 ) && ( drand48() <= p_change ) ) {
-   // at most half of the open ones
-   MCFBlock::Index tochange = min( MCFBlock::Index( opened / 2 ) ,
-				   MCFBlock::Index( drand48() * n_change ) );
-   if( tochange ) {
-    cout << tochange << " close";
+   MCFBlock::Index changed = 0;
 
-    MCFBlock::Vec_Index nms( tochange );
-    for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
-     MCFBlock::Index pos = drand48() * opened;
-     if( pos >= opened )
-      pos = opened - 1;
-     MCFBlock::Index arc = open[ pos ];
-     open[ pos ] = open[ --opened ];
-     open[ opened ] = arc;
-     nms[ i ] = arc;
-     mcf->CloseArc( arc );
-     }
+   MCFBlock::Vec_Index nms( n_change );
+   for( MCFBlock::Index i = mMCFB->get_NStaticArcs() ;
+	i < mMCFB->get_NArcs() ; ++i ) {
+    if( mcf->IsDeletedArc( i ) )
+     continue;
+    if( mcf->IsClosedArc( i ) )
+     continue;
+    if( drand48() <= 0.5 )
+     continue;
+    
+    nms[ changed++ ] = i;
+    mcf->CloseArc( i );
+
+    if( changed >= n_change )
+     break;
+    }
+
+   if( changed ) {
+    nms.resize( changed );
+    cout << changed << " close";
 
     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
      // change via abstract representation
@@ -925,23 +908,28 @@ int main( int argc , char **argv )
   // re-opening arcs - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   if( ( wchg & 16 ) && ( drand48() <= p_change ) ) {
-   // at most half of the closed ones
-   MCFBlock::Index tochange = min( MCFBlock::Index( ( m - opened ) / 2 ) ,
-				   MCFBlock::Index( drand48() * n_change ) );
-   if( tochange ) {
-    cout << tochange << " open";
+   MCFBlock::Index changed = 0;
 
-    MCFBlock::Vec_Index nms( tochange );
-    for( int i = 0 ; i < tochange ; i++ ) {
-     MCFBlock::Index pos = drand48() * ( m - opened );
-     if( opened + pos >= m )
-      pos = m - opened - 1;
-     MCFBlock::Index arc = open[ opened + pos ];
-     open[ opened + pos ] = open[ opened ];
-     open[ opened++ ] = arc;
-     nms[ i ] = arc;
-     mcf->OpenArc( arc );
-     } 
+   MCFBlock::Vec_Index nms( n_change );
+   for( MCFBlock::Index i = mMCFB->get_NStaticArcs() ;
+	i < mMCFB->get_NArcs() ; ++i ) {
+    if( mcf->IsDeletedArc( i ) )
+     continue;
+    if( ! mcf->IsClosedArc( i ) )
+     continue;
+    if( drand48() <= 0.5 )
+     continue;
+    
+    nms[ changed++ ] = i;
+    mcf->OpenArc( i );
+
+    if( changed >= n_change )
+     break;
+    }
+
+   if( changed ) {
+    nms.resize( changed );
+    cout << changed << " open";
 
     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
      // change via abstract representation
@@ -959,64 +947,140 @@ int main( int argc , char **argv )
   // deleting arcs - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   if( ( wchg & 32 ) && ( drand48() <= p_change ) ) {
-   // at most 20% of the existing dynamic ones
-   MCFBlock::Index tochange = drand48() *
-                     ( mMCFB->get_NArcs() - mMCFB->get_NStaticArcs() ) / 5;
-   if( tochange ) {
-    cout << tochange << " delete(";
+   MCFBlock::Index changed = 0;
 
-    if( drand48() < 0.5 ) {
-     // delete somewhere in the middle
-     cout << "m)";
+   if( drand48() < 0.5 ) {
+    // delete somewhere in the middle
 
-     while( tochange-- ) {
-      MCFBlock::Index arc = mMCFB->get_NStaticArcs() +
-           drand48() * ( mMCFB->get_NArcs() - mMCFB->get_NStaticArcs() );
-      mcf->DelArc( arc );
-      mMCFB->remove_arc( arc );
-      }
-     }
-    else {
-     // delete at the end
-     cout << "e)";
+    for( MCFBlock::Index i = mMCFB->get_NStaticArcs() ;
+	 i < mMCFB->get_NArcs() ; ++i ) {
+     if( mcf->IsDeletedArc( i ) )
+     continue;
+     if( mcf->IsClosedArc( i ) )
+      continue;
+     if( drand48() <= 0.75 )
+      continue;
 
-     while( tochange-- ) {
-      MCFBlock::Index arc = mMCFB->get_NArcs() - 1;
-      mcf->DelArc( arc );
-      mMCFB->remove_arc( arc );
-      }
+     mcf->DelArc( i );
+     mMCFB->remove_arc( i );
+     if( ++changed >= n_change )
+      break;
      }
 
-    cout << " - ";
+    if( changed )
+     cout << changed << " delete(m) - ";
+    }
+   else {
+    for( MCFBlock::Index i =  mMCFB->get_NArcs() ;
+	 --i >= mMCFB->get_NStaticArcs() ; ) {
+     if( mcf->IsDeletedArc( i ) )
+      continue;
+     if( mcf->IsClosedArc( i ) )
+      continue;
+     if( drand48() <= 0.13 )
+      break;
+
+     mcf->DelArc( i );
+     mMCFB->remove_arc( i );
+     if( ++changed >= n_change )
+      break;
+     }
+
+    if( changed )
+     cout << changed << " delete(e) - ";
     }
    }
 
   // creating new arcs - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   if( ( wchg & 64 ) && ( drand48() <= p_change ) ) {
-   // at most 20% of the existing space
-   MCFBlock::Index tochange = drand48() *
-                         ( mMCFB->get_MaxNArcs() - mMCFB->get_NArcs() ) / 5;
-   if( tochange ) {
-    cout << tochange << " create - ";
 
-    while( tochange-- ) {
-     // random sn != en
-     MCFBlock::Index sn , en;
-     do {
-      sn = drand48() * mMCFB->get_NNodes() + 1;
-      en = drand48() * mMCFB->get_NNodes() + 1;
-      } while( sn == en );
+   cout << "create ";
 
-     // random cost in [ - c_max , c_max ]
-     auto cst = c_max * ( 1  - 2 * drand48() );
+   MCFBlock::Index changed = 0;
+   MCFBlock::Index i = mMCFB->get_NStaticArcs();
+   for( ; i < mMCFB->get_NArcs() ; ++i ) {
+    if( ! mcf->IsDeletedArc( i ) )
+     continue;
+    if( mcf->IsClosedArc( i ) )
+     continue;
 
-     // random capacity <= 1.5 u_max
-     auto cap = 1.5 * u_max * drand48();
+    // random sn != en
+    MCFBlock::Index sn , en;
+    do {
+     sn = drand48() * mMCFB->get_NNodes() + 1;
+     en = drand48() * mMCFB->get_NNodes() + 1;
+     } while( sn == en );
 
-     mMCFB->add_arc( sn , en , cst , cap );
-     mcf->AddArc( sn , en , cap , cst );
+    // random cost in [ - c_max , c_max ]
+    auto cst = c_max * ( 1 - 2 * drand48() );
+
+    // random capacity <= 1.5 u_max
+    auto cap = 1.5 * u_max * drand48();
+
+    mMCFB->add_arc( sn , en , cst , cap );
+    mcf->AddArc( sn , en , cap , cst );
+    if( ++changed >= n_change )
+     break;
+    }
+
+   cout << changed << "/";
+
+   for( ; ( i < mMCFB->get_MaxNArcs() ) && ( changed < n_change ) ; ++i ) {
+    if( drand48() <= 0.13 )
+     break;
+
+    // random sn != en
+    MCFBlock::Index sn , en;
+    do {
+     sn = drand48() * mMCFB->get_NNodes() + 1;
+     en = drand48() * mMCFB->get_NNodes() + 1;
+     } while( sn == en );
+
+    // random cost in [ - c_max , c_max ]
+    auto cst = c_max * ( 1 - 2 * drand48() );
+
+    // random capacity <= 1.5 u_max
+    auto cap = 1.5 * u_max * drand48();
+
+    mMCFB->add_arc( sn , en , cst , cap );
+    mcf->AddArc( sn , en , cap , cst );
+    ++changed;
+    }
+
+   cout << changed << " - ";
+   }
+
+  // check that the status of the arcs is the same- - - - - - - - - - - - - -
+
+  if( wchg & 120 ) {  // ... if it can ever change
+
+   n = mcf->MCFn();
+   if( n != mMCFB->get_NNodes() ) {
+    cerr << endl << "error: different number of nodes" << endl;
+    exit( 1 );
+    }
+
+   m = mcf->MCFm();
+   if( m != mMCFB->get_NArcs() ) {
+    cerr << endl << "error: different number of arcs" << endl;
+    exit( 1 );
+    }
+
+   for( MCFBlock::Index i = 0 ; i < m ; ++i ) {
+    if( mcf->IsDeletedArc( i ) ) {
+     if( ! mMCFB->is_deleted( i ) ) {
+      std::cerr << "inconsistent del status for arc " << i << std::endl;
+      exit( 1 );
+      }
+     continue;
      }
+
+    if( mcf->IsClosedArc( i ) )
+     if( ! mMCFB->is_closed( i ) ) {
+      std::cerr << "inconsistent cls status for arc " << i << std::endl;
+      exit( 1 );
+      }
     }
    }
 

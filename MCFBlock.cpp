@@ -419,7 +419,7 @@ void MCFBlock::deserialize( netCDF::NcGroup & group )
  Index MaxNArcs = NArcs;
  netCDF::NcDim mdm = group.getDim( "MaxDynNArcs" );
  if( ( ! mdm.isNull() ) && ( mdm.getSize() > DynNArcs ) )
-  MaxNNodes += mdm.getSize() - DynNArcs;
+  MaxNArcs += mdm.getSize() - DynNArcs;
  
  netCDF::NcVar sn = group.getVar( "SN" );
  if( sn.isNull() )
@@ -3036,10 +3036,10 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 				   c_ModParam issueMod ,
 				   c_ModParam issueAMod )
 {
- if( sn >= get_NNodes() )
+ if( ( sn < 1 ) || ( sn > get_NNodes() ) )
   throw( std::invalid_argument( "invalid starting node name" ) );
  
- if( en >= get_NNodes() )
+ if( ( en < 1 ) || ( en > get_NNodes() ) )
   throw( std::invalid_argument( "invalid ending node name" ) );
 
  Index arc = get_NStaticArcs();

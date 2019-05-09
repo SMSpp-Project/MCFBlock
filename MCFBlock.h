@@ -790,8 +790,6 @@ public:
 		  &( *std::next( dE.begin() , i - get_NStaticNodes() ) ) ) );
   }
 
-
-
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
  inline c_Vec_Index & get_SN( void ) const { return( SN ); }
