@@ -3070,24 +3070,24 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
   EN[ arc ] = en;
   }
 
- // add the new variable- - - - - - - - - - - - - - - - - - - - - - - - - - -
- // ... if the number of arcs actually increases
-
- if( arc == get_NArcs() )
-  dx.emplace_back( this , ColVariable::kNonNegative );
-
  // change the abstract representation- - - - - - - - - - - - - - - - - - - -
  // in the meantime, if so instructed also issue abstract Modification(s)
+ // note that this is *always* done, unless issueAMod says this is a dry
+ // run, because at least the BlockModAD corresponding to deleting the
+ // Variable(s), or fixing them, is always issued since the Variable are
+ // always present
 
- if( not_dry_run( issueAMod ) && ( AR & ( HasFlw | HasObj ) ) ) {
+ if( not_dry_run( issueAMod ) ) {
 
-  c_ModParam ampar = make_amod_param( issueAMod , 2 );
-
+  c_ModParam ampar = make_amod_param( issueAMod ,
+				      AR & ( HasFlw | HasObj ) ? 4 : 1 );
   ColVariable * nx;
   LB0Constraint * nUB;
   if( arc == get_NArcs() ) {
    // the new arc is physically constructed
 
+   // add the new variable
+   dx.emplace_back( this , ColVariable::kNonNegative );
    nx = &(dx.back());
 
    // issue BlockModAD for the new Variable
@@ -3096,7 +3096,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
    auto vmod = std::make_shared<BlockModAD>( BlockModAD::eAddVar );
    vmod->whc_list = &(dx);
    vmod->mod_list = nx;
-   Block::add_Modification( vmod , ampar );
+   Block::add_Modification( vmod , Observer::par2chnl( ampar ) );
 
    // add the new coefficient in the objective
    if( AR & HasObj )
@@ -3105,19 +3105,19 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
    if( ( cap < Inf<FNumber>() ) && ( AR & HasFlw ) && ( ! ( AR & HasBnd ) ) )
     throw( std::logic_error( "cannot set finite capacity" ) );
 
-   // construct new arc capacity constraint
    if( AR & HasBnd ) {
+    // construct new arc capacity constraint
     dUB.emplace_back();
     nUB = &(UB.back());
     nUB->set_variable( nx , eNoBlck );
     nUB->set_Block( this );  // this is done last ==> no Modification
-    }
 
-   // issue BlockModAD for the new Constraint
-   auto cmod = std::make_shared<BlockModAD>( BlockModAD::eAddConst );
-   cmod->whc_list = &(dUB);
-   cmod->mod_list = nUB;
-   Block::add_Modification( cmod , ampar );
+    // issue BlockModAD for the new Constraint
+    auto cmod = std::make_shared<BlockModAD>( BlockModAD::eAddConst );
+    cmod->whc_list = &(dUB);
+    cmod->mod_list = nUB;
+    Block::add_Modification( cmod , Observer::par2chnl( ampar ) );
+    }
    }
   else {
    // the arc is just inserted in a previously deleted slot
@@ -3149,7 +3149,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
    get_lfc( i2p_e( en - 1 ) )->add_variable( nx ,  1 , ampar );
    }
 
-  unmake_amod_param( issueAMod , ampar , 2 );
+  unmake_amod_param( issueAMod , ampar , AR & ( HasFlw | HasObj ) ? 4 : 1 );
   }
 
  if( arc == get_NArcs() )
@@ -3157,10 +3157,10 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
  
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				  MCFBlockMod::eAddArc , NArcs - 1 , NArcs ) ,
+				     MCFBlockMod::eAddArc , arc , arc + 1 ) ,
 			   Observer::par2chnl( issueMod ) );
 
- return( get_NArcs() );
+ return( arc );
 
  }  // end( MCFBlock::add_arc )
 
@@ -3186,10 +3186,14 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 
  // change the abstract representation- - - - - - - - - - - - - - - - - - - -
  // in the meantime, if so instructed also issue abstract Modification(s)
+ // note that this is *always* done, unless issueAMod says this is a dry
+ // run, because at least the BlockModAD corresponding to deleting the
+ // Variable(s), or fixing them, is always issued since the Variable are
+ // always present
 
- if( not_dry_run( issueAMod ) && ( AR & ( HasFlw | HasObj ) ) ) {
-
-  c_ModParam ampar = make_amod_param( issueAMod , 4 );
+ if( not_dry_run( issueAMod ) ) {
+  c_ModParam ampar = make_amod_param( issueAMod ,
+				      AR & ( HasFlw | HasObj ) ? 4 : 1 );
 
   ColVariable * rx;  // variable of the (first) removed arc
   
@@ -3262,7 +3266,7 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
    get_lfc( i2p_e( en ) )->remove_variable( rx , ampar );
    }
   
-  unmake_amod_param( issueAMod , ampar , 4 );
+  unmake_amod_param( issueAMod , ampar , AR & ( HasFlw | HasObj ) ? 4 : 1 );
   }
  else  // at the very least ensure the value is 0
   std::next( dx.begin() , arc - get_NStaticArcs() )->set_value( 0 );

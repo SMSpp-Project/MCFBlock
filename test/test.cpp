@@ -39,9 +39,9 @@
  *
  * - HAVE_RELAX      for the RelaxIV class
  *
- * - HAVE_SPTRE      for the MCFCplex class
+ * - HAVE_CPLEX      for the MCFCplex class
  *
- * - HAVE_CPLEX      for the SPTree class; note that SPTree cannot solve
+ * - HAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
  *                   most MCF instances, except those with SPT structure
  *
  * Thus, the choice of the specific :MCFClass solver can be done in the
@@ -169,7 +169,6 @@ static inline void CreateProb( int Optns )
   #endif
   mcf = rlx;
   cout << "RelaxIV";
-  assert( false );  // RelaxIV not fully supported yet
  #endif
  #ifdef HAVE_SPTRE  // - - - - - - - - - - - - - - - - - - - - - - - - - - -
   mcf = new SPTree();
@@ -233,7 +232,7 @@ static inline void load( char * fn )
 {
  try {
   // note that usually the "original" MCFBlock is loaded, unless mode == 2
-  // (==> original solved, R3 modified) *and* the R3 has been constructed
+  // (==> original solved, R3 modified) *and* the R3 as been constructed
   // already, in which case the R3 is loaded; this is perhaps stretching
   // the concept of "R3Block" close to the breaking point, but in this case
   // it works because the R3B is a copy *and* always the same instance is
@@ -567,7 +566,8 @@ int main( int argc , char **argv )
  MCFClass::CNumber c_max = - OPTtypes_di_unipi_it::Inf<MCFClass::CNumber>();
                                                         // max cost
  MCFClass::CNumber c_min = - c_max;                     // min cost
- MCFClass::FNumber u_max = 0;                           // max capacity
+ MCFClass::FNumber u_avg = 0;                           // average capacity
+ MCFClass::FNumber u_min = OPTtypes_di_unipi_it::Inf<MCFClass::FNumber>();
 
  for( MCFClass::Index i = 0 ; i < m ; i++ ) {
   MCFClass::cCNumber ci = mcf->MCFCost( i );
@@ -578,10 +578,12 @@ int main( int argc , char **argv )
    c_max = ci;
 
   MCFClass::cFNumber ui = mcf->MCFUCap( i );
-  if( ui > u_max )
-   u_max = ui;
+  u_avg += ui;
+  if( ui < u_min )
+   u_min = ui;
   }
 
+ u_avg /= m;
  bool nzdfct = false;
 
  for( MCFClass::Index i = 0 ; i < n ; )
@@ -613,7 +615,7 @@ int main( int argc , char **argv )
 
  srand48( seed );  // seed the pseudo-random number generator
 
- // number of opened dynamic arcs (all dynamic ones at the beginning)
+ bool diffarcs = false;  // whether added arcs ended up with different names
 
  while( n_repeat-- ) {
 
@@ -834,7 +836,7 @@ int main( int argc , char **argv )
     posd = negd = 0;
     }
 
-   MCFClass::FNumber Dlt = u_max / 5;
+   MCFClass::FNumber Dlt = u_avg * 2 * drand48();
    if( drand48() <= 0.5 ) {  // in 50% of cases up, in 50% of cases down
     posd += Dlt;
     negd -= Dlt;
@@ -955,9 +957,11 @@ int main( int argc , char **argv )
     for( MCFBlock::Index i = mMCFB->get_NStaticArcs() ;
 	 i < mMCFB->get_NArcs() ; ++i ) {
      if( mcf->IsDeletedArc( i ) )
-     continue;
+      continue;
+     /*!!
      if( mcf->IsClosedArc( i ) )
       continue;
+      !!*/
      if( drand48() <= 0.75 )
       continue;
 
@@ -975,8 +979,10 @@ int main( int argc , char **argv )
 	 --i >= mMCFB->get_NStaticArcs() ; ) {
      if( mcf->IsDeletedArc( i ) )
       continue;
+     /*!!
      if( mcf->IsClosedArc( i ) )
       continue;
+      !!*/
      if( drand48() <= 0.13 )
       break;
 
@@ -995,41 +1001,14 @@ int main( int argc , char **argv )
 
   if( ( wchg & 64 ) && ( drand48() <= p_change ) ) {
 
-   cout << "create ";
-
    MCFBlock::Index changed = 0;
-   MCFBlock::Index i = mMCFB->get_NStaticArcs();
-   for( ; i < mMCFB->get_NArcs() ; ++i ) {
-    if( ! mcf->IsDeletedArc( i ) )
-     continue;
-    if( mcf->IsClosedArc( i ) )
-     continue;
-
-    // random sn != en
-    MCFBlock::Index sn , en;
-    do {
-     sn = drand48() * mMCFB->get_NNodes() + 1;
-     en = drand48() * mMCFB->get_NNodes() + 1;
-     } while( sn == en );
-
-    // random cost in [ - c_max , c_max ]
-    auto cst = c_max * ( 1 - 2 * drand48() );
-
-    // random capacity <= 1.5 u_max
-    auto cap = 1.5 * u_max * drand48();
-
-    mMCFB->add_arc( sn , en , cst , cap );
-    mcf->AddArc( sn , en , cap , cst );
-    if( ++changed >= n_change )
-     break;
-    }
-
-   cout << changed << "/";
-
-   for( ; ( i < mMCFB->get_MaxNArcs() ) && ( changed < n_change ) ; ++i ) {
+   MCFBlock::Index afterend = 0;
+   while( changed < n_change ) {
     if( drand48() <= 0.13 )
      break;
 
+    ++changed;
+
     // random sn != en
     MCFBlock::Index sn , en;
     do {
@@ -1040,15 +1019,26 @@ int main( int argc , char **argv )
     // random cost in [ - c_max , c_max ]
     auto cst = c_max * ( 1 - 2 * drand48() );
 
-    // random capacity <= 1.5 u_max
-    auto cap = 1.5 * u_max * drand48();
+    // random capacity <= 0.75 u_avg
+    auto cap = 1.5 * ( u_avg - u_min ) * drand48() + u_min;
 
-    mMCFB->add_arc( sn , en , cst , cap );
-    mcf->AddArc( sn , en , cap , cst );
-    ++changed;
+    auto arc = mMCFB->add_arc( sn , en , cst , cap );
+    if( arc != mcf->AddArc( sn , en , cap , cst ) )
+     diffarcs = false;
+
+    if( arc >= m )
+     ++afterend;
+
+    if( mMCFB->get_NArcs() >= mMCFB->get_MaxNArcs() )
+     break;
     }
 
-   cout << changed << " - ";
+   if( changed ) {
+    cout << "create " << changed << "(" << afterend << ")";
+    if( diffarcs )
+     cout << "[d]";
+    cout << " - ";
+    }
    }
 
   // check that the status of the arcs is the same- - - - - - - - - - - - - -
@@ -1067,20 +1057,22 @@ int main( int argc , char **argv )
     exit( 1 );
     }
 
-   for( MCFBlock::Index i = 0 ; i < m ; ++i ) {
-    if( mcf->IsDeletedArc( i ) ) {
-     if( ! mMCFB->is_deleted( i ) ) {
-      std::cerr << "inconsistent del status for arc " << i << std::endl;
-      exit( 1 );
+   if( ! diffarcs ) {
+    for( MCFBlock::Index i = 0 ; i < m ; ++i ) {
+     if( mcf->IsDeletedArc( i ) ) {
+      if( ! mMCFB->is_deleted( i ) ) {
+       std::cerr << "inconsistent del status for arc " << i << std::endl;
+       exit( 1 );
+       }
+      continue;
       }
-     continue;
-     }
 
-    if( mcf->IsClosedArc( i ) )
-     if( ! mMCFB->is_closed( i ) ) {
-      std::cerr << "inconsistent cls status for arc " << i << std::endl;
-      exit( 1 );
-      }
+     if( mcf->IsClosedArc( i ) )
+      if( ! mMCFB->is_closed( i ) ) {
+       std::cerr << "inconsistent cls status for arc " << i << std::endl;
+       exit( 1 );
+       }
+     }
     }
    }
 
@@ -1088,9 +1080,12 @@ int main( int argc , char **argv )
   // yet, if the problem is either unfeasible or unbounded, re-load it in
   // both MCFClass and MCFBlock
 
-  if( ! SolveMCF() )
+  if( ( ! SolveMCF() ) || diffarcs ) {
    load( argv[ 1 ] );
-
+   n = mcf->MCFn();
+   m = mcf->MCFm();
+   diffarcs = false;
+   }
   }  // end( main loop )- - - - - - - - - - - - - - - - - - - - - - - - - - -
      // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

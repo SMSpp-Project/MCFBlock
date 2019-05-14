@@ -608,11 +608,37 @@ public:
 /** @name Changing the data of the model
  *  @{ */
 
- /*
- virtual void add_Modification( sp_Mod &mod ) {
-  v_mod.push_back( mod );
+ /** The only reason why MCFSolver::add_Modification() needs be defined is to
+  * properly react to NBModification. Indeed, the correct reaction is to
+  * *immediately* reload the MCFBlock, besides clearing the list of
+  * Modification as Solver::add_Modification() already does. The issue is
+  * that if arcs/nodes are added/deleted after the NBModification is issued
+  * but before it is processed, then the number of nodes/arcs at the moment
+  * in which the NBModification is processed is different from that at the
+  * moment in which is is issued, which may break the "naming convention"
+  * (because the name of, say, a newly created arc depends on the current
+  * state and/or number of the arcs). */
+
+ virtual void add_Modification( sp_Mod &mod ) override
+ {
+  const auto tmod = std::dynamic_pointer_cast<NBModification>( mod );
+  if( tmod ) {
+   // this is the "nuclear option": the MCFBlock has been re-loaded, so
+   // the MCFClass solver also has to (immediately)
+   auto MCFB = static_cast< MCFBlock * >( f_Block );
+   MCFC::LoadNet( MCFB->get_MaxNNodes() , MCFB->get_MaxNArcs() ,
+		  MCFB->get_NNodes() , MCFB->get_NArcs() ,
+		  MCFB->get_U().empty() ? nullptr : MCFB->get_U().data() ,
+		  MCFB->get_C().empty() ? nullptr : MCFB->get_C().data() ,
+		  MCFB->get_B().empty() ? nullptr : MCFB->get_B().data() ,
+		  MCFB->get_SN().data() , MCFB->get_EN().data() );
+   MCFC::PreProcess();
+   // besides, any outstanding modification makes no sense any longer
+   v_mod.clear();
+   }
+  else
+   v_mod.push_back( mod );
   }
- */
 
 /*@} -----------------------------------------------------------------------*/
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
@@ -740,13 +766,15 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 	MCFC::CloseArc( arc++ );
        break;
 
-      case( MCFBlockMod::eAddArc ):
-       MCFC::AddArc( MCFB->get_SN( tmod->f_strt ) ,
-		     MCFB->get_EN( tmod->f_strt ) ,
-		     MCFB->get_U( tmod->f_strt ) ,
-		     MCFB->get_C( tmod->f_strt ) );
+      case( MCFBlockMod::eAddArc ): {
+       auto arc = MCFC::AddArc( MCFB->get_SN( tmod->f_strt ) ,
+				MCFB->get_EN( tmod->f_strt ) ,
+				MCFB->get_U( tmod->f_strt ) ,
+				MCFB->get_C( tmod->f_strt ) );
+       if( arc != tmod->f_strt )
+	throw( std::logic_error( "name mismatch in AddArc()" ) );
        break;
-
+       }
       case( MCFBlockMod::eRmvArc ):
        MCFC::DelArc( tmod->f_stop - 1 );
        break;
@@ -814,22 +842,6 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
        throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
       }
 
-     return;
-     }
-    }
-
-   // NBModification- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   {
-    const auto tmod = std::dynamic_pointer_cast<NBModification>( mod );
-    if( tmod ) {
-     // this is the "nuclear option": the MCFBlock has been re-loaded
-     MCFC::LoadNet( MCFB->get_MaxNNodes() , MCFB->get_MaxNArcs() ,
-		    MCFB->get_NNodes() , MCFB->get_NArcs() ,
-		    MCFB->get_U().empty() ? nullptr : MCFB->get_U().data() ,
-		    MCFB->get_C().empty() ? nullptr : MCFB->get_C().data() ,
-		    MCFB->get_B().empty() ? nullptr : MCFB->get_B().data() ,
-		    MCFB->get_SN().data() , MCFB->get_EN().data() );
-     MCFC::PreProcess();
      return;
      }
     }

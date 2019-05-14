@@ -36,10 +36,10 @@
  *
  * - HAVE_RELAX      for the RelaxIV class
  *
- * - HAVE_SPTRE      for the MCFCplex class
+ * - HAVE_CPLEX      for the MCFCplex class
  *
- * - HAVE_CPLEX      for the SPTree class; note that SPTree cannot solve
- *                    most MCF instances, except those with SPT structure.
+ * - HAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
+ *                   most MCF instances, except those with SPT structure.
  */
 
 /*--------------------------------------------------------------------------*/
@@ -184,8 +184,8 @@ Solver::idx_type MCFSolver<MCFSimplex>::get_num_dbl_par( void ) const
 template<>
 int MCFSolver<MCFSimplex>::get_dflt_int_par( const idx_type par ) const
 {
- static const std::vector<int> my_dflt_int_par = { MCFSimplex::kYes ,
-		MCFSimplex::kYes , MCFSimplex::kCandidateListPivot , 0 , 0 };
+ static const std::vector<int> my_dflt_int_par = { MCFClass::kYes ,
+		MCFClass::kYes , MCFSimplex::kCandidateListPivot , 0 , 0 };
 
  return( par >= intLastParCDAS ? my_dflt_int_par[ par - intLastParCDAS ]
 	                       : CDASolver::get_dflt_int_par( par ) );
@@ -244,6 +244,127 @@ const std::string & MCFSolver<MCFSimplex>::int_par_idx2str(
 /*
 template<>
 const std::string & MCFSolver<MCFSimplex>::dbl_par_idx2str(
+						   const idx_type idx ) const
+{
+ }
+ */
+
+#endif
+
+/*--------------------------------------------------------------------------*/
+/* Managing parameters for RelaxIV -----------------------------------------*/
+/*
+ * RelaxIV has the following extra parameters:
+ *
+ * - kAuction     the auction/shortest paths initialization is used
+ *
+ * These are all "int" parameters, hence the "double" versions only issue the
+ * method of the base CDASolver class, and therefore need not be defined. */
+
+#ifdef HAVE_RELAX
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+const std::vector<int> MCFSolver<RelaxIV>::Solver_2_MCFClass_int = {
+ MCFClass::kMaxIter ,        // intMaxIter
+ -1 ,                        // intMaxSol
+ -1 ,                        // intLogVerb
+ -1 ,                        // intMaxDSol
+ MCFClass::kReopt ,          // intLastParCDAS
+ RelaxIV::kAuction
+ };
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+template<>
+const std::vector<int> MCFSolver<RelaxIV>::Solver_2_MCFClass_dbl = {
+ MCFClass::kMaxTime ,         // dblMaxTime
+ -1 ,                         // dblRelAcc
+ MCFClass::kEpsFlw ,          // dblAbsAcc
+ -1 ,                         // dblUpCutOff
+ -1 ,                         // dblLwCutOff
+ -1 ,                         // dblRAccSol
+ -1 ,                         // dblAAccSol
+ -1 ,                         // dblFAccSol
+ -1 ,                         // dblRAccDSol
+ MCFClass::kEpsCst ,          // dblAAccDSol
+ -1                           // dblFAccDSol
+ };
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+Solver::idx_type MCFSolver<RelaxIV>::get_num_int_par( void ) const
+{
+ return( CDASolver::get_num_int_par() + 2 );
+ }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/*
+template<>
+Solver::idx_type MCFSolver<RelaxIV>::get_num_dbl_par( void ) const
+{
+ }
+ */
+/*--------------------------------------------------------------------------*/
+
+template<>
+int MCFSolver<RelaxIV>::get_dflt_int_par( const idx_type par ) const
+{
+ static const std::vector<int> my_dflt_int_par = { MCFClass::kYes ,
+						   MCFClass::kYes };
+
+ return( par >= intLastParCDAS ? my_dflt_int_par[ par - intLastParCDAS ]
+	                       : CDASolver::get_dflt_int_par( par ) );
+ }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/*
+template<>
+double MCFSolver<RelaxIV>::get_dflt_dbl_par( const idx_type par ) const
+{
+ }
+ */
+/*--------------------------------------------------------------------------*/
+
+template<>
+Solver::idx_type MCFSolver<RelaxIV>::int_par_str2idx(
+					     const std::string & name ) const
+{
+ if( name == "kReopt" )
+  return( intLastParCDAS );
+ if( name == "kAuction" )
+  return( intLastParCDAS + 1 );
+
+ return( CDASolver::dbl_par_str2idx( name ) );
+ }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/*
+template<>
+Solver::idx_type MCFSolver<RelaxIV>::dbl_par_str2idx(
+					    const std::string & name ) const
+{
+ }
+ */
+/*--------------------------------------------------------------------------*/
+
+template<>
+const std::string & MCFSolver<RelaxIV>::int_par_idx2str(
+						   const idx_type idx ) const
+{
+ static const std::vector<std::string> my_int_pars_str =
+                                                    { "kReopt" , "kAuction" };
+
+ return( idx >= intLastParCDAS ? my_int_pars_str[ idx - intLastParCDAS ]
+	                       : CDASolver::int_par_idx2str( idx ) );
+ }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/*
+template<>
+const std::string & MCFSolver<RelaxIV>::dbl_par_idx2str(
 						   const idx_type idx ) const
 {
  }
