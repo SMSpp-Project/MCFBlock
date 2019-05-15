@@ -4,9 +4,9 @@
 /** @file
  * Implementation of the MCFBlock class.
  *
- * \version 0.30
+ * \version 1.00
  *
- * \date 21 - 03 - 2019
+ * \date 15 - 05 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -1536,9 +1536,11 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
        MCFB->close_arcs( tmod->f_strt , tmod->f_stop , iPM , iPA );
       break;
      case( MCFBlockMod::eAddArc ):
-      MCFB->add_arc( get_SN( tmod->f_strt ) , get_EN( tmod->f_strt ) ,
-		     get_C( tmod->f_strt ) , get_U( tmod->f_strt ) ,
-		     iPM , iPA );
+      if( MCFB->add_arc( get_SN( tmod->f_strt ) , get_EN( tmod->f_strt ) ,
+			 get_C( tmod->f_strt ) , get_U( tmod->f_strt ) ,
+			 iPM , iPA )
+	  != tmod->f_strt )
+       throw( std::logic_error( "inconsistency between arc names" ) );       
       break;
      case( MCFBlockMod::eRmvArc ):
       MCFB->remove_arc( tmod->f_stop - 1 , iPM , iPA );
@@ -3075,8 +3077,8 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
  // change the abstract representation- - - - - - - - - - - - - - - - - - - -
  // in the meantime, if so instructed also issue abstract Modification(s)
  // note that this is *always* done, unless issueAMod says this is a dry
- // run, because at least the BlockModAD corresponding to deleting the
- // Variable(s), or fixing them, is always issued since the Variable are
+ // run, because at least the BlockModAD corresponding to adding the
+ // Variable, or unfixing it, is always issued since the Variable are
  // always present
 
  if( not_dry_run( issueAMod ) ) {
@@ -3110,7 +3112,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
    if( AR & HasBnd ) {
     // construct new arc capacity constraint
     dUB.emplace_back();
-    nUB = &(UB.back());
+    nUB = &(dUB.back());
     nUB->set_variable( nx , eNoBlck );
     nUB->set_Block( this );  // this is done last ==> no Modification
 
@@ -3196,12 +3198,8 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
  if( not_dry_run( issueAMod ) ) {
   c_ModParam ampar = make_amod_param( issueAMod ,
 				      AR & ( HasFlw | HasObj ) ? 4 : 1 );
-
-  ColVariable * rx;  // variable of the (first) removed arc
-  
   if( arc == get_NArcs() - 1 ) {
    // removing the last arc (and possibly more)
-   rx = &(dx.back());
 
    // list holding the removed variables
    std::list<ColVariable> rmvd;
@@ -3221,7 +3219,13 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
     // delete contribution to objective (if any)
     if( AR & HasObj )
      lfo->remove_variable( rxi , ampar );
-    
+
+    // delete contribution to flow constraint (if any)
+    if( AR & HasFlw ) {
+     get_lfc( i2p_e( sn ) )->remove_variable( rxi , ampar );
+     get_lfc( i2p_e( en ) )->remove_variable( rxi , ampar );
+     }
+
     // delete arc capacity constraint (if any)
     if( AR & HasBnd ) {
      auto tbrmvd = std::prev( dUB.end() );
@@ -3255,19 +3259,19 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
    Block::add_Modification( vmod , Observer::par2chnl( ampar ) );
    }
   else {
-   rx = const_cast< ColVariable * >(
+   auto rx = const_cast< ColVariable * >(
 		  &( *std::next( dx.begin() , arc - get_NStaticArcs() ) ) );
 
-   rx->set_value( 0 );            // fix the Variable (to 0)
-   rx->is_fixed( true , ampar );  // close the arc
+   rx->set_value( 0 );            // set the Variable to 0
+   rx->is_fixed( true , ampar );  // fix it
+
+   // delete contribution to flow constraint (if any)
+   if( AR & HasFlw ) {
+    get_lfc( i2p_e( sn ) )->remove_variable( rx , ampar );
+    get_lfc( i2p_e( en ) )->remove_variable( rx , ampar );
+    }
    }
 
-  // delete contribution to flow constraint (if any)
-  if( AR & HasFlw ) {
-   get_lfc( i2p_e( sn ) )->remove_variable( rx , ampar );
-   get_lfc( i2p_e( en ) )->remove_variable( rx , ampar );
-   }
-  
   unmake_amod_param( issueAMod , ampar , AR & ( HasFlw | HasObj ) ? 4 : 1 );
   }
  else  // at the very least ensure the value is 0

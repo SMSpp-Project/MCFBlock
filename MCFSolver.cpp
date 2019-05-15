@@ -4,9 +4,9 @@
 /** @file
  * Implementation of the MCFSolver class.
  *
- * \version 0.10
+ * \version 1.00
  *
- * \date 30 - 09 - 2018
+ * \date 15 - 05 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n

@@ -5,9 +5,9 @@
  * Header file for the *concrete* class MCFBlock, which implements the Block
  * concept [see Block.h] for (linear) Min-Cost Flow problems.
  *
- * \version 0.30
+ * \version 1.00
  *
- * \date 21 - 03 - 2019
+ * \date 15 - 05 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
