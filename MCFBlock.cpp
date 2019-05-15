@@ -188,37 +188,39 @@ void MCFBlock::load( c_Index n , c_Index m ,
  NStaticArcs = dm > NArcs ? 0 : NArcs - dm;
 
  SN.resize( MaxNArcs );
- std::copy( pSn.begin() , pSn.end() , SN.begin() );
- for( auto sn : SN )
-  if( ( sn < 1 ) || ( sn > NNodes ) )
-   throw( std::invalid_argument( "wrong starting node" ) );
+ if( std::any_of( pSn.begin() , pSn.begin() + m ,
+		  [ n ]( c_Index sn ) { return( ( sn < 1 ) || ( sn > n ) ); }
+		  ) )
+  throw( std::invalid_argument( "wrong starting node" ) );
+ std::copy( pSn.begin() , pSn.begin() + m , SN.begin() );
 
  EN.resize( MaxNArcs );
- std::copy( pEn.begin() , pEn.end() , EN.begin() );
- for( auto en : EN )
-  if(  ( en < 1 ) || ( en > NNodes ) )
-   throw( std::invalid_argument( "wrong ending node" ) );
+ if( std::any_of( pEn.begin() , pEn.begin() + m ,
+		  [ n ]( c_Index en ) { return( ( en < 1 ) || ( en > n ) ); }
+		  ) )
+  throw( std::invalid_argument( "wrong ending node" ) );
+ std::copy( pEn.begin() , pEn.begin() + m , EN.begin() );
 
- if( std::any_of( pC.begin() , pC.end() ,
+ if( std::any_of( pC.begin() , pC.begin() + m ,
 		  []( c_CNumber ci ) { return( ci != 0 ); } ) ) {
   C.resize( MaxNArcs );
-  std::copy( pC.begin() , pC.end() , C.begin() );
+  std::copy( pC.begin() , pC.begin() + m , C.begin() );
   }
  else
   C.clear();
 
- if( std::any_of( pU.begin() , pU.end() ,
+ if( std::any_of( pU.begin() , pU.begin() + m ,
 		  []( c_FNumber ui ) { return( ui < Inf<FNumber>() ); } ) ) {
   U.resize( MaxNArcs );
-  std::copy( pU.begin() , pU.end() , U.begin() );
+  std::copy( pU.begin() , pU.begin() + m , U.begin() );
   }
  else
   U.clear();
 
- if( std::any_of( pB.begin() , pB.end() ,
+ if( std::any_of( pB.begin() , pB.begin() + n ,
 		  []( c_FNumber bi ) { return( bi != 0 ); } ) ) {
   B.resize( MaxNNodes );
-  std::copy( pB.begin() , pB.end() , B.begin() );
+  std::copy( pB.begin() , pB.begin() + n , B.begin() );
   }
  else
   B.clear();
