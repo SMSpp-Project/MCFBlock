@@ -14,7 +14,7 @@
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
- * Copyright &copy by Antonio Frangioni
+ * Copyright &copy; by Antonio Frangioni
  */
 /*--------------------------------------------------------------------------*/
 /*----------------------------- DEFINITIONS --------------------------------*/
@@ -263,7 +263,7 @@ public:
  typedef std::vector<FONumber> Vec_FONumber;   ///< a vector of FONumber
  typedef const Vec_FONumber c_Vec_FONumber;    ///< a const vector of FONumber
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*------------------------------- FRIENDS ----------------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -291,7 +291,7 @@ public:
 
  virtual ~MCFBlock() { guts_of_destructor(); }
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*-------------------------- OTHER INITIALIZATIONS -------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Other initializations
@@ -585,7 +585,7 @@ public:
 
  virtual void generate_objective( Configuration *objc = nullptr ) override;
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*-------------- Methods for reading the data of the MCFBlock --------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for reading the data of the MCFBlock
@@ -850,11 +850,11 @@ public:
 
  inline FNumber get_B( c_Index i ) const { return( B.size() ? B[ i ] : 0 ); }
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*--------------------- Methods for checking the Block ---------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for checking the Block
-    @{ */
+ *  @{ */
 
  /// returns true if the current solution is (approximately) flow feasible
  /** Returns true if the solution encoded in the current value of the flow
@@ -975,11 +975,11 @@ public:
  virtual bool is_optimal( bool useabstract = false  ,
 			  Configuration *optc = nullptr ) override;
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for R3 Blocks
-    @{ */
+ *  @{ */
 
  /// gets an R3 Block of MCFBlock currently only the copy one
  /** Gets an R3 Block of the MCFBlock. The list of currently supported R3
@@ -1112,7 +1112,7 @@ public:
 				     c_ModParam issueAMod = eModBlck )
   override;
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*----------------------- Methods for handling Solution --------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for handling Solution
@@ -1340,7 +1340,7 @@ public:
 
  }  // end( MCFBlock::set_rc( one ) )
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*-------------------- Methods for handling Modification -------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for handling Modification
@@ -1391,13 +1391,7 @@ public:
 
  virtual void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
 
-/*@} -----------------------------------------------------------------------*/
-/*---------------------- Methods for handling Solver -----------------------*/
-/*--------------------------------------------------------------------------*/
-/** @name Methods for handling Solver
-    @{ */
-
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*------------ METHODS FOR LOADING, PRINTING & SAVING THE MCFBlock ---------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for loading, printing & saving the MCFBlock
@@ -1410,7 +1404,7 @@ public:
 
  virtual void serialize( netCDF::NcGroup & group ) const override;
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Changing the data of the MCF instabnce
@@ -1858,7 +1852,7 @@ public:
  void remove_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
 		                c_ModParam issueAMod = eNoBlck );
 
-/*@} -----------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -1872,7 +1866,7 @@ public:
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Protected methods for inserting and extracting
-    @{ */
+ *  @{ */
 
  /// print the MCFBlock on an ostream with the given verbosity
  /** Protected method to print information about the MCFBlock; with the
@@ -1917,7 +1911,7 @@ public:
 
  virtual void load( std::istream &input ) override;
 
-/*@}------------------------------------------------------------------------*/
+/**@} ----------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -2298,7 +2292,7 @@ class MCFSolution : public Solution {
 
  };  // end( class( MCFSolution ) )
 
-/*@}  end( group( MCFBlock_CLASSES ) ) -------------------------------------*/
+/** @} end( group( MCFBlock_CLASSES ) ) ------------------------------------*/
 /*--------------------------------------------------------------------------*/
 
  };  // end( namespace SMSpp_di_unipi_it )
