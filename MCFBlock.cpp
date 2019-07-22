@@ -348,6 +348,8 @@ void MCFBlock::load( std::istream &input )
  if( i < NArcs )
   throw( std::invalid_argument( "too few arc descriptors" ) );
 
+ f_cond_lower = NAN;  // reset conditional bounds
+
  // simplify out the deta structures- - - - - - - - - - - - - - - - - - - - -
 
  if( std::all_of( C.begin() , C.end() ,
@@ -467,6 +469,8 @@ void MCFBlock::deserialize( netCDF::NcGroup & group )
 		   []( c_FNumber bi ) { return( bi == 0 ); } ) )
    B.clear();
   }
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -725,7 +729,7 @@ void MCFBlock::generate_objective( Configuration *objc )
 		 eNoMod );
  c.set_Block( this );
 
- set_objective( c , eNoMod );
+ set_objective( & c , eNoMod );
 
  AR |= HasObj;
 
@@ -881,7 +885,7 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
    throw( std::logic_error(
 	 "abstract representation not there in dual_feasible( , true )" ) );
 
-  auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
+  auto obj = static_cast<FRealObjective *>( get_objective() );
   assert( obj );
   auto lfo = get_lfo();
 
@@ -954,7 +958,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
     "abstract representation not there in complementary_slackness(( , true )"
 			   ) );
 
-  auto obj = boost::any_cast<FRealObjective *>( & get_objective() );
+  auto obj = static_cast<FRealObjective *>( get_objective() );
   assert( obj );
   auto lfo = get_lfo();
   Index i = 0;
@@ -2027,6 +2031,9 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
  if( stop >= get_NArcs() )
   stop = get_NArcs();
 
+ if( stop <= strt )  // nothing to change
+  return;            // cowardly (and silently) return
+
  if( C.empty() ) {
   if( std::all_of( NCost , NCost + ( stop - strt ) ,
 		   []( c_CNumber cst ) { return( cst == 0 ); } ) )
@@ -2098,6 +2105,8 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
   if( not_dry_run( issueMod ) )
    std::copy( NCost , NCost + ( stop - strt ) , C.begin() + strt );
 
+ f_cond_lower = NAN;  // reset conditional bounds
+ 
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2120,6 +2129,9 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
 
   C.assign( get_MaxNArcs() , 0 );
   }
+
+ if( nms.empty() )  // nothing to change
+  return;           // cowardly (and silently) return
 
  if( not_dry_run( issueAMod ) && ( AR & HasObj ) ) {
   // change abstract and physical representation together - - - - - - - - - -
@@ -2234,6 +2246,8 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
   if( not_dry_run( issueMod ) )
    copyidx( C , nms , NCost );
 
+ f_cond_lower = NAN;  // reset conditional bounds
+
  // TODO: eliminate from nms the "fake" changes
 
  if( issue_pmod( issueMod ) ) {  // issue "physical Modification" - - - - - -
@@ -2261,6 +2275,8 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
 
  if( C[ arc ] == NCost )
   return;
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  if( not_dry_run( issueAMod ) && ( AR & HasObj ) ) {
   // change abstract and physical representation together - - - - - - - - - -
@@ -2304,6 +2320,8 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
  c_Index ndiff = countdiff( NCap , NCap + ( stop - strt ) , U.cbegin() + strt );
  if( ! ndiff )
   return;
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  if( not_dry_run( issueAMod ) && ( AR & HasFlw ) ) {
   // change abstract and physical representation together - - - - - - - - - -
@@ -2364,6 +2382,8 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
  Index ndiff = countdiff( U , nms , NCap , get_NArcs() );
  if( ! ndiff )
   return;
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  if( not_dry_run( issueAMod ) && ( AR & HasFlw ) ) {
   // change abstract and physical representation together - - - - - - - - - -
@@ -2473,6 +2493,8 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
 
  if( U[ arc ] == NCap )
   return;
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  if( not_dry_run( issueMod ) )
   U[ arc ] = NCap;  // only change the physical representation - - - - - - -
@@ -2755,6 +2777,8 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
 
+ f_cond_lower = NAN;  // reset conditional bounds
+
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2831,6 +2855,8 @@ void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
 
+ f_cond_lower = NAN;  // reset conditional bounds
+
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
                                  MCFBlockMod::eCloseArc , std::move( nms ) ) ,
@@ -2863,6 +2889,8 @@ void MCFBlock::close_arc( c_Index arc ,
 
   xa->is_fixed( true , issueAMod );
   }
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
@@ -2920,6 +2948,8 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
 
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  // TODO: if some changes are "fake", restrict the range
 
@@ -2993,6 +3023,8 @@ void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
   unmake_amod_param( issueAMod , ampar , ndiff );
   }
 
+ f_cond_lower = NAN;  // reset conditional bounds
+
  // TODO: eliminate from nms the "fake" changes
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -3025,6 +3057,8 @@ void MCFBlock::open_arc( c_Index arc ,
 
   xa->is_fixed( false , issueAMod );
   }
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
@@ -3158,7 +3192,9 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 
  if( arc == get_NArcs() )
   ++NArcs;  // increase arc count
- 
+
+ f_cond_lower = NAN;  // reset conditional bounds
+
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 				     MCFBlockMod::eAddArc , arc , arc + 1 ) ,
@@ -3279,6 +3315,8 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 
  if( arc == get_NArcs() - 1 )
   NArcs -= rmvdarcs;  // decrease arc count
+
+ f_cond_lower = NAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
@@ -3673,6 +3711,62 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
  throw( std::invalid_argument( "unsupported Modification to MCFBlock" ) );
 
  }  // end( MCFBlock::guts_of_add_Modification )
+
+/*--------------------------------------------------------------------------*/
+
+void MCFBlock::compute_conditional_bounds( void )
+{
+ f_cond_lower = f_cond_upper = 0;
+
+ auto tC = C.begin();
+ auto tU = U.begin();
+
+ for( ; tC < C.end() ; ++tC , ++tU ) {
+  if( *tC == 0 )
+   continue;
+
+  if( *tC < 0 ) {
+   if( *tU == Inf<FNumber>() ) {
+    f_cond_lower = - Inf<double>();
+    break;
+    }
+   else
+    f_cond_lower += *tC * (*tU);
+   }
+  else
+   if( *tU == Inf<FNumber>() ) {
+    f_cond_upper = Inf<double>();
+    break;
+    }
+   else
+    f_cond_upper += *tC * (*tU);
+   }
+
+ if( f_cond_lower > - Inf<double>() ) {
+  for( ; tC < C.end() ; ++tC , ++tU )
+   if( *tC < 0 ) {
+    if( *tU == Inf<FNumber>() ) {
+     f_cond_lower = - Inf<double>();
+     break;
+     }
+    else
+     f_cond_lower += *tC * (*tU);
+    }
+  }
+
+ if( f_cond_upper < Inf<double>() ) {
+  for( ; tC < C.end() ; ++tC , ++tU )
+   if( *tC > 0 ) {
+    if( *tU == Inf<FNumber>() ) {
+     f_cond_upper = Inf<double>();
+     break;
+     }
+    else
+     f_cond_upper += *tC * (*tU);
+    }
+  }
+ }  // end( MCFBlock::compute_conditional_bounds )
+
 
 /*--------------------------------------------------------------------------*/
 

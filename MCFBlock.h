@@ -284,7 +284,8 @@ public:
 
  MCFBlock( Block *father = nullptr ) : Block( father ) , NNodes( 0 ) ,
   NArcs( 0 ) , MaxNNodes( 0 ) , NStaticNodes( 0 ) , NStaticArcs( 0 ) ,
-  AR( 0 ) { }
+  AR( 0 ) , f_cond_lower( - Inf<double>() ) , f_cond_upper( - Inf<double>() )
+  { }
 
 /*--------------------------------------------------------------------------*/
  /// destructor of MCFBlock: deletes the abstract representation, if any
@@ -591,6 +592,65 @@ public:
 /** @name Methods for reading the data of the MCFBlock
  *  @{ */
 
+/*--------------------------------------------------------------------------*/
+ /// getting the current sense of the Objective, which is minimization
+
+ virtual int get_objective_sense( void ) const override final {
+  return( Objective::eMin );
+  }
+  
+/*--------------------------------------------------------------------------*/
+ /// getting upper bounds on the value of the Objective
+ /** An upper bound on the optimal value of the problem is computed as
+  * \f[
+  *  \sum_{ (i,j) \in A : c_{ij} > 0 } c_{ij} u_{ij}
+  * \f]
+  * If it is finite (which it may not be), this is a conditionally valid upper
+  * bound but not a globally valid one because the problem may be empty (and
+  * it being a minimization one this would mean that its optimal value is
+  * + infinity).
+  *
+  * TODO: other bounds could be computed by looking at the total amount of
+  *       flow to be moved
+  *       \f[
+  *         D = \sum_{ i \in N : b_i > 0 } b_i
+  *       \f]
+  *       and the worst possible cost of a simple path, like "max positive
+  *       cost of an arc * ( n - 1 )". At least, D = 0 means that the problem
+  *       is surely not empty, and thus the conditionally valid upper bound is
+  *       also a globally valid upper bound. */
+
+ virtual double get_valid_upper_bound( const bool conditional = false )
+  override final {
+  if( ! conditional )
+   return( + Inf<double>() );
+   
+  if( isnan( f_cond_upper ) )
+   compute_conditional_bounds();
+
+  return( f_cond_upper );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// getting a global valid lower bound on the value of the Objective
+ /** A lower bound on the optimal value of the problem is computed as
+  * \f[
+  *  \sum_{ (i,j) \in A : c_{ij} < 0 } c_{ij} u_{ij}
+  * \f]
+  * If it is finite (which it may not be), this is both a conditionally valid
+  * lower bound abd a globally valid one, since clearly the problem then
+  * cannot be unbounded below (although it cas still be empty, but that's an
+  * issue for upper bound, this being a minimization problem). */
+
+ virtual double get_valid_lower_bound( const bool conditional = false )
+  override final {
+  if( isnan( f_cond_lower ) )
+   compute_conditional_bounds();
+
+  return( f_cond_lower );
+  }
+
+/*--------------------------------------------------------------------------*/
  /// get the number of nodes
  inline Index get_NNodes( void ) const { return( NNodes ); }
 
@@ -1920,7 +1980,7 @@ public:
  Index MaxNNodes;                ///< the maximum number of nodes
  Index NStaticNodes;             ///< the number of static nodes
  Index NStaticArcs;              ///< the number of static arcs
- 
+
  Vec_Index SN;                   ///< vector of arc starting nodes
  Vec_Index EN;                   ///< vector of arc ending nodes
 
@@ -1939,6 +1999,9 @@ public:
  static constexpr unsigned char HasBnd = 8;
  ///< fourth bit of AR == 1 if the Bound have been constructed
 
+ double f_cond_lower;            ///< conditional lower bound, can be infinite
+ double f_cond_upper;            ///< conditional upper bound, can be infinite
+ 
  std::vector<ColVariable> x;     ///< the static flow variables
  std::vector<FRowConstraint> E;  ///< the static flow conservation constrs.
  std::vector<LB0Constraint> UB;  ///< the static bound constraints
@@ -1998,10 +2061,12 @@ public:
    return( lfc );
   #endif
   }
-  
+
  void guts_of_destructor( void );
 
  void guts_of_add_Modification( sp_Mod mod );
+
+ void compute_conditional_bounds( void );
 
  inline ModParam make_amod_param( c_ModParam issueAMod , c_Index num );
 

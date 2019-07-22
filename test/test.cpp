@@ -663,8 +663,7 @@ int main( int argc , char **argv )
     if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
      // change via abstract representation
      cout << "(a)";
-     auto obj = boost::any_cast<FRealObjective *>( mMCFB->get_objective() );
-     assert( obj );
+     auto obj = static_cast<FRealObjective *>( mMCFB->get_objective() );
      auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
      assert( lf );
      LinearFunction::v_coeff nc = { newcst };
@@ -690,8 +689,7 @@ int main( int argc , char **argv )
      if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
       // change via abstract representation
       cout << "s(r,a) - ";
-      auto obj = boost::any_cast<FRealObjective *>( mMCFB->get_objective() );
-      assert( obj );
+      auto obj = static_cast<FRealObjective *>( mMCFB->get_objective() );
       auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
       assert( lf );
       if( mMCFB->HasDynamicX() ) {
@@ -734,8 +732,7 @@ int main( int argc , char **argv )
      if( ( mode & 16 ) && ( drand48() < 0.5 ) ) {
       // change via abstract representation
       cout << "s(s,a) - ";
-      auto obj = boost::any_cast<FRealObjective *>( mMCFB->get_objective() );
-      assert( obj );
+      auto obj = static_cast<FRealObjective *>( mMCFB->get_objective() );
       auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
       assert( lf );
       if( mMCFB->HasDynamicX() ) {
