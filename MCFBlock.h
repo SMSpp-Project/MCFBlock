@@ -1214,7 +1214,7 @@ public:
   * current value of the flow solution for the i-th arc in \p rng. Note that
   * if the right extreme of the range is >= get_NArcs() it is ignored.  */
 
- void get_x( Vec_FNumber & FSol , c_Range rng = Range( 0 , Inf<Index>() ) );
+ void get_x( Vec_FNumber & FSol , Range rng = Range( 0 , Inf<Index>() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the flow solution for an arbitrary subset of arcs
@@ -1246,7 +1246,7 @@ public:
   * fact that get_SN() and get_EN() report node "names" between 1 and
   * get_NNodes(). */
 
- void get_pi( Vec_CNumber & PSol , c_Range rng = Range( 0 , Inf<Index>() ) );
+ void get_pi( Vec_CNumber & PSol , Range rng = Range( 0 , Inf<Index>() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the flow potential for an arbitrary subset of nodes
@@ -1283,7 +1283,7 @@ public:
   * current value of the reduced cost for the i-th arc in \p rng. Note that
   * if the right extreme of the range is >= get_NArcs() it is ignored. */
 
- void get_rc( Vec_CNumber & RC , c_Range rng = Range( 0 , Inf<Index>() ) );
+ void get_rc( Vec_CNumber & RC , Range rng = Range( 0 , Inf<Index>() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the reduced costs for an arbitrary subset of arcs
@@ -1513,7 +1513,7 @@ public:
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
  void chg_costs( c_Vec_CNumber_it NCost ,
-		 c_Range & rng = Range( 0 , Inf<Index>() ) ,
+		 Range rng = Range( 0 , Inf<Index>() ) ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1571,7 +1571,7 @@ public:
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
  void chg_ucaps( c_Vec_FNumber_it NCap ,
-		 c_Range rng = Range( 0 , Inf<Index>() ) ,
+		 Range rng = Range( 0 , Inf<Index>() ) ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1633,7 +1633,7 @@ public:
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
  void chg_dfcts( c_Vec_FNumber_it NDfct ,
-		 c_Range rng = Range( 0 , Inf<Index>() ) ,
+		 Range rng = Range( 0 , Inf<Index>() ) ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1691,7 +1691,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void close_arcs( c_Range rng = Range( 0 , Inf<Index>() ) ,
+ void close_arcs( Range rng = Range( 0 , Inf<Index>() ) ,
 		  c_ModParam issueMod = eNoBlck ,
 		  c_ModParam issueAMod = eNoBlck );
 
@@ -1746,7 +1746,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void open_arcs( c_Range rng = Range( 0 , Inf<Index>() ) ,
+ void open_arcs( Range rng = Range( 0 , Inf<Index>() ) ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -2020,24 +2020,64 @@ public:
  *
  * - chg_ucaps() (both range and subset version)
  *
+ * - chg_dfcts() (both range and subset version)
+ *
+ * - close_arcs() (both range and subset version)
+ *
+ * - open_arcs() (both range and subset version)
+ *
  * into the corresponding method factories.
  */
 
  static void static_initialization( void )
  {
-  /*!!			   
-  register_method_dbl_rngd< MCFBlock >( "MCFBlock::chg_costs" ,
-					&MCFBlock::chg_costs );
+  register_method< MCFBlock >( "MCFBlock::chg_costs" , &MCFBlock::chg_costs ,
+			       MS_dbl_rngd::args() );
 
-  register_method_dbl_sbst< MCFBlock >( "MCFBlock::chg_costs" ,
-					&MCFBlock::chg_costs );
-					!!*/
+  register_method< MCFBlock >( "MCFBlock::chg_costs" , &MCFBlock::chg_costs ,
+			       MS_dbl_sbst::args() );
 
+  register_method< MCFBlock >( "MCFBlock::chg_ucaps" , &MCFBlock::chg_ucaps ,
+			       MS_dbl_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_ucaps" , &MCFBlock::chg_ucaps ,
+			       MS_dbl_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_dfcts" , &MCFBlock::chg_dfcts ,
+			       MS_dbl_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_dfcts" , &MCFBlock::chg_dfcts ,
+			       MS_dbl_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::close_arcs" , &MCFBlock::close_arcs ,
+			       MS_rngd::args() );
+
+  /*!!
+  register_method< MCFBlock >( "MCFBlock::close_arcs" , &MCFBlock::close_arcs ,
+			       MS_sbst::args() );
+			       !!*/
+
+  register_method< MCFBlock , Subset && , const bool >(
+			      "MCFBlock::close_arcs" , &MCFBlock::close_arcs );
+
+  register_method< MCFBlock >( "MCFBlock::open_arcs" , &MCFBlock::open_arcs ,
+			       MS_rngd::args() );
+
+  /*!!
+  register_method< MCFBlock >( "MCFBlock::open_arcs" , &MCFBlock::open_arcs ,
+			       MS_sbst::args() );
+			       !!*/
+
+  register_method< MCFBlock , Subset && , const bool >(
+			        "MCFBlock::open_arcs" , &MCFBlock::open_arcs );
+
+  /* explicit versions
   register_method< MCFBlock , MF_dbl_it , c_Range & >(
 			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
 
   register_method< MCFBlock , MF_dbl_it , Subset && , const bool >(
 			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
+   */
 
   }
 
