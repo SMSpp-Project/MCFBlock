@@ -5,9 +5,9 @@
  * Header file for the *concrete* class MCFBlock, which implements the Block
  * concept [see Block.h] for (linear) Min-Cost Flow problems.
  *
- * \version 1.00
+ * \version 1.10
  *
- * \date 15 - 05 - 2019
+ * \date 18 - 08 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -168,11 +168,7 @@ public:
 /*--------------------------------------------------------------------------*/
 /** @name Public types
  *
- * MCFBlock defines four main public types:
- *
- * - Index, the type of node indices;
- *
- * - Index, the type of arc indices;
+ * MCFBlock defines three main public types:
  *
  * - FNumber, the type of flow variables, arc capacities, and node deficits;
  *
@@ -217,18 +213,6 @@ public:
  @{ */
 
 /*--------------------------------------------------------------------------*/
-
- typedef unsigned int Index;                 ///< index of a node / arc
- typedef const Index c_Index;                ///< a read-only Index
-
- typedef std::vector<Index> Vec_Index;       ///< a vector of Index
- typedef const Vec_Index c_Vec_Index;        ///< a const vector of Index
-
- typedef Vec_Index::iterator Vec_Index_it;   ///< iterator in Vec_Index
- typedef Vec_Index::const_iterator c_Vec_Index_it;
-                                             ///< const iterator in Vec_Index
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
  typedef double FNumber;                     ///< type of arc flow / deficit
  typedef const FNumber c_FNumber;            ///< a read-only FNumber
@@ -357,7 +341,7 @@ public:
   * MCFBlock then a NBModification (the "nuclear option") is issued. */
 
  virtual void load( c_Index n , c_Index m ,
-		    c_Vec_Index & pEn , c_Vec_Index & pSn ,
+		    c_Subset & pEn , c_Subset & pSn ,
 		    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
 		    c_Vec_FNumber & pB = {} ,
 		    c_Index dn = 0 , c_Index dm = 0 ,
@@ -639,7 +623,7 @@ public:
   * \f]
   * If it is finite (which it may not be), this is both a conditionally valid
   * lower bound abd a globally valid one, since clearly the problem then
-  * cannot be unbounded below (although it cas still be empty, but that's an
+  * cannot be unbounded below (although it can still be empty, but that's an
   * issue for upper bound, this being a minimization problem). */
 
  virtual double get_valid_lower_bound( const bool conditional = false )
@@ -852,18 +836,22 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
- inline c_Vec_Index & get_SN( void ) const { return( SN ); }
+
+ inline c_Subset & get_SN( void ) const { return( SN ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the starting node of arc i (0 <= i < get_NArcs())
+
  inline Index get_SN( c_Index i ) const { return( SN[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of ending nodes
- inline  c_Vec_Index & get_EN( void ) const { return( EN ); }
+
+ inline  c_Subset & get_EN( void ) const { return( EN ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the ending node of arc i (0 <= i < get_NArcs())
+
  inline Index get_EN( c_Index i ) const { return( EN[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -876,6 +864,7 @@ public:
 
  /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the cost of arc i (0 <= i < get_NArcs())
+
  inline CNumber get_C( c_Index i ) const { return( C.size() ? C[ i ] : 0 ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -1222,11 +1211,10 @@ public:
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the flow solution
  /** Method to get the flow solution; upon return, FSol[ i ] contains the
-  * current value of the flow solution for arc strt + i for all 0 <= i < 
-  * min( stop , get_NArcs() ). */
+  * current value of the flow solution for the i-th arc in \p rng. Note that
+  * if the right extreme of the range is >= get_NArcs() it is ignored.  */
 
- void get_x( Vec_FNumber & FSol , c_Index strt = 0 ,
-	                          c_Index stop = Inf<Index>() );
+ void get_x( Vec_FNumber & FSol , c_Range rng = Range( 0 , Inf<Index>() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the flow solution for an arbitrary subset of arcs
@@ -1234,7 +1222,7 @@ public:
   * current value of the flow solution for arc nms[ i ] for all 0 <= i < 
   * nms.size(). */
 
- void get_x( Vec_FNumber & FSol , c_Vec_Index & nms );
+ void get_x( Vec_FNumber & FSol , c_Subset & nms );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the flow solution of the given arc
@@ -1252,13 +1240,13 @@ public:
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the potential solution
  /** Method to get the potential solution; upon return, PSol[ i ] contains the
-  * current value of the potential solution for node strt + i for all 0 <= i <
-  * min( stop , get_NNodes() ). Note that "node names" here go from 0 to
-  * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
-  * "names" between 1 and get_NNodes(). */
+  * current value of the potential solution for the i-th node in \p rng. Note
+  * that if the right extreme of the range is >= get_NNodes() it is ignored.
+  * Note that "node names" here go from 0 to get_NNodes() - 1, despite the
+  * fact that get_SN() and get_EN() report node "names" between 1 and
+  * get_NNodes(). */
 
- void get_pi( Vec_CNumber & PSol , c_Index strt = 0 ,
-	                           c_Index stop = Inf<Index>() );
+ void get_pi( Vec_CNumber & PSol , c_Range rng = Range( 0 , Inf<Index>() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the flow potential for an arbitrary subset of nodes
@@ -1268,7 +1256,7 @@ public:
   * despite the fact that get_SN() and get_EN() report node "names" between
   * 1 and get_NNodes(). */
 
- void get_pi( Vec_CNumber & PSol , c_Vec_Index & nms );
+ void get_pi( Vec_CNumber & PSol , c_Subset & nms );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the potential solution of the given node
@@ -1292,11 +1280,10 @@ public:
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the reduced costs
  /** Method to get the reduced costs; upon return, RC[ i ] contains the
-  * current value of the reduced cost for arc strt + i for all 0 <= i < 
-  * min( stop , get_NArcs() ). */
+  * current value of the reduced cost for the i-th arc in \p rng. Note that
+  * if the right extreme of the range is >= get_NArcs() it is ignored. */
 
- void get_rc( Vec_CNumber & RC , c_Index strt = 0 ,
-	                         c_Index stop = Inf<Index>() );
+ void get_rc( Vec_CNumber & RC , c_Range rng = Range( 0 , Inf<Index>() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the reduced costs for an arbitrary subset of arcs
@@ -1304,7 +1291,7 @@ public:
   * current value of the reduced costs for arc nms[ i ] for all 0 <= i < 
   * nms.size(). */
 
- void get_rc( Vec_CNumber & RC , c_Vec_Index & nms );
+ void get_rc( Vec_CNumber & RC , c_Subset & nms );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// gets the reduced costs of the given arc
@@ -1501,8 +1488,9 @@ public:
 
  /// change the costs of a contiguous interval of arcs
  /** Method to change the costs of a subset of arcs with "contiguous names".
-  * That is, *( NCost + i - strt ) becomes the new cost of arc i for all
-  * strt <= i < min( stop , get_NArcs() ).
+  * That is, *( NCost + i - strt ) becomes the new cost of the i-th arc in
+  * \p rng. Note that if the right extreme of the range is >= get_NArcs() it 
+  * is ignored.
   *
   * Note that, if the Objective is a "sparse" LinearFunction (see
   * compute_objective()), then changing the costs can issue up to three
@@ -1524,8 +1512,9 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_costs( c_Vec_CNumber_it NCost , c_Index strt = 0 ,
-		 Index stop = Inf<Index>() , c_ModParam issueMod = eNoBlck ,
+ void chg_costs( c_Vec_CNumber_it NCost ,
+		 c_Range & rng = Range( 0 , Inf<Index>() ) ,
+		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -1540,7 +1529,7 @@ public:
   * See chg_costs( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
+ void chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
 		 const bool ordered = false , c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1549,7 +1538,7 @@ public:
  /** Changes the cost of the given arc.
   *
   * Note that this can issue only one Modification of each type; the
-  * "physical" one is a MCFBlockRngdMod with stop = start + 1. */
+  * "physical" one is a MCFBlockRngdMod with rng = [ arc ). */
 
  void chg_cost( c_CNumber NCost , c_Index arc ,
 		c_ModParam issueMod = eNoBlck ,
@@ -1558,11 +1547,11 @@ public:
 /*--------------------------------------------------------------------------*/
  /// change the capacities of a contiguous interval of arcs
  /** Method to change the capacities of a subset of arcs with "contiguous
-  * names". That is, *( NCap + i - strt ) becomes the new capacity of arc i
-  * for all strt <= i < min( stop , get_NArcs() ). Note that, according to
-  * the Configuration of the static Constraint, the capacity of the arcs
-  * cannot be changed: trying to do that will result in an exception being
-  * thrown.
+  * names". That is, *( NCap + i - strt ) becomes the new capacity of the i-th
+  * arc in \p rng. Note that if the right extreme of the range is
+  * >= get_NArcs() it is ignored. Note that, according to the Configuration of
+  * the static Constraint, the capacity of the arcs cannot be changed: trying
+  * to do that will result in an exception being thrown.
   *
   * Note that changing the capacities can issue as many Modification as there
   * are arcs in the range, in particular OneVarConstraintMod with type
@@ -1581,8 +1570,9 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_ucaps( c_Vec_FNumber_it NCap , c_Index strt = 0 ,
-		 Index stop = Inf<Index>() , c_ModParam issueMod = eNoBlck ,
+ void chg_ucaps( c_Vec_FNumber_it NCap ,
+		 c_Range rng = Range( 0 , Inf<Index>() ) ,
+		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -1601,7 +1591,7 @@ public:
   * See chg_ucaps( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
+ void chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
 		 const bool ordered = false ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
@@ -1614,7 +1604,7 @@ public:
   * do that will result in an exception being thrown.
   *
   * Note that this can issue only one Modification; the "physical" one is a
-  * MCFBlockRngdMod with stop = start + 1. */
+  * MCFBlockRngdMod with rng = [ arc ). */
 
  void chg_ucap( c_FNumber NCap , c_Index arc ,
 		c_ModParam issueMod = eNoBlck ,
@@ -1623,10 +1613,11 @@ public:
 /*--------------------------------------------------------------------------*/
  /// change the deficits of a contiguous interval of nodes
  /** Method to change the deficits of a subset of nodes with "contiguous
-  * names". That is, *( NDfct + i - strt ) becomes the new deficit of node i
-  * for all strt <= i < min( stop , get_NNodes() ). Note that "node names"
-  * here go from 0 to get_NNodes() - 1, despite the fact that get_SN() and
-  * get_EN() report node "names" between 1 and get_NNodes().
+  * names". That is, *( NDfct + i - strt ) becomes the new deficit of the i-th
+  * node in \p rng. Note that if the right extreme of the range is
+  * >= get_NNodes() it is ignored. Note that "node names" here go from 0 to
+  * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
+  * "names" between 1 and get_NNodes().
   *
   * Note that changing the capacities can issue as many Modification as there
   * are nodes in the range, in particular FRowConstraintMod with type
@@ -1641,8 +1632,8 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_dfcts( c_Vec_FNumber_it NDfct , c_Index strt = 0 ,
-		 Index stop = Inf<Index>() ,
+ void chg_dfcts( c_Vec_FNumber_it NDfct ,
+		 c_Range rng = Range( 0 , Inf<Index>() ) ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1660,7 +1651,7 @@ public:
   * See chg_dfcts( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void chg_dfcts( c_Vec_FNumber_it NDfct , Vec_Index && nms ,
+ void chg_dfcts( c_Vec_FNumber_it NDfct , Subset && nms ,
 		 const bool ordered = false ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
@@ -1673,7 +1664,7 @@ public:
   * "names" between 1 and get_NNodes().
   *
   * Note that this can issue only one Modification; the "physical" one is a
-  * MCFBlockRngdMod with stop = start + 1. */
+  * MCFBlockRngdMod with rng = [ arc ). */
 
  void chg_dfct( c_FNumber NDfct , c_Index nde ,
 		c_ModParam issueMod = eNoBlck ,
@@ -1681,12 +1672,12 @@ public:
 
 /*--------------------------------------------------------------------------*/
  /// closes a contiguous interval of arcs
- /** Method to close a subset of arcs with all "contiguous names" comprised
-  * between strt (included) and min( stop , get_NArcs() ) (excluded). The 
-  * flow on the arcs is fixed to 0 but the arcs are not removed from the
-  * problem, and their capacity and cost are not changed, so that they can be
-  * easily re-opened later. When the problem is created, all arcs are open.
-  * Closing an already closed arc does nothing.
+ /** Method to close a subset of arcs with all "contiguous names" given in
+  * \rng; note that if the right extreme of the range is >= get_NArcs() it is
+  * ignored. The flow on the arcs is fixed to 0 but the arcs are not removed
+  * from the problem, and their capacity and cost are not changed, so that
+  * they can be easily re-opened later. When the problem is created, all arcs
+  * are open. Closing an already closed arc does nothing.
   *
   * Note that closing multiple arcs can issue as many Modification as there
   * are arcs in the range, in particular VariableMod. If more than one
@@ -1700,7 +1691,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void close_arcs( c_Index strt = 0 , Index stop = Inf<Index>() ,
+ void close_arcs( c_Range rng = Range( 0 , Inf<Index>() ) ,
 		  c_ModParam issueMod = eNoBlck ,
 		  c_ModParam issueAMod = eNoBlck );
 
@@ -1720,7 +1711,7 @@ public:
   * See close_arcs( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void close_arcs( Vec_Index && nms , const bool ordered = false ,
+ void close_arcs( Subset && nms , const bool ordered = false ,
 		  c_ModParam issueMod = eNoBlck ,
 		  c_ModParam issueAMod = eNoBlck );
 
@@ -1732,7 +1723,7 @@ public:
   * created, all arcs are open. Closing an already closed arc does nothing.
   *
   * Note that this can issue only one Modification; the "physical" one is a
-  * MCFBlockRngdMod with stop = start + 1. */
+  * MCFBlockRngdMod with rng = [ arc ). */
 
  void close_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
 		               c_ModParam issueAMod = eNoBlck );
@@ -1740,9 +1731,9 @@ public:
 /*--------------------------------------------------------------------------*/
 /// re-opens a contiguous interval of arcs
  /** Method to "open" a subset of closed arcs with all "contiguous names"
-  * comprised between strt (included) and min( stop , get_NArcs() )
-  * (excluded). Opening an already open arc (which is what all arcs are when
-  * the problem is created) does nothing.
+  * given in \rng; note that if the right extreme of the range is >=
+  * get_NArcs() it is ignored. Opening an already open arc (which is what all
+  * arcs are when the problem is created) does nothing.
   *
   * Note that opening multiple arcs can issue as many Modification as there
   * are arcs in the range, in particular VariableMod. If more than one
@@ -1755,7 +1746,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void open_arcs( c_Index strt = 0 , Index stop = Inf<Index>() ,
+ void open_arcs( c_Range rng = Range( 0 , Inf<Index>() ) ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1782,7 +1773,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void open_arcs( Vec_Index && nms , const bool ordered = false ,
+ void open_arcs( Subset && nms , const bool ordered = false ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1793,7 +1784,7 @@ public:
   * problem is created) does nothing.
   *
   * Note that this can issue only one Modification; the "physical" one is a
-  * MCFBlockRngdMod with stop = start + 1. */
+  * MCFBlockRngdMod with rng = [ arc ). */
 
  void open_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
 		              c_ModParam issueAMod = eNoBlck );
@@ -1981,8 +1972,8 @@ public:
  Index NStaticNodes;             ///< the number of static nodes
  Index NStaticArcs;              ///< the number of static arcs
 
- Vec_Index SN;                   ///< vector of arc starting nodes
- Vec_Index EN;                   ///< vector of arc ending nodes
+ Subset SN;                   ///< vector of arc starting nodes
+ Subset EN;                   ///< vector of arc ending nodes
 
  Vec_CNumber C;                  ///< vector of arc costs
  Vec_FNumber U;                  ///< vector of arc upper capacities
@@ -2020,6 +2011,36 @@ public:
 
 /*--------------------------------------------------------------------------*/
 /*-------------------------- PRIVATE METHODS -------------------------------*/
+/*--------------------------------------------------------------------------*/
+/// register MCFBlock methods into the method factories
+/** Although in general private methods should not be commented, this one is
+ * because it does the registration of the following MCFBlock methods:
+ *
+ * - chg_costs() (both range and subset version)
+ *
+ * - chg_ucaps() (both range and subset version)
+ *
+ * into the corresponding method factories.
+ */
+
+ static void static_initialization( void )
+ {
+  /*!!			   
+  register_method_dbl_rngd< MCFBlock >( "MCFBlock::chg_costs" ,
+					&MCFBlock::chg_costs );
+
+  register_method_dbl_sbst< MCFBlock >( "MCFBlock::chg_costs" ,
+					&MCFBlock::chg_costs );
+					!!*/
+
+  register_method< MCFBlock , MF_dbl_it , c_Range & >(
+			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
+
+  register_method< MCFBlock , MF_dbl_it , Subset && , const bool >(
+			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
+
+  }
+
 /*--------------------------------------------------------------------------*/
 
  inline int p2i_x_s( Variable * const var ) const
@@ -2179,8 +2200,8 @@ class MCFBlockRngdMod : public MCFBlockMod
  /// constructor: takes the MCFBlock, the type, and the range
 
  MCFBlockRngdMod( MCFBlock * const fblock , const int type ,
-		  MCFBlock::Index strt , MCFBlock::Index stop )
-  : MCFBlockMod( fblock , type ) , f_strt( strt ) , f_stop( stop ) {}
+		  Block::Range rng )
+  : MCFBlockMod( fblock , type ) , f_rng( rng ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -2188,8 +2209,7 @@ class MCFBlockRngdMod : public MCFBlockMod
 
 /*--------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
 
- MCFBlock::Index f_strt;     ///< begin of the range
- MCFBlock::Index f_stop;     ///< end of the range
+ Block::Range f_rng;     ///< the range
  
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2199,7 +2219,7 @@ class MCFBlockRngdMod : public MCFBlockMod
  /// print the MCFBlockRngdMod
  virtual inline void print( std::ostream &output ) const {
   MCFBlockMod::print( output );
-  output << "[ " << f_strt << ", " << f_stop - 1 << " ]" << std::endl;
+  output << "[ " << f_rng.first << ", " << f_rng.second << " )" << std::endl;
   }
 
 /*--------------------------------------------------------------------------*/
@@ -2229,7 +2249,7 @@ class MCFBlockSbstMod : public MCFBlockMod
   * property of the MCFBlockSbstMod object. */
 
  MCFBlockSbstMod( MCFBlock * const fblock , const int type ,
-		  MCFBlock::Vec_Index && nms )
+		  Block::Subset && nms )
   : MCFBlockMod( fblock , type ) , f_nms( std::move( nms ) ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -2238,7 +2258,7 @@ class MCFBlockSbstMod : public MCFBlockMod
 
 /*--------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
 
- MCFBlock::Vec_Index f_nms;   ///< the subset
+ Block::Subset f_nms;   ///< the subset
  
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 

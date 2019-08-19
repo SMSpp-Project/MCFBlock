@@ -4,9 +4,9 @@
 /** @file
  * Implementation of the MCFBlock class.
  *
- * \version 1.00
+ * \version 1.10
  *
- * \date 15 - 05 - 2019
+ * \date 18 - 08 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -111,7 +111,7 @@ static inline MCFBlock::Index countdiff( T beg , T end , T cmp )
 // being given as a base vector and a subset of indices
 template< typename T >
 static inline MCFBlock::Index countdiff( std::vector<T> & vec ,
-				MCFBlock::c_Vec_Index & nms ,
+				MCFBlock::c_Subset & nms ,
 				typename std::vector<T>::const_iterator cmp ,
 				MCFBlock::c_Index n_max )
 {
@@ -130,7 +130,7 @@ static inline MCFBlock::Index countdiff( std::vector<T> & vec ,
 // copys one vector to a given subset of another
 template< typename T >
 static inline void copyidx( std::vector<T> & vec ,
-			    MCFBlock::c_Vec_Index & nms ,
+			    MCFBlock::c_Subset & nms ,
 			    typename std::vector<T>::const_iterator cpy )
 {
  for( auto nm : nms )
@@ -151,7 +151,7 @@ SMSpp_insert_in_factory_cpp_1( MCFBlock );
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::load( c_Index n , c_Index m ,
-		     c_Vec_Index & pEn , c_Vec_Index & pSn ,
+		     c_Subset & pEn , c_Subset & pSn ,
 		     c_Vec_FNumber & pU , c_Vec_CNumber & pC ,
 		     c_Vec_FNumber & pB , c_Index dn , c_Index dm ,
 		     c_Index mdn , c_Index mdm )
@@ -1507,47 +1507,51 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
    if( tmod ) {
     switch( tmod->f_type ) {
      case( MCFBlockMod::eChgCost ):
-      if( tmod->f_stop == tmod->f_strt + 1 )
-       MCFB->chg_cost( C[ tmod->f_strt ] , tmod->f_strt , iPM , iPA );
+      if( tmod->f_rng.second == tmod->f_rng.first + 1 )
+       MCFB->chg_cost( C[ tmod->f_rng.first ] , tmod->f_rng.first ,
+		       iPM , iPA );
       else
-       MCFB->chg_costs( C.begin() + tmod->f_strt , tmod->f_strt ,
-			tmod->f_stop , iPM , iPA );
+       MCFB->chg_costs( C.begin() + tmod->f_rng.first , tmod->f_rng ,
+			iPM , iPA );
       break;
      case( MCFBlockMod::eChgCaps ):
-      if( tmod->f_stop == tmod->f_strt + 1 )
-       MCFB->chg_ucap( U[ tmod->f_strt ] , tmod->f_strt , iPM , iPA );
+      if( tmod->f_rng.second == tmod->f_rng.first + 1 )
+       MCFB->chg_ucap( U[ tmod->f_rng.first ] , tmod->f_rng.first ,
+		       iPM , iPA );
       else
-       MCFB->chg_ucaps( U.begin() + tmod->f_strt , tmod->f_strt ,
-			tmod->f_stop , iPM , iPA );
+       MCFB->chg_ucaps( U.begin() + tmod->f_rng.first , tmod->f_rng ,
+			iPM , iPA );
       break;
      case( MCFBlockMod::eChgDfct ):
-      if( tmod->f_stop == tmod->f_strt + 1 )
-       MCFB->chg_dfct( B[ tmod->f_strt ] , tmod->f_strt , iPM , iPA );
+      if( tmod->f_rng.second == tmod->f_rng.first + 1 )
+       MCFB->chg_dfct( B[ tmod->f_rng.first ] , tmod->f_rng.first ,
+		       iPM , iPA );
       else
-       MCFB->chg_dfcts( B.begin() + tmod->f_strt , tmod->f_strt ,
-			tmod->f_stop , iPM , iPA );
+       MCFB->chg_dfcts( B.begin() + tmod->f_rng.first , tmod->f_rng ,
+			iPM , iPA );
       break;
      case( MCFBlockMod::eOpenArc ):
-      if( tmod->f_stop == tmod->f_strt + 1 )
-       MCFB->open_arc( tmod->f_strt , iPM , iPA );
+      if( tmod->f_rng.second == tmod->f_rng.first + 1 )
+       MCFB->open_arc( tmod->f_rng.first , iPM , iPA );
       else
-       MCFB->open_arcs( tmod->f_strt , tmod->f_stop , iPM , iPA );
+       MCFB->open_arcs( tmod->f_rng , iPM , iPA );
       break;
      case( MCFBlockMod::eCloseArc ):
-      if( tmod->f_stop == tmod->f_strt + 1 )
-       MCFB->close_arc( tmod->f_strt , iPM , iPA );
+      if( tmod->f_rng.second == tmod->f_rng.first + 1 )
+       MCFB->close_arc( tmod->f_rng.first , iPM , iPA );
       else
-       MCFB->close_arcs( tmod->f_strt , tmod->f_stop , iPM , iPA );
+       MCFB->close_arcs( tmod->f_rng , iPM , iPA );
       break;
      case( MCFBlockMod::eAddArc ):
-      if( MCFB->add_arc( get_SN( tmod->f_strt ) , get_EN( tmod->f_strt ) ,
-			 get_C( tmod->f_strt ) , get_U( tmod->f_strt ) ,
-			 iPM , iPA )
-	  != tmod->f_strt )
+      if( MCFB->add_arc( get_SN( tmod->f_rng.first ) ,
+			 get_EN( tmod->f_rng.first ) ,
+			 get_C( tmod->f_rng.first ) ,
+			 get_U( tmod->f_rng.first ) , iPM , iPA )
+	  != tmod->f_rng.first )
        throw( std::logic_error( "inconsistency between arc names" ) );       
       break;
      case( MCFBlockMod::eRmvArc ):
-      MCFB->remove_arc( tmod->f_stop - 1 , iPM , iPA );
+      MCFB->remove_arc( tmod->f_rng.second - 1 , iPM , iPA );
       break;
      default:
       throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
@@ -1573,7 +1577,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
       if( MCFB->issue_pmod( iPM ) )
        MCFB->chg_costs( NCost.begin() ,
-			std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+			std::move( Subset( tmod->f_nms ) ) , iPM , iPA );
       else
        MCFB->chg_costs( NCost.begin() ,
 			std::move( tmod->f_nms ) , iPM , iPA );
@@ -1586,7 +1590,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
       if( MCFB->issue_pmod( iPM ) )
        MCFB->chg_ucaps( NCap.begin() ,
-			std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+			std::move( Subset( tmod->f_nms ) ) , iPM , iPA );
       else
        MCFB->chg_ucaps( NCap.begin() ,
 			std::move( tmod->f_nms ) , iPM , iPA );
@@ -1599,7 +1603,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
       if( MCFB->issue_pmod( iPM ) )
        MCFB->chg_dfcts( NDfct.begin() ,
-			std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+			std::move( Subset( tmod->f_nms ) ) , iPM , iPA );
       else
        MCFB->chg_dfcts( NDfct.begin() ,
 			std::move( tmod->f_nms ) , iPM , iPA );
@@ -1607,13 +1611,13 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       }
      case( MCFBlockMod::eOpenArc ):
       if( MCFB->issue_pmod( iPM ) )
-       MCFB->open_arcs( std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+       MCFB->open_arcs( std::move( Subset( tmod->f_nms ) ) , iPM , iPA );
       else
        MCFB->open_arcs( std::move( tmod->f_nms ) , iPM , iPA );
       break;
      case( MCFBlockMod::eCloseArc ):
       if( MCFB->issue_pmod( iPM ) )
-       MCFB->close_arcs( std::move( Vec_Index( tmod->f_nms ) ) , iPM , iPA );
+       MCFB->close_arcs( std::move( Subset( tmod->f_nms ) ) , iPM , iPA );
       else
        MCFB->close_arcs( std::move( tmod->f_nms ) , iPM , iPA );
       break;
@@ -1712,23 +1716,23 @@ Solution * MCFBlock::get_Solution( Configuration *solc , bool emptys )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_x( Vec_FNumber & FSol , c_Index strt , c_Index stop )
+void MCFBlock::get_x( Vec_FNumber & FSol , c_Range rng )
 {
  auto FSi = FSol.begin();
- Index i = strt;
- for( ; i < std::min( stop , get_NStaticArcs() ) ; ++i )
+ Index i = rng.first;
+ for( ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
   *(FSi++) = x[ i ].get_value();
 
  if( HasDynamicX() ) {
   auto dxi = dx.begin();
-  for( ; i < std::min( stop , get_NArcs() ) ; ++i )
+  for( ; i < std::min( rng.second , get_NArcs() ) ; ++i )
    *(FSi++) = (*(dxi++)).get_value();
   }
  }  // end( MCFBlock::get_x( interval ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_x( Vec_FNumber & FSol , c_Vec_Index & nms )
+void MCFBlock::get_x( Vec_FNumber & FSol , c_Subset & nms )
 {
  if( ! ( AR & HasVar ) )
   throw( std::logic_error( "flow Variable not available" ) );
@@ -1758,26 +1762,26 @@ void MCFBlock::get_x( Vec_FNumber & FSol , c_Vec_Index & nms )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_pi( Vec_CNumber & PSol , c_Index strt , c_Index stop )
+void MCFBlock::get_pi( Vec_CNumber & PSol , c_Range rng )
 {
  if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
  auto PSi = PSol.begin();
- Index i = strt;
- for( ; i < std::min( stop , get_NStaticNodes() ) ; ++i )
+ Index i = rng.first;
+ for( ; i < std::min( rng.second , get_NStaticNodes() ) ; ++i )
   *(PSi++) = E[ i ].get_dual();
 
  if( HasDynamicE() ) {
   auto dei = dE.begin();
-  for( ; i < std::min( stop , get_NNodes() ) ; ++i )
+  for( ; i < std::min( rng.second , get_NNodes() ) ; ++i )
    *(PSi++) = (*(dei++)).get_dual();
   }
  }  // end( MCFBlock::get_pi( interval ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_pi( Vec_CNumber & PSol , c_Vec_Index & nms )
+void MCFBlock::get_pi( Vec_CNumber & PSol , c_Subset & nms )
 {
  if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
@@ -1807,7 +1811,7 @@ void MCFBlock::get_pi( Vec_CNumber & PSol , c_Vec_Index & nms )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stop )
+void MCFBlock::get_rc( Vec_CNumber & RC , c_Range rng )
 {
  if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
@@ -1816,27 +1820,27 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Index strt , c_Index stop )
  auto RCi = RC.begin();
 
  if( AR & HasBnd ) {
-  Index i = strt;
+  Index i = rng.first;
 
   if( HasStaticX() )
-   for( ; i < std::min( stop , get_NStaticArcs() ) ; ++i )
+   for( ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
     *(RCi++) = UB[ i ].get_dual();
 
   if( HasDynamicX() ) {
    auto dubi = dUB.begin();
-   for( ; i < std::min( stop , get_NArcs() ) ; ++i )
+   for( ; i < std::min( rng.second , get_NArcs() ) ; ++i )
     *(RCi++) = (*(dubi++)).get_dual();
    }
   }
  else
-  for( Index i = strt ; i < std::min( stop , get_NArcs() ) ; ++i )
+  for( Index i = rng.first ; i < std::min( rng.second , get_NArcs() ) ; ++i )
    *(RCi++) = get_C( i ) + get_pi( SN[ i ] - 1 ) - get_pi( EN[ i ] - 1 );
 
  }  // end( MCFBlock::get_rc( interval ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_rc( Vec_CNumber & RC , c_Vec_Index & nms )
+void MCFBlock::get_rc( Vec_CNumber & RC , c_Subset & nms )
 {
  if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
@@ -2024,18 +2028,15 @@ void MCFBlock::serialize( netCDF::NcGroup & group ) const
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
-			  c_Index strt , Index stop ,
+void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , c_Range & rng ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- if( stop >= get_NArcs() )
-  stop = get_NArcs();
-
- if( stop <= strt )  // nothing to change
-  return;            // cowardly (and silently) return
+ c_Index stop = std::min( rng.second , get_NArcs() );
+ if( stop <= rng.first )  // nothing to change
+  return;                 // cowardly (and silently) return
 
  if( C.empty() ) {
-  if( std::all_of( NCost , NCost + ( stop - strt ) ,
+  if( std::all_of( NCost , NCost + ( stop - rng.first ) ,
 		   []( c_CNumber cst ) { return( cst == 0 ); } ) )
    return;
 
@@ -2049,9 +2050,9 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
   auto lfo = get_lfo();
 
   Index cnt = 0;
-  Vec_CNumber_it cit = C.begin() + strt;
+  Vec_CNumber_it cit = C.begin() + rng.first;
   for( c_Vec_CNumber_it ncit = NCost ;
-       ncit < NCost + ( stop - strt ) ; ++ncit , ++cit )
+       ncit < NCost + ( stop - rng.first ) ; ++ncit , ++cit )
    if( *cit != *ncit ) {
     *cit = *ncit;
     cnt++;  // meanwhile, count how many real changes happen
@@ -2064,25 +2065,25 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
    if( stop <= get_NStaticArcs() ) {
     // but all those in the range are static: hence, the range maps
     // into a range of the coefficient, just have to find the extreme
-    auto rstrt = lfo->is_active( &x[ strt ] );
-    lfo->modify_coefficients( NCost , rstrt , rstrt + ( stop - strt ) ,
+    auto rstrt = lfo->is_active( &x[ rng.first ] );
+    lfo->modify_coefficients( NCost , rstrt , rstrt + ( stop - rng.first ) ,
 			      issueAMod );
     }
    else {
     // there are dynamic arcs: the only way is to use the subset version
     // of modify_coefficients()
-    LinearFunction::v_coeff_pair ccp( stop - strt );
+    LinearFunction::v_coeff_pair ccp( stop - rng.first );
     auto pi = ccp.begin();
 
-    if( strt >= get_NStaticArcs() ) {  // there are only dynamic arcs
-     auto dxi = std::next( dx.begin() , strt - get_NStaticArcs() );
-     for( Index i = stop - strt ; i-- ; ) {
+    if( rng.first >= get_NStaticArcs() ) {  // there are only dynamic arcs
+     auto dxi = std::next( dx.begin() , rng.first - get_NStaticArcs() );
+     for( Index i = stop - rng.first ; i-- ; ) {
       (*pi).first = &(*(dxi++));
       (*(pi++)).second = *(NCost++);
       }
      }
     else {                             // the range mixes static and dynamic
-     for( auto xi = x.begin() + strt ; xi != x.end() ; ) {
+     for( auto xi = x.begin() + rng.first ; xi != x.end() ; ) {
       (*pi).first = &(*(xi++));
       (*(pi++)).second = *(NCost++);
       }
@@ -2098,12 +2099,12 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
     }
    }
   else                 // all arcs are static
-   lfo->modify_coefficients( NCost , strt , stop , issueAMod );
+   lfo->modify_coefficients( NCost , rng.first , stop , issueAMod );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   std::copy( NCost , NCost + ( stop - strt ) , C.begin() + strt );
+   std::copy( NCost , NCost + ( stop - rng.first ) , C.begin() + rng.first );
 
  f_cond_lower = NAN;  // reset conditional bounds
  
@@ -2111,14 +2112,14 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				      MCFBlockMod::eChgCost , strt , stop ) ,
+					      MCFBlockMod::eChgCost , rng ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::chg_costs( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
+void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
 			  const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
@@ -2255,10 +2256,9 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Vec_Index && nms ,
   if( ! ordered )
    std::sort( nms.begin() , nms.end() );
 
-  auto mod = std::make_shared<MCFBlockSbstMod>( this ,
-                                  MCFBlockMod::eChgCost , std::move( nms ) );
-
-  Block::add_Modification( mod , Observer::par2chnl( issueMod ) );
+  Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
+                                  MCFBlockMod::eChgCost , std::move( nms ) ) ,
+			   Observer::par2chnl( issueMod ) );
   }
  }  // end( MCFBlock::chg_costs( subset ) )
 
@@ -2292,32 +2292,30 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				    MCFBlockMod::eChgCost , arc , arc + 1 ) ,
+			   MCFBlockMod::eChgCost , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
  
  }  // end( MCFBlock::chg_cost )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
-			  c_Index strt , Index stop ,
+void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , c_Range rng ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- if( stop >= get_NArcs() )
-  stop = get_NArcs();
-
- if( stop <= strt )
-  return;
+ c_Index stop = std::min( rng.second , get_NArcs() );
+ if( stop <= rng.first )  // nothing to change
+  return;                 // cowardly (and silently) return
 
  if( U.empty() ) {
-  if( std::all_of( NCap , NCap + ( stop - strt ) ,
+  if( std::all_of( NCap , NCap + ( stop - rng.first ) ,
 		   []( c_FNumber cap ) { return( cap >= Inf<FNumber>() ); } ) )
    return;
 
   U.assign( get_MaxNArcs() , Inf<FNumber>() );
   }
 
- c_Index ndiff = countdiff( NCap , NCap + ( stop - strt ) , U.cbegin() + strt );
+ c_Index ndiff = countdiff( NCap , NCap + ( stop - rng.first ) ,
+			    U.cbegin() + rng.first );
  if( ! ndiff )
   return;
 
@@ -2333,7 +2331,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  Index i = strt;
+  Index i = rng.first;
 
   // static part
   for( ; i < std::min( stop , get_NStaticArcs() ) ;  ++i , ++NCap )
@@ -2354,20 +2352,20 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   std::copy( NCap , NCap + ( stop - strt ) , U.begin() + strt );
+   std::copy( NCap , NCap + ( stop - rng.first ) , U.begin() + rng.first );
 
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				      MCFBlockMod::eChgCaps , strt , stop ) ,
+				              MCFBlockMod::eChgCaps , rng ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::chg_ucaps( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Vec_Index && nms ,
+void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
 			  const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
@@ -2516,30 +2514,30 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				    MCFBlockMod::eChgCaps , arc , arc + 1 ) ,
+			   MCFBlockMod::eChgCaps , Range( arc , arc + 1 )  ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::chg_ucap )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
-			  c_Index strt , Index stop ,
+void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , c_Range rng ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- if( stop >= get_NNodes() )
-  stop = get_NNodes();
+ c_Index stop = std::min( rng.second , get_NNodes() );
+ if( stop <= rng.first )  // nothing to change
+  return;                 // cowardly (and silently) return
 
  if( B.empty() ) {
-  if( std::all_of( NDfct , NDfct + ( stop - strt ) ,
+  if( std::all_of( NDfct , NDfct + ( stop - rng.first ) ,
 		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
 
   B.assign( get_MaxNNodes() , 0 );
   }
 
- c_Index ndiff = countdiff( NDfct , NDfct + ( stop - strt ) ,
-			    B.cbegin() + strt );
+ c_Index ndiff = countdiff( NDfct , NDfct + ( stop - rng.first ) ,
+			    B.cbegin() + rng.first );
  if( ! ndiff )
   return;
 
@@ -2549,7 +2547,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
 
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
-  Index i = strt;
+  Index i = rng.first;
 
   // static part
   for( ; i < std::min( stop , get_NStaticNodes() ) ;  ++i , ++NDfct )
@@ -2570,20 +2568,20 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   std::copy( NDfct , NDfct + ( stop - strt ) , B.begin() + strt );
+   std::copy( NDfct , NDfct + ( stop - rng.first ) , B.begin() + rng.first );
 
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				      MCFBlockMod::eChgDfct , strt , stop ) ,
+				              MCFBlockMod::eChgDfct , rng ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::chg_dfcts( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Vec_Index && nms ,
+void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
 			  const bool ordered ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
@@ -2718,21 +2716,19 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
  
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				    MCFBlockMod::eChgDfct , nde , nde + 1 ) ,
+			   MCFBlockMod::eChgDfct , Range( nde , nde + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::chg_dfct )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::close_arcs( c_Index strt , Index stop ,
+void MCFBlock::close_arcs( c_Range rng ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
- if( stop >= get_NArcs() )
-  stop = get_NArcs();
-
- if( stop <= strt )  // nothing to change
-  return;            // cowardly (and silently) return
+ c_Index stop = std::min( rng.second , get_NArcs() );
+ if( stop <= rng.first )  // nothing to change
+  return;                 // cowardly (and silently) return
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
@@ -2740,7 +2736,7 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
-  Index i = strt;
+  Index i = rng.first;
 
   // static part
   for( ; i < std::min( stop , get_NStaticArcs() ) ; ++i )
@@ -2761,7 +2757,7 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   // static part
-  for( i = strt ; std::min( stop , get_NStaticArcs() ) ; ++i )
+  for( i = rng.first ; std::min( stop , get_NStaticArcs() ) ; ++i )
    if( ! x[ i ].is_fixed() ) {
     x[ i ].set_value( 0 );
     x[ i ].is_fixed( true , ampar );
@@ -2783,14 +2779,14 @@ void MCFBlock::close_arcs( c_Index strt , Index stop ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				     MCFBlockMod::eCloseArc , strt , stop ) ,
+				             MCFBlockMod::eCloseArc , rng ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::close_arcs( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::close_arcs( Vec_Index && nms , const bool ordered  ,
+void MCFBlock::close_arcs( Subset && nms , const bool ordered  ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( nms.empty() )
@@ -2894,29 +2890,27 @@ void MCFBlock::close_arc( c_Index arc ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				   MCFBlockMod::eCloseArc , arc , arc + 1 ) ,
+			   MCFBlockMod::eCloseArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::close_arc )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::open_arcs( c_Index strt , Index stop ,
+void MCFBlock::open_arcs( c_Range rng ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
- if( stop >= get_NArcs() )
-  stop = get_NArcs();
-
- if( stop <= strt )  // nothing to change
-  return;            // cowardly (and silently) return
+ c_Index stop = std::min( rng.second , get_NArcs() );
+ if( stop <= rng.first )  // nothing to change
+  return;                 // cowardly (and silently) return
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
  // "dry run" case; but the "phisical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-   Index ndiff = 0;
-  Index i = strt;
+  Index ndiff = 0;
+  Index i = rng.first;
 
   // static part
   for( ; i < std::min( stop , get_NStaticArcs() ) ; ++i )
@@ -2937,7 +2931,7 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
   c_ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   // static part
-  for( i = strt ; std::min( stop , get_NStaticArcs() ) ; ++i )
+  for( i = rng.first ; std::min( stop , get_NStaticArcs() ) ; ++i )
    if( x[ i ].is_fixed() )
     x[ i ].is_fixed( false , ampar );
 
@@ -2955,14 +2949,14 @@ void MCFBlock::open_arcs( c_Index strt , Index stop ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				      MCFBlockMod::eOpenArc , strt , stop ) ,
+				             MCFBlockMod::eOpenArc , rng ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::open_arcs( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::open_arcs( Vec_Index && nms , const bool ordered  ,
+void MCFBlock::open_arcs( Subset && nms , const bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( nms.empty() )
@@ -3062,7 +3056,7 @@ void MCFBlock::open_arc( c_Index arc ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				    MCFBlockMod::eOpenArc , arc , arc + 1 ) ,
+			   MCFBlockMod::eOpenArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::open_arc )
@@ -3197,7 +3191,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-				     MCFBlockMod::eAddArc , arc , arc + 1 ) ,
+			    MCFBlockMod::eAddArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
 
  return( arc );
@@ -3320,7 +3314,8 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
-		      MCFBlockMod::eRmvArc , arc - rmvdarcs + 1 , arc + 1 ) ,
+				     MCFBlockMod::eRmvArc ,
+				     Range( arc - rmvdarcs + 1 , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
 
  }  // end( MCFBlock::remove_arc )
@@ -3527,7 +3522,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     // (and possibly small) and therefore the search is quick; besides, if
     // one of the extremes is found, the interval can be shrank in later
     // searches
-    Vec_Index nI( tmod->v_vars.size() );
+    Subset nI( tmod->v_vars.size() );
 
     if( HasDynamicX() ) {
      auto lb = tmod->v_vars.begin();
@@ -3646,7 +3641,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
      }
 
     if( cnsctv )
-     chg_costs( tmod->v_delta.begin() , nI.front() , nI.back() + 1 ,
+     chg_costs( tmod->v_delta.begin() , Range( nI.front() , nI.back() + 1 ) ,
 		eNoBlck , eDryRun );
     else
      chg_costs( tmod->v_delta.begin() , std::move( nI ) , true ,

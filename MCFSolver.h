@@ -11,9 +11,9 @@
  * template over the underlying :MCFClass object, which implies that most of
  * the code is in the header file.
  *
- * \version 1.00
+ * \version 1.10
  *
- * \date 15 - 05 - 2019
+ * \date 18 - 08 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -742,50 +742,50 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
     if( tmod ) {
      switch( tmod->f_type ) {
       case( MCFBlockMod::eChgCost ):
-       if( tmod->f_stop == tmod->f_strt + 1 )
-        MCFC::ChgCost( tmod->f_strt , MCFB->get_C( tmod->f_strt ) );
+       if( tmod->f_rng.second == tmod->f_rng.first + 1 )
+        MCFC::ChgCost( tmod->f_rng.first , MCFB->get_C( tmod->f_rng.first ) );
        else
-	MCFC::ChgCosts( MCFB->get_C().data() + tmod->f_strt , nullptr,
-			tmod->f_strt , tmod->f_stop );
+	MCFC::ChgCosts( MCFB->get_C().data() + tmod->f_rng.first , nullptr,
+			tmod->f_rng.first , tmod->f_rng.second );
        break;
 
       case( MCFBlockMod::eChgCaps ):
-       if( tmod->f_stop == tmod->f_strt + 1 )
-        MCFC::ChgUCap( tmod->f_strt , MCFB->get_U( tmod->f_strt ) );
+       if( tmod->f_rng.second == tmod->f_rng.first + 1 )
+        MCFC::ChgUCap( tmod->f_rng.first , MCFB->get_U( tmod->f_rng.first ) );
        else
-	MCFC::ChgUCaps( MCFB->get_U().data() + tmod->f_strt , nullptr,
-			tmod->f_strt , tmod->f_stop );
+	MCFC::ChgUCaps( MCFB->get_U().data() + tmod->f_rng.first , nullptr,
+			tmod->f_rng.first , tmod->f_rng.second );
        break;
 
       case( MCFBlockMod::eChgDfct ):
-       if( tmod->f_stop == tmod->f_strt + 1 )
-        MCFC::ChgDfct( tmod->f_strt , MCFB->get_B( tmod->f_strt ) );
+       if( tmod->f_rng.second == tmod->f_rng.first + 1 )
+        MCFC::ChgDfct( tmod->f_rng.first , MCFB->get_B( tmod->f_rng.first ) );
        else
-	MCFC::ChgDfcts( MCFB->get_B().data() + tmod->f_strt , nullptr,
-			tmod->f_strt , tmod->f_stop );
+	MCFC::ChgDfcts( MCFB->get_B().data() + tmod->f_rng.first , nullptr,
+			tmod->f_rng.first , tmod->f_rng.second );
        break;
 
       case( MCFBlockMod::eOpenArc ):
-       for( auto arc = tmod->f_strt ; arc < tmod->f_stop ; )
+       for( auto arc = tmod->f_rng.first ; arc < tmod->f_rng.second ; )
 	MCFC::OpenArc( arc++ );
        break;
 
       case( MCFBlockMod::eCloseArc ):
-       for( auto arc = tmod->f_strt ; arc < tmod->f_stop ; )
+       for( auto arc = tmod->f_rng.first ; arc < tmod->f_rng.second ; )
 	MCFC::CloseArc( arc++ );
        break;
 
       case( MCFBlockMod::eAddArc ): {
-       auto arc = MCFC::AddArc( MCFB->get_SN( tmod->f_strt ) ,
-				MCFB->get_EN( tmod->f_strt ) ,
-				MCFB->get_U( tmod->f_strt ) ,
-				MCFB->get_C( tmod->f_strt ) );
-       if( arc != tmod->f_strt )
+       auto arc = MCFC::AddArc( MCFB->get_SN( tmod->f_rng.first ) ,
+				MCFB->get_EN( tmod->f_rng.first ) ,
+				MCFB->get_U( tmod->f_rng.first ) ,
+				MCFB->get_C( tmod->f_rng.first ) );
+       if( arc != tmod->f_rng.first )
 	throw( std::logic_error( "name mismatch in AddArc()" ) );
        break;
        }
       case( MCFBlockMod::eRmvArc ):
-       MCFC::DelArc( tmod->f_stop - 1 );
+       MCFC::DelArc( tmod->f_rng.second - 1 );
        break;
 
       default:
@@ -813,7 +813,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
       }
 
      // have to InINF-terminate the vector of indices (damn!)
-     MCFBlock::Vec_Index nmsI( tmod->f_nms.size() + 1 );
+     MCFBlock::Subset nmsI( tmod->f_nms.size() + 1 );
      *copy( tmod->f_nms.begin() , tmod->f_nms.end() , nmsI.begin() ) =
                                                        Inf<MCFBlock::Index>();
      switch( tmod->f_type ) {
