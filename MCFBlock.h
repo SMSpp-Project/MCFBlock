@@ -2052,24 +2052,14 @@ public:
   register_method< MCFBlock >( "MCFBlock::close_arcs" , &MCFBlock::close_arcs ,
 			       MS_rngd::args() );
 
-  /*!!
   register_method< MCFBlock >( "MCFBlock::close_arcs" , &MCFBlock::close_arcs ,
 			       MS_sbst::args() );
-			       !!*/
-
-  register_method< MCFBlock , Subset && , const bool >(
-			      "MCFBlock::close_arcs" , &MCFBlock::close_arcs );
 
   register_method< MCFBlock >( "MCFBlock::open_arcs" , &MCFBlock::open_arcs ,
 			       MS_rngd::args() );
 
-  /*!!
   register_method< MCFBlock >( "MCFBlock::open_arcs" , &MCFBlock::open_arcs ,
 			       MS_sbst::args() );
-			       !!*/
-
-  register_method< MCFBlock , Subset && , const bool >(
-			        "MCFBlock::open_arcs" , &MCFBlock::open_arcs );
 
   /* explicit versions
   register_method< MCFBlock , MF_dbl_it , c_Range & >(
