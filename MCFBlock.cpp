@@ -6,7 +6,7 @@
  *
  * \version 1.10
  *
- * \date 18 - 08 - 2019
+ * \date 20 - 08 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n

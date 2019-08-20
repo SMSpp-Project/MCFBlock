@@ -11,9 +11,9 @@
  * closures and arcs additions / deletions. The same operations are performed
  * on the two solvers, and the results are compared.
  *
- * \version 2.00
+ * \version 3.00
  *
- * \date 08 - 05 - 2019
+ * \date 20 - 08 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -711,8 +711,18 @@ int main( int argc , char **argv )
        }
       }
      else {  // change via call to chg_* method
-      mMCFB->chg_costs( newcsts.begin() , Block::Range( strt , stp ) );
-      cout << "s(r) - ";
+      // in 50% of the cases a direct call, otherwise use the methos factory
+      if( drand48() <= 0.5 ) {
+       mMCFB->chg_costs( newcsts.begin() , Block::Range( strt , stp ) );
+       cout << "s(r) - ";
+       }
+      else {
+       auto mthd = Block::get_method_fs( "MCFBlock::chg_costs" ,
+					 Block::MS_dbl_rngd::args() );
+       std::invoke( *mthd , mMCFB , newcsts.begin() ,
+		    Block::Range( strt , stp ) , eNoBlck , eNoBlck );
+       cout << "s(r-mf) - ";
+       }
       }
      }
     else {
@@ -748,8 +758,18 @@ int main( int argc , char **argv )
        lf->modify_coefficients( newcsts.begin() , nms , true );
       }
      else {  // change via call to chg_* method
-      mMCFB->chg_costs( newcsts.begin() , std::move( nms ) , true );
-      cout << "s(s) - ";
+      // in 50% of the cases a direct call, otherwise use the methos factory
+      if( drand48() <= 0.5 ) {
+       mMCFB->chg_costs( newcsts.begin() , std::move( nms ) , true );
+       cout << "s(s) - ";
+       }
+      else {
+       auto mthd = Block::get_method_fs( "MCFBlock::chg_costs" ,
+					 Block::MS_dbl_sbst::args() );
+       std::invoke( *mthd , mMCFB , newcsts.begin() , std::move( nms ) ,
+		    true , eNoBlck , eNoBlck );
+       cout << "s(s-mf) - ";
+       }
       }
      }
     }
@@ -794,8 +814,18 @@ int main( int argc , char **argv )
        mMCFB->i2p_ub( i + strt )->set_rhs( newcaps[ i ] );
       }
      else {  // change via call to chg_* method
-      mMCFB->chg_ucaps( newcaps.begin() , Block::Range( strt , stp ) );
-      cout << "ies(r) - ";
+      // in 50% of the cases a direct call, otherwise use the methos factory
+      if( drand48() <= 0.5 ) {
+       mMCFB->chg_ucaps( newcaps.begin() , Block::Range( strt , stp ) );
+       cout << "ies(r) - ";
+       }
+      else {
+       auto mthd = Block::get_method_fs( "MCFBlock::chg_ucaps" ,
+					 Block::MS_dbl_rngd::args() );
+       std::invoke( *mthd , mMCFB , newcaps.begin() ,
+		    Block::Range( strt , stp ) , eNoBlck , eNoBlck );
+       cout << "ies(r-mf) - ";
+       }
       }
      }
     else {
@@ -821,8 +851,18 @@ int main( int argc , char **argv )
        mMCFB->i2p_ub( nms[ i ] )->set_rhs( newcaps[ i ] );
       }
      else {  // change via call to chg_* method
-      mMCFB->chg_ucaps( newcaps.begin() , std::move( nms ) , true );
-      cout << "ies(s) - ";
+      // in 50% of the cases a direct call, otherwise use the methos factory
+      if( drand48() <= 0.5 ) {
+       mMCFB->chg_ucaps( newcaps.begin() , std::move( nms ) , true );
+       cout << "ies(s) - ";
+       }
+      else {
+       auto mthd = Block::get_method_fs( "MCFBlock::chg_ucaps" ,
+					 Block::MS_dbl_sbst::args() );
+       std::invoke( *mthd , mMCFB , newcaps.begin() , std::move( nms ) ,
+		    true , eNoBlck , eNoBlck );
+       cout << "ies(s-mf) - ";
+       }
       }
      }
     }
@@ -922,8 +962,18 @@ int main( int argc , char **argv )
       x->is_fixed( true );
       }
      }
-    else  // change via call to chg_* method
-     mMCFB->close_arcs( std::move( nms ) );
+    else {  // change via call to chg_* method
+     // in 50% of the cases a direct call, otherwise use the methos factory
+     if( drand48() <= 0.5 )
+      mMCFB->close_arcs( std::move( nms ) );
+     else {
+      auto mthd = Block::get_method_fs( "MCFBlock::close_arcs" ,
+					Block::MS_sbst::args() );
+      std::invoke( *mthd , mMCFB , std::move( nms ) , false ,
+		   eNoBlck , eNoBlck );
+      cout << "(mf)";
+      }
+     }
 
     cout << " - ";
     }
@@ -961,8 +1011,18 @@ int main( int argc , char **argv )
      for( auto i : nms )
       mMCFB->i2p_x( i )->is_fixed( false );
      }
-    else  // change via call to chg_* method
-     mMCFB->open_arcs( std::move( nms ) );
+    else {  // change via call to chg_* method
+     // in 50% of the cases a direct call, otherwise use the methos factory
+     if( drand48() <= 0.5 )
+      mMCFB->open_arcs( std::move( nms ) );
+     else {
+      auto mthd = Block::get_method_fs( "MCFBlock::open_arcs" ,
+					Block::MS_sbst::args() );
+      std::invoke( *mthd , mMCFB , std::move( nms ) , false ,
+		   eNoBlck , eNoBlck );
+      cout << "(mf)";
+      }
+     }
 
     cout << " - ";
     }
