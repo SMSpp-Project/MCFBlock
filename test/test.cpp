@@ -717,8 +717,11 @@ int main( int argc , char **argv )
        cout << "s(r) - ";
        }
       else {
-       auto mthd = Block::get_method_fs( "MCFBlock::chg_costs" ,
+       std::string name = "MCFBlock::chg_costs";
+       auto mthd = Block::get_method_fs( name ,
 					 Block::MS_dbl_rngd::args() );
+       assert( name == Block::get_method_name_fs
+               ( mthd , Block::MS_dbl_rngd::args() ) );
        std::invoke( *mthd , mMCFB , newcsts.begin() ,
 		    Block::Range( strt , stp ) , eNoBlck , eNoBlck );
        cout << "s(r-mf) - ";
@@ -764,8 +767,10 @@ int main( int argc , char **argv )
        cout << "s(s) - ";
        }
       else {
-       auto mthd = Block::get_method_fs( "MCFBlock::chg_costs" ,
-					 Block::MS_dbl_sbst::args() );
+       std::string name = "MCFBlock::chg_costs";
+       auto mthd = Block::get_method_fs( name , Block::MS_dbl_sbst::args() );
+       assert( name == Block::get_method_name_fs
+               ( mthd , Block::MS_dbl_sbst::args() ) );
        std::invoke( *mthd , mMCFB , newcsts.begin() , std::move( nms ) ,
 		    true , eNoBlck , eNoBlck );
        cout << "s(s-mf) - ";
@@ -820,8 +825,10 @@ int main( int argc , char **argv )
        cout << "ies(r) - ";
        }
       else {
-       auto mthd = Block::get_method_fs( "MCFBlock::chg_ucaps" ,
-					 Block::MS_dbl_rngd::args() );
+       std::string name = "MCFBlock::chg_ucaps";
+       auto mthd = Block::get_method_fs( name , Block::MS_dbl_rngd::args() );
+       assert( name == Block::get_method_name_fs
+               ( mthd , Block::MS_dbl_rngd::args() ) );
        std::invoke( *mthd , mMCFB , newcaps.begin() ,
 		    Block::Range( strt , stp ) , eNoBlck , eNoBlck );
        cout << "ies(r-mf) - ";
@@ -857,8 +864,10 @@ int main( int argc , char **argv )
        cout << "ies(s) - ";
        }
       else {
-       auto mthd = Block::get_method_fs( "MCFBlock::chg_ucaps" ,
-					 Block::MS_dbl_sbst::args() );
+       std::string name = "MCFBlock::chg_ucaps";
+       auto mthd = Block::get_method_fs( name , Block::MS_dbl_sbst::args() );
+       assert( name == Block::get_method_name_fs
+               ( mthd , Block::MS_dbl_sbst::args() ) );
        std::invoke( *mthd , mMCFB , newcaps.begin() , std::move( nms ) ,
 		    true , eNoBlck , eNoBlck );
        cout << "ies(s-mf) - ";
@@ -967,8 +976,10 @@ int main( int argc , char **argv )
      if( drand48() <= 0.5 )
       mMCFB->close_arcs( std::move( nms ) );
      else {
-      auto mthd = Block::get_method_fs( "MCFBlock::close_arcs" ,
-					Block::MS_sbst::args() );
+      std::string name = "MCFBlock::close_arcs";
+      auto mthd = Block::get_method_fs( name , Block::MS_sbst::args() );
+      assert( name == Block::get_method_name_fs
+              ( mthd , Block::MS_sbst::args() ) );
       std::invoke( *mthd , mMCFB , std::move( nms ) , false ,
 		   eNoBlck , eNoBlck );
       cout << "(mf)";
@@ -1016,8 +1027,10 @@ int main( int argc , char **argv )
      if( drand48() <= 0.5 )
       mMCFB->open_arcs( std::move( nms ) );
      else {
-      auto mthd = Block::get_method_fs( "MCFBlock::open_arcs" ,
-					Block::MS_sbst::args() );
+      std::string name = "MCFBlock::open_arcs";
+      auto mthd = Block::get_method_fs( name , Block::MS_sbst::args() );
+      assert( name == Block::get_method_name_fs
+              ( mthd , Block::MS_sbst::args() ) );
       std::invoke( *mthd , mMCFB , std::move( nms ) , false ,
 		   eNoBlck , eNoBlck );
       cout << "(mf)";
