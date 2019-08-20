@@ -718,8 +718,7 @@ int main( int argc , char **argv )
        }
       else {
        std::string name = "MCFBlock::chg_costs";
-       auto mthd = Block::get_method_fs( name ,
-					 Block::MS_dbl_rngd::args() );
+       auto mthd = Block::get_method_fs( name , Block::MS_dbl_rngd::args() );
        assert( name == Block::get_method_name_fs
                ( mthd , Block::MS_dbl_rngd::args() ) );
        std::invoke( *mthd , mMCFB , newcsts.begin() ,
