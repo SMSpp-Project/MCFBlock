@@ -728,11 +728,10 @@ int main( int argc , char **argv )
       }
      }
     else {
-     MCFBlock::Subset nms( m + 1 );
-     for( MCFBlock::Index i = 0 ; i < m ; i++ )
-      nms[ i ] = i;
+     Block::Subset nms( m + 1 );
+     std::iota( nms.begin() , nms.end() , 1 );
 
-     for( MCFBlock::Index i = 0 ; i < tochange ; i++ )
+     for( Block::Index i = 0 ; i < tochange ; i++ )
       swap( nms[ i ] , nms[ i + drand48() * ( m - i ) ] );
 
      auto end = nms.begin() + tochange;
@@ -835,11 +834,10 @@ int main( int argc , char **argv )
       }
      }
     else {
-     MCFBlock::Subset nms( m + 1 );
-     for( MCFBlock::Index i = 0 ; i < m ; i++ )
-      nms[ i ] = i;
+     Block::Subset nms( m + 1 );
+     std::iota( nms.begin() , nms.end() , 1 );
 
-     for( MCFBlock::Index i = 0 ; i < tochange ; i++ ) {
+     for( Block::Index i = 0 ; i < tochange ; i++ ) {
       swap( nms[ i ] , nms[ i + drand48() * ( m - i ) ] );
       newcaps[ i ] = mcf->MCFUCap( nms[ i ]  ) * rndfctr();
       }
