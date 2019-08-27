@@ -5,9 +5,9 @@
  * Header file for the *concrete* class MCFBlock, which implements the Block
  * concept [see Block.h] for (linear) Min-Cost Flow problems.
  *
- * \version 1.10
+ * \version 1.20
  *
- * \date 20 - 08 - 2019
+ * \date 27 - 08 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -2367,6 +2367,10 @@ class MCFSolution : public Solution {
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
+ virtual void deserialize( netCDF::NcGroup & group ) override final;
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
  virtual ~MCFSolution() { }  ///< destructor: it is virtual, and empty
 
 /*------------- METHODS DESCRIBING THE BEHAVIOR OF A MCFSolution -----------*/
@@ -2374,6 +2378,33 @@ class MCFSolution : public Solution {
  virtual void read( const Block * const block ) override final;
 
  virtual void write( Block * const block ) override final;
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// serialize a MCFSolution into a netCDF::NcGroup
+ /** Serialize a MCFSolution into a netCDF::NcGroup, with the following
+  * format:
+  *
+  * - The dimension "NumNodes" containing the number of nodes. The dimension
+  *   is optional, if it is not specified then the corresponding variable
+  *   "Potentials" is not read (the MCFSolution object does not contain any
+  *   node potentials).
+  *
+  * - The dimension "NumArcs" containing the number of arcs. The dimension
+  *   is optional, if it is not specified then the corresponding variable
+  *   "Potentials" is not read (the MCFSolution object does not contain any
+  *   flow solution).
+  *
+  * - The variable "FlowSolution", of type double and indexed over the
+  *   dimension NumArcs. The variable is optional, if it is not specified
+  *   then the MCFSolution object does not contain any flow solution.
+  *
+  * - The variable "Potentials", of type double and indexed over the
+  *   dimension NumNodes. The variable is optional, if it is not specified
+  *   then the MCFSolution object does not contain any node potentials. */
+ 
+ virtual void serialize( netCDF::NcGroup & group )  override final;
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
  virtual MCFSolution * scale( double factor ) const override final;
 

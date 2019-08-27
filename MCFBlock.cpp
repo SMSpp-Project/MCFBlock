@@ -4,9 +4,9 @@
 /** @file
  * Implementation of the MCFBlock class.
  *
- * \version 1.10
+ * \version 1.20
  *
- * \date 20 - 08 - 2019
+ * \date 27 - 08 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -431,21 +431,19 @@ void MCFBlock::deserialize( netCDF::NcGroup & group )
 
  SN.resize( MaxNArcs );
 
- std::vector<size_t> start = { 0 };
- std::vector<size_t> counta = { NArcs };
- sn.getVar( start , counta , SN.data() );
+ sn.getVar( SN.data() );
 
  netCDF::NcVar en = group.getVar( "EN" );
  if( en.isNull() )
   throw( std::logic_error( "Ending Nodes not found" ) );
 
  EN.resize( MaxNArcs );
- en.getVar( start , counta , EN.data() );
+ en.getVar( EN.data() );
 
  netCDF::NcVar cst = group.getVar( "C" );
  if( ! cst.isNull() ) {
   C.resize( MaxNArcs );
-  cst.getVar( start , counta , C.data() );
+  cst.getVar( C.data() );
   if( std::all_of( C.begin() , C.begin() + NArcs ,
 		   []( c_CNumber ci ) { return( ci == 0 ); } ) )
    C.clear();
@@ -454,7 +452,7 @@ void MCFBlock::deserialize( netCDF::NcGroup & group )
  netCDF::NcVar cap = group.getVar( "U" );
  if( ! cap.isNull() ) {
   U.resize( MaxNArcs );
-  cap.getVar( start , counta , U.data() );
+  cap.getVar( U.data() );
   if( std::all_of( U.begin() , U.begin() + NArcs ,
 		   []( c_FNumber ui ) { return( ui == Inf<FNumber>() ); } ) )
    U.clear();
@@ -464,7 +462,7 @@ void MCFBlock::deserialize( netCDF::NcGroup & group )
  if( ! dfc.isNull() ) {
   B.resize( MaxNNodes );
   std::vector<size_t> countn = { NNodes };
-  dfc.getVar( start , countn , B.data() );
+  dfc.getVar( B.data() );
   if( std::all_of( B.begin() , B.begin() + NNodes ,
 		   []( c_FNumber bi ) { return( bi == 0 ); } ) )
    B.clear();
@@ -2000,7 +1998,8 @@ void MCFBlock::serialize( netCDF::NcGroup & group ) const
 
  if( get_MaxNArcs() > get_NStaticArcs() )
   group.addDim( "MaxDynNArcs" , get_MaxNArcs() - get_NStaticArcs() );
- 
+
+ /*!!
  std::vector<size_t> startp = { 0 };
  std::vector<size_t> countpa = { get_NArcs() };
  std::vector<size_t> countpn = { get_NNodes() };
@@ -2019,6 +2018,21 @@ void MCFBlock::serialize( netCDF::NcGroup & group ) const
  if( ! B.empty() )
   ( group.addVar( "B" , netCDF::NcDouble() , nn ) ).putVar( startp , countpn ,
 							    B.data() );
+							    !!*/
+
+ ( group.addVar( "SN" , netCDF::NcUint64() , na ) ).putVar( SN.data() );
+
+ ( group.addVar( "EN" , netCDF::NcUint64() , na ) ).putVar( EN.data() );
+
+ if( ! C.empty() )
+  ( group.addVar( "C" , netCDF::NcDouble() , na ) ).putVar( C.data() );
+
+ if( ! U.empty() )
+  ( group.addVar( "U" , netCDF::NcDouble() , na ) ).putVar( U.data() );
+
+ if( ! B.empty() )
+  ( group.addVar( "B" , netCDF::NcDouble() , nn ) ).putVar( B.data() );
+
  }  // end( MCFBlock::serialize )
 
 /*--------------------------------------------------------------------------*/
@@ -3808,6 +3822,39 @@ inline void MCFBlock::unmake_amod_param( c_ModParam oldiAM ,
 /*-------------------------- METHODS OF MCFSolution ------------------------*/
 /*--------------------------------------------------------------------------*/
 
+void MCFSolution::deserialize( netCDF::NcGroup & group )
+{
+ std::vector<size_t> start = { 0 };
+
+ netCDF::NcDim na = group.getDim( "NumArcs" );
+ if( na.isNull() )
+  v_x.clear();
+ else {
+  netCDF::NcVar fs = group.getVar( "FlowSolution" );
+  if( fs.isNull() )
+   v_x.clear();
+  else {
+   v_x.resize( na.getSize() );
+   fs.getVar( v_x.data() );
+   }
+  }
+
+ netCDF::NcDim nn = group.getDim( "NumNodes" );
+ if( nn.isNull() )
+  v_pi.clear();
+ else {
+  netCDF::NcVar ps = group.getVar( "Potentials" );
+  if( ps.isNull() )
+   v_pi.clear();
+  else {
+   v_pi.resize( nn.getSize() );
+   ps.getVar( v_pi.data() );
+   }
+  }
+ }  // end( MCFSolution::deserialize )
+
+/*--------------------------------------------------------------------------*/
+
 void MCFSolution::read( const Block * const block )
 {
  auto MCFB = dynamic_cast<const MCFBlock *>( block );
@@ -3912,6 +3959,31 @@ void MCFSolution::write( Block * const block )
   (dubi++)->set_dual( MCFB->get_C( i ) + v_pi[ MCFB->SN[ i ] - 1 ]
 		                       - v_pi[ MCFB->EN[ i ] - 1 ] );
  }  // end( MCFSolution::write )
+
+/*--------------------------------------------------------------------------*/
+
+void MCFSolution::serialize( netCDF::NcGroup & group )
+{
+ std::vector<size_t> startp = { 0 };
+
+ if( ! v_x.empty() ) {
+  netCDF::NcDim na = group.addDim( "NumArcs" , v_x.size() );
+
+  std::vector<size_t> countpa = { v_x.size() };
+
+  ( group.addVar( "FlowSolution" , netCDF::NcDouble() , na ) ).putVar(
+					      startp , countpa , v_x.data() );
+  }
+
+ if( v_pi.empty() )
+  return;
+
+ netCDF::NcDim nn = group.addDim( "NumNodes" ,  v_pi.size() );
+ std::vector<size_t> countpn = { v_pi.size() };
+  ( group.addVar( "Potentials" , netCDF::NcDouble() , nn ) ).putVar(
+					     startp , countpn , v_pi.data() );
+ 
+ }  // end( MCFSolution::serialize )
 
 /*--------------------------------------------------------------------------*/
 
