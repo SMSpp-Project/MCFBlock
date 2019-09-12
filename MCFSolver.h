@@ -489,7 +489,17 @@ public:
 /*
  virtual bool is_dual_exact( void ) const override { return( true ); }
 */
- 
+
+/*--------------------------------------------------------------------------*/
+ /// "publicize" MCFClass::WriteMCF
+ /** Make the method
+  *
+  *      void WriteMCF( ostream &oStrm , int frmt = 0 )
+  *
+  * of the base (private) MCFClass public, so that it can be freely used. */
+
+ using MCFC::WriteMCF;
+
 /*--------------------------------------------------------------------------*/
 /*------------------- METHODS FOR HANDLING THE PARAMETERS ------------------*/
 /*--------------------------------------------------------------------------*/
