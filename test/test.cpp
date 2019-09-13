@@ -729,7 +729,7 @@ int main( int argc , char **argv )
      }
     else {
      Block::Subset nms( m + 1 );
-     std::iota( nms.begin() , nms.end() , 1 );
+     std::iota( nms.begin() , nms.end() , 0 );
 
      for( Block::Index i = 0 ; i < tochange ; i++ )
       swap( nms[ i ] , nms[ i + drand48() * ( m - i ) ] );
@@ -835,7 +835,7 @@ int main( int argc , char **argv )
      }
     else {
      Block::Subset nms( m + 1 );
-     std::iota( nms.begin() , nms.end() , 1 );
+     std::iota( nms.begin() , nms.end() , 0 );
 
      for( Block::Index i = 0 ; i < tochange ; i++ ) {
       swap( nms[ i ] , nms[ i + drand48() * ( m - i ) ] );
