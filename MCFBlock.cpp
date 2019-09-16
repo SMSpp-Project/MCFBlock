@@ -1765,12 +1765,14 @@ void MCFBlock::get_pi( Vec_CNumber & PSol , Range rng )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
  auto PSi = PSol.begin();
- for( ; rng.first < std::min( rng.second , get_NStaticNodes() ) ; )
-  *(PSi++) = E[ rng.first++ ].get_dual();
+ Index i = rng.first;
+ for( ; i < std::min( rng.second , get_NStaticNodes() ) ; )
+  *(PSi++) = E[ i++ ].get_dual();
 
  if( HasDynamicE() ) {
-  auto dei = dE.begin();
-  for( ; rng.first++ < std::min( rng.second , get_NNodes() ) ; )
+  auto dei = std::next( dE.begin() , rng.first >= get_NStaticNodes() ?
+			             i - get_NStaticNodes() : 0 );
+   for( ; i++ < std::min( rng.second , get_NNodes() ) ; )
    *(PSi++) = (*(dei++)).get_dual();
   }
  }  // end( MCFBlock::get_pi( interval ) )
@@ -1816,13 +1818,15 @@ void MCFBlock::get_rc( Vec_CNumber & RC , Range rng )
  auto RCi = RC.begin();
 
  if( AR & HasBnd ) {
+  Index i = rng.first;
   if( HasStaticX() )
-   for( ; rng.first < std::min( rng.second , get_NStaticArcs() ) ; )
-    *(RCi++) = UB[ rng.first++ ].get_dual();
+   for( ; i < std::min( rng.second , get_NStaticArcs() ) ; )
+    *(RCi++) = UB[ i++ ].get_dual();
 
   if( HasDynamicX() ) {
-   auto dubi = dUB.begin();
-   for( ; rng.first++ < std::min( rng.second , get_NArcs() ) ; )
+   auto dubi = std::next( dUB.begin() , rng.first >= get_NStaticArcs() ?
+			                i - get_NStaticArcs() : 0 );
+   for( ; i++ < std::min( rng.second , get_NArcs() ) ; )
     *(RCi++) = (*(dubi++)).get_dual();
    }
   }
@@ -2353,7 +2357,8 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
 
   // dynamic part
   for( auto dubi = std::next( dUB.begin() ,
-			      rng.first >= get_NStaticArcs() ? i : 0 ) ;
+			      rng.first >= get_NStaticArcs() ?
+			      i - get_NStaticArcs() : 0 ) ;
        i < rng.second ; ++i , ++NCap , ++dubi )
    if( U[ i ] != *NCap ) {
     U[ i ] = *NCap;
@@ -2572,7 +2577,8 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
 
   // dynamic part
   for( auto dei = std::next( dE.begin() ,
-			     rng.first >= get_NStaticNodes() ? i : 0 ) ;
+			     rng.first >= get_NStaticNodes() ?
+			     i - get_NStaticNodes() : 0 ) ;
        i < rng.second ; ++i , ++NDfct , ++dei )
    if( B[ i ] != *NDfct ) {
     B[ i ] = *NDfct;
