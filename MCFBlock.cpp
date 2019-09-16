@@ -2352,10 +2352,12 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
     }
 
   // dynamic part
-  for( auto dubi = dUB.begin() ; i < rng.second ; ++i , ++NCap , ++dubi )
+  for( auto dubi = std::next( dUB.begin() ,
+			      rng.first >= get_NStaticArcs() ? i : 0 ) ;
+       i < rng.second ; ++i , ++NCap , ++dubi )
    if( U[ i ] != *NCap ) {
     U[ i ] = *NCap;
-    (dubi++)->set_rhs( *NCap , ampar );
+    dubi->set_rhs( *NCap , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
@@ -2569,10 +2571,12 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
     }
 
   // dynamic part
-  for( auto dei = dE.begin() ; i < rng.second ; ++i , ++NDfct , ++dei )
+  for( auto dei = std::next( dE.begin() ,
+			     rng.first >= get_NStaticNodes() ? i : 0 ) ;
+       i < rng.second ; ++i , ++NDfct , ++dei )
    if( B[ i ] != *NDfct ) {
     B[ i ] = *NDfct;
-    (dei++)->set_both( *NDfct , ampar );
+    dei->set_both( *NDfct , ampar );
     }
 
   unmake_amod_param( issueAMod , ampar , ndiff );
