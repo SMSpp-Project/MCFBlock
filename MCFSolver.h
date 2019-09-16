@@ -11,9 +11,9 @@
  * template over the underlying :MCFClass object, which implies that most of
  * the code is in the header file.
  *
- * \version 1.10
+ * \version 1.11
  *
- * \date 18 - 08 - 2019
+ * \date 16 - 09 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -245,7 +245,14 @@ public:
 		  MCFB->get_C().empty() ? nullptr : MCFB->get_C().data() ,
 		  MCFB->get_B().empty() ? nullptr : MCFB->get_B().data() ,
 		  MCFB->get_SN().data() , MCFB->get_EN().data() );
-   MCFC::PreProcess();
+   // TODO: PreProcess() changes the internal data of the MCFSolver using
+   //       information about how the data of the MCF is *now*. If the
+   //       data changes, some of the deductions (say, reducing the capacity
+   //       of some arcs) may no longer be correct and they should be undone,
+   //       but there isn't any proper way to handle this. Thus, PreProcess()
+   //       has to be disabled for now; maybe later on someone will take
+   //       care to make this work (or maybe not).
+   // MCFC::PreProcess();
 
    // TODO: maybe log it
    }
@@ -653,7 +660,14 @@ public:
 		  MCFB->get_C().empty() ? nullptr : MCFB->get_C().data() ,
 		  MCFB->get_B().empty() ? nullptr : MCFB->get_B().data() ,
 		  MCFB->get_SN().data() , MCFB->get_EN().data() );
-   MCFC::PreProcess();
+   // TODO: PreProcess() changes the internal data of the MCFSolver using
+   //       information about how the data of the MCF is *now*. If the
+   //       data changes, some of the deductions (say, reducing the capacity
+   //       of some arcs) may no longer be correct and they should be undone,
+   //       but there isn't any proper way to handle this. Thus, PreProcess()
+   //       has to be disabled for now; maybe later on someone will take
+   //       care to make this work (or maybe not).
+   // MCFC::PreProcess();
    // besides, any outstanding modification makes no sense any longer
    v_mod.clear();
    }
