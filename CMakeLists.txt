@@ -3,24 +3,27 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
+# ----- Project description and directories ------------------------------------
 project(MCFBlock DESCRIPTION "MCF Block for SMS++")
 
-# Options for choosing the MCF Solver
+set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR})
+
+# ----- Options for choosing the MCF Solver ------------------------------------
 #add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_CPLEX)
 add_compile_definitions(HAVE_RELAX)
 
-set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR})
-
-set(MCFBlock_SOURCES
-    ${PROJECT_SOURCE_DIR}/MCFSolver.cpp
-    ${PROJECT_SOURCE_DIR}/MCFBlock.cpp)
-
+# ----- Requirements -----------------------------------------------------------
 find_package(Boost REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
-
 find_package(Eigen3 REQUIRED)
+
+# ----- Includes ---------------------------------------------------------------
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${EIGEN3_INCLUDE_DIRS})
+include_directories(${PROJECT_INCLUDE_DIR})
+
+# TODO: Write and use a FindSMS++.cmake
+include_directories(../SMS++/include)
 
 # TODO: Write and use Find*.cmake files
 set(MCFClass_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../MCFClass)
@@ -32,11 +35,15 @@ include_directories(${MCFClass_INCLUDE_DIR}/MCFClass
                     ${MCFClass_INCLUDE_DIR}/RelaxIV
                     )
 
-include_directories(../SMS++/include)
+# ----- SOURCE FILES -----------------------------------------------------------
+set(${PROJECT_NAME}_SOURCES
+    ${PROJECT_SOURCE_DIR}/MCFSolver.cpp
+    ${PROJECT_SOURCE_DIR}/MCFBlock.cpp
+    )
 
-include_directories(${PROJECT_INCLUDE_DIR})
 # TODO: Find out why STATIC doesn't work
-add_library(${PROJECT_NAME} OBJECT ${MCFBlock_SOURCES})
+add_library(${PROJECT_NAME} OBJECT ${${PROJECT_NAME}_SOURCES})
 
+# ----- Subdirectories ---------------------------------------------------------
 add_subdirectory(test)
 add_subdirectory(tools)
