@@ -1,12 +1,11 @@
-cmake_minimum_required(VERSION 3.1)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
-set(CMAKE_VERBOSE_MAKEFILE OFF)
-
 # ----- Project description and directories ------------------------------------
-project(MCFBlock DESCRIPTION "MCF Block for SMS++")
+cmake_minimum_required(VERSION 3.8)
+project(MCFBlock
+        VERSION 1.0.0
+        DESCRIPTION "MCF Block for SMS++")
 
-set(PROJECT_INCLUDE_DIR ${PROJECT_SOURCE_DIR})
+set(PROJECT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(PROJECT_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # ----- Options for choosing the MCF Solver ------------------------------------
 # TODO: Do it in a more fashionable way
@@ -17,34 +16,83 @@ add_compile_definitions(HAVE_RELAX)
 # ----- Requirements -----------------------------------------------------------
 find_package(Boost REQUIRED)
 find_package(Eigen3 REQUIRED)
-
-# ----- Custom includes --------------------------------------------------------
-# TODO: When libraries will be installable, fix this
-set(SMS++_INCLUDE_DIR ../SMS++/include)
-set(MCFClass_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../MCFClass)
-set(MCFClass_INCLUDE_DIRS
-    ${MCFClass_INCLUDE_DIR}/MCFClass
-    ${MCFClass_INCLUDE_DIR}/MCFClone
-    ${MCFClass_INCLUDE_DIR}/MCFCplex
-    ${MCFClass_INCLUDE_DIR}/MCFSimplex
-    ${MCFClass_INCLUDE_DIR}/OPTUtils
-    ${MCFClass_INCLUDE_DIR}/RelaxIV
-    )
+find_package(SMSpp REQUIRED)
+find_package(MCFClass REQUIRED)
 
 # ----- Library ----------------------------------------------------------------
-set(${PROJECT_NAME}_SOURCES
+set(MCFBlock_SOURCES
     ${PROJECT_SOURCE_DIR}/MCFSolver.cpp
     ${PROJECT_SOURCE_DIR}/MCFBlock.cpp
     )
 
 # TODO: Find out why STATIC doesn't work
-add_library(${PROJECT_NAME} OBJECT ${${PROJECT_NAME}_SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${Boost_INCLUDE_DIRS})
-target_include_directories(${PROJECT_NAME} PUBLIC ${EIGEN3_INCLUDE_DIRS})
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_INCLUDE_DIR})
-target_include_directories(${PROJECT_NAME} PUBLIC ${SMS++_INCLUDE_DIR})
-target_include_directories(${PROJECT_NAME} PUBLIC ${MCFClass_INCLUDE_DIRS})
+add_library(MCFBlock OBJECT ${MCFBlock_SOURCES})
 
+# Alias for testing
+add_library(SMS++::MCFBlock ALIAS MCFBlock)
+
+target_compile_features(MCFBlock PUBLIC cxx_std_17)
+target_include_directories(MCFBlock
+                           PUBLIC
+                           $<INSTALL_INTERFACE:include/SMS++>
+                           $<BUILD_INTERFACE:${PROJECT_INCLUDE_DIR}>
+                           )
+
+target_link_libraries(MCFBlock PUBLIC
+                      SMS++::SMSpp
+                      MCFClass::MCFClass
+                      Boost::boost
+                      Eigen3::Eigen)
 # ----- Subdirectories ---------------------------------------------------------
 add_subdirectory(test)
 add_subdirectory(tools)
+
+# ----- Install instructions ---------------------------------------------------
+include(GNUInstallDirs)
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
+
+# Install library
+install(TARGETS MCFBlock
+        EXPORT MCFBlock-targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        )
+
+# Install headers
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/SMS++)
+
+# Export target in *Targets.cmake
+install(EXPORT MCFBlock-targets
+        FILE MCFBlockTargets.cmake
+        NAMESPACE SMS++::
+        DESTINATION ${INSTALL_CONFIGDIR}
+        )
+
+# Create *ConfigVersion.cmake
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion
+)
+
+# Create *Config.cmake
+configure_package_config_file(
+        ${CMAKE_CURRENT_LIST_DIR}/cmake/MCFBlockConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfig.cmake
+        INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+# Install the Config and ConfigVersion
+install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfigVersion.cmake
+        DESTINATION ${INSTALL_CONFIGDIR}
+        )
+
+export(EXPORT MCFBlock-targets
+       FILE ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockTargets.cmake
+       NAMESPACE SMS++::)
+
+# Register package in user's package registry (~/.cmake/registry)
+export(PACKAGE MCFBlock)

@@ -1,0 +1,15 @@
+# This file contains instructions on how to generate the MCFBlockConfig.cmake file
+
+get_filename_component(MCFBlock_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+find_package(Boost REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(SMSpp REQUIRED)
+find_package(MCFClass REQUIRED)
+
+if(NOT TARGET SMS++::MCFBlock)
+    include("${MCFBlock_CMAKE_DIR}/MCFBlockTargets.cmake")
+endif()
+
+set(MCFBlock_LIBRARIES SMS++::MCFBlock)
