@@ -3128,7 +3128,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
  // change the abstract representation- - - - - - - - - - - - - - - - - - - -
  // in the meantime, if so instructed also issue abstract Modification(s)
  // note that this is *always* done, unless issueAMod says this is a dry
- // run, because at least the BlockModAD corresponding to adding the
+ // run, because at least the BlockModAdd corresponding to adding the
  // Variable, or unfixing it, is always issued since the Variable are
  // always present
 
@@ -3141,17 +3141,13 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
   if( arc == get_NArcs() ) {
    // the new arc is physically constructed
 
-   // add the new variable
-   dx.emplace_back( this , ColVariable::kNonNegative );
-   nx = &(dx.back());
+   // create the new variable
+   std::list< ColVariable > na;
+   na.emplace_back( this , ColVariable::kNonNegative );
+   nx = &(na.back());
 
-   // issue BlockModAD for the new Variable
-   // do this first thing, so that if Modification are processed in FIFO
-   // order it is seen before
-   auto vmod = std::make_shared<BlockModAD>( BlockModAD::eAddVar );
-   vmod->whc_list = &(dx);
-   vmod->mod_list = nx;
-   Block::add_Modification( vmod , Observer::par2chnl( ampar ) );
+   // now add it
+   Block::add_dynamic_variables( dx , na , ampar );
 
    // add the new coefficient in the objective
    if( AR & HasObj )
@@ -3162,16 +3158,12 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 
    if( AR & HasBnd ) {
     // construct new arc capacity constraint
-    dUB.emplace_back();
-    nUB = &(dUB.back());
-    nUB->set_variable( nx , eNoBlck );
-    nUB->set_Block( this );  // this is done last ==> no Modification
+    std::list< LB0Constraint > nub;
+    nub.emplace_back( this , nx );
+    nUB = &(nub.back());
 
-    // issue BlockModAD for the new Constraint
-    auto cmod = std::make_shared<BlockModAD>( BlockModAD::eAddConst );
-    cmod->whc_list = &(dUB);
-    cmod->mod_list = nUB;
-    Block::add_Modification( cmod , Observer::par2chnl( ampar ) );
+    // now add it
+    Block::add_dynamic_constraints( dUB , nub , ampar );
     }
    }
   else {
@@ -3254,20 +3246,24 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
   if( arc == get_NArcs() - 1 ) {
    // removing the last arc (and possibly more)
 
-   // list holding the removed variables
-   std::list<ColVariable> rmvd;
-   // list holding the removed constraints (if any)
-   std::list<LB0Constraint> rmvdub;
+   // vector holding the iterators to the removed variables
+   std::vector< typename std::list< ColVariable >::iterator > rmvdx;
+   // reverse iterator into dx
+   auto ritdx = dx.rbegin();
+   // vector holding the iteratos to the removed constraints (if any)
+   std::vector< typename std::list< LB0Constraint >::iterator > rmvdub;
+   // reverse iterator into dub
+   auto ritdub = dUB.rbegin();
    // pointer to LinearFunction in the objective (if any)
    LinearFunction * lfo;
    if( AR & HasObj )
     lfo = get_lfo();
 
    // scan from the end backwards, eliminate all deleted arcs
-   for( ; ; ++rmvdarcs ) {
-    auto rxi = &(dx.back());
-
-    rmvd.splice( rmvd.begin() , dx , std::prev( dx.end() ) );
+   for( ; ritdx != dx.rend() ; ++rmvdarcs ) {
+    auto itdx = (ritdx++).base();
+    rmvdx.push_back( --itdx );      // &*(rit.base() - 1) == &*rit
+    auto rxi = &(*itdx);
 
     // delete contribution to objective (if any)
     if( AR & HasObj )
@@ -3281,11 +3277,8 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 
     // delete arc capacity constraint (if any)
     if( AR & HasBnd ) {
-     auto tbrmvd = std::prev( dUB.end() );
-     // since there is no guarantee about the order in which the
-     // Modification are processed, be sure to clear() it now
-     tbrmvd->clear();
-     rmvdub.splice( rmvdub.begin() , dUB , tbrmvd );
+     auto itdub = (ritdub++).base();
+     rmvdub.push_back( --itdub );     // &*(rit.base() - 1) == &*rit
      }
 
     if( rmvdarcs >= get_NArcs() - get_NStaticArcs() )
@@ -3295,21 +3288,14 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
      break;
     }
 
-   // issue BlockModAD for the Constraint(s) (if any)
-   // do this before issuing that for Variable(s), so that if they are
+   // now actually remove and clear the UB Constraint(s) (if any)
+   // do this before removing the flow Variable(s), so that if they are
    // processed in FIFO order it is seen before
-   if( AR & HasBnd ) {
-    auto cmod = std::make_shared<BlockModAD>( BlockModAD::eDelConst );
-    cmod->whc_list = &(dUB);
-    cmod->mod_list = std::move( rmvdub );
-    Block::add_Modification( cmod , Observer::par2chnl( ampar ) );
-    }
+   if( AR & HasBnd )
+    Block::remove_dynamic_constraints( dUB , rmvdub , ampar );
 
-   // issue BlockModAD for the Variable(s)
-   auto vmod = std::make_shared<BlockModAD>( BlockModAD::eDelVar );
-   vmod->whc_list = &(dx);
-   vmod->mod_list = std::move( rmvd );
-   Block::add_Modification( vmod , Observer::par2chnl( ampar ) );
+   // now actually remove the flow Variable(s) (if any)
+   Block::remove_dynamic_variables( dx , rmvdx , ampar );
    }
   else {
    auto rx = const_cast< ColVariable * >(
@@ -3683,8 +3669,8 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     throw( std::invalid_argument(
 			     "Modification to non-constructed Constraint" ) );
 
-   if( tmod->f_type == RowConstraintMod::eChgRHS ) {
-    auto cp = dynamic_cast<LB0Constraint * const>( tmod->f_constraint );
+   if( tmod->type() == RowConstraintMod::eChgRHS ) {
+    auto cp = dynamic_cast<LB0Constraint * const>( tmod->constraint() );
     if( ! cp )
      throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
@@ -3692,8 +3678,8 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     return;
     }
 
-   if( tmod->f_type == RowConstraintMod::eChgBTS ) {
-    auto cp = static_cast<FRowConstraint * const>( tmod->f_constraint );
+   if( tmod->type() == RowConstraintMod::eChgBTS ) {
+    auto cp = static_cast<FRowConstraint * const>( tmod->constraint() );
     if( ! cp )
      throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
@@ -3709,7 +3695,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
  {
   const auto tmod = std::dynamic_pointer_cast<VariableMod>( mod );
   if( tmod ) {
-   auto xi = dynamic_cast<ColVariable * const>( tmod->f_variable );
+   auto xi = dynamic_cast<ColVariable * const>( tmod->variable() );
    if( ! xi )
     throw( std::logic_error( "Modification to wrong type of Variable" ) );
    if( ( xi->get_type() != ColVariable::kNonNegative ) &&

@@ -1819,10 +1819,10 @@ public:
   *
   *   = if the "name" of the arc is == get_NArcs() (before the call):
   *
-  *     * a BlockModAD with type eAddVar corresponding to the addition of a
+  *     * a BlockModAdd< ColVariable > corresponding to the addition of a
   *       new dynamic Variable (the flow Variable of the arc);
   *
-  *     * possibly, a BlockModAD with type eAddConst corresponding to the
+  *     * possibly, a BlockModAdd< LB0Constraint > corresponding to the
   *       addition of a new dynamic Constraint (the bound Constraint of the
   *       arc, if it is defined);
   *
@@ -1886,10 +1886,10 @@ public:
   *
   *   = if the elimination is "physical":
   *
-  *     * a BlockModAD with type eDelVar corresponding to the removal of the
+  *     * a BlockModRmv< ColVariable > corresponding to the removal of the
   *       existing dynamic Variable (the flow Variable of the arcs);
   *
-  *     * possibly, a BlockModAD with type eDelConst corresponding to the
+  *     * possibly, a BlockModRmv< LB0Constraint > corresponding to the
   *       removal of the existing dynamic Constraint (the bound Constraint of
   *       the arcs, if they are defined);
   *
