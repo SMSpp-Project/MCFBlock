@@ -42,11 +42,11 @@
 
 # macroes to be exported- - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-MCFBkOBJ = $(MCFBkSDR)MCFBlock.o $(MCFBkSDR)MCFSolver.o
+MCFBkOBJ = $(MCFBkSDR)obj/MCFBlock.o $(MCFBkSDR)obj/MCFSolver.o
 
 MCFBkINC = -I$(MCFBkSDR)
 
-MCFBkH   = $(MCFBkSDR)MCFBlock.h $(MCFBkSDR)MCFSolver.h
+MCFBkH   = $(MCFBkSDR)include/MCFBlock.h $(MCFBkSDR)include/MCFSolver.h
 
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -55,11 +55,11 @@ clean::
 
 # dependencies: every .o from its .cpp + every recursively included .h- - - -
 
-$(MCFBkSDR)MCFBlock.o: $(MCFBkSDR)MCFBlock.cpp $(MCFBkSDR)MCFBlock.h \
-	$(SMS++OBJ)
+$(MCFBkSDR)obj/MCFBlock.o: $(MCFBkSDR)src/MCFBlock.cpp \
+	$(MCFBkSDR)include/MCFBlock.h $(SMS++OBJ)
 	$(CC) -c $*.cpp -o $@ $(MCFBkINC) $(SMS++INC) $(SW)
 
-$(MCFBkSDR)MCFSolver.o: $(MCFBkSDR)MCFSolver.cpp $(MCFBkH) \
+$(MCFBkSDR)obj/MCFSolver.o: $(MCFBkSDR)src/MCFSolver.cpp $(MCFBkH) \
 	$(SMS++OBJ) $(libMCFClOBJ) 
 	$(CC) -c $*.cpp -o $@ $(MCFBkINC) $(SMS++INC) $(libMCFClINC) $(SW)
 
