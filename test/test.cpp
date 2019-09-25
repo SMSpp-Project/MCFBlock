@@ -576,8 +576,9 @@ int main( int argc , char **argv )
   sMCFB = mMCFB = oMCFB;
 
  //  attach a "true" MCFSolver to the one that is actually solved
- sMCFB->register_Solver( Solver::new_Solver( solver_name( MCFC ) ) );
- 
+ // sMCFB->register_Solver( Solver::new_Solver( solver_name( MCFC ) ) );
+ sMCFB->register_Solver( new MCFSolver<MCFC>() );
+
  // compute min/max cost & max deficit- - - - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

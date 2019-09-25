@@ -1,27 +1,36 @@
-# ----- Project description and directories ------------------------------------
+# --------------------------------------------------------------------------- #
+#    Main CMake file for SMS++ MCF Block                                      #
+#                                                                             #
+#                              Niccolo' Iardella                              #
+#                          Operations Research Group                          #
+#                         Dipartimento di Informatica                         #
+#                             Universita' di Pisa                             #
+# --------------------------------------------------------------------------- #
 cmake_minimum_required(VERSION 3.8)
-project(MCFBlock
-        VERSION 1.0.0 # TODO: set proper version
-        HOMEPAGE_URL "https://gitlab.com/frangio68/sms_plus_plus_mcfblock_mcfsolver"
-        DESCRIPTION "MCF Block for SMS++")
+# ----- Project description and directories -----------------------------------
+# TODO: set proper version
+project(MCFBlock VERSION 1.0.0)
 
 set(PROJECT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(PROJECT_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# ----- Options for choosing the MCF Solver ------------------------------------
+# ----- Options for choosing the MCF Solver -----------------------------------
 # TODO: Do it in a more fashionable way
 #add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_CPLEX)
-add_compile_definitions(HAVE_RELAX)
+#add_compile_definitions(HAVE_RELAX)
+add_definitions(-DHAVE_RELAX)
 
-# ----- Requirements -----------------------------------------------------------
-find_package(Boost REQUIRED)
-find_package(Eigen3 REQUIRED)
-find_package(SMSpp REQUIRED)
+# ----- Requirements ----------------------------------------------------------
+# This file contains HINTS supported by the find modules
+include(CMakeConfig.txt OPTIONAL)
+
+find_package(SMSpp    REQUIRED)
 find_package(MCFClass REQUIRED)
+find_package(netCDF   REQUIRED)
 
-# ----- Library ----------------------------------------------------------------
-add_library(MCFBlock OBJECT) # TODO: Find out why STATIC doesn't work
+# ----- Library ---------------------------------------------------------------
+add_library(MCFBlock STATIC)
 target_compile_features(MCFBlock PUBLIC cxx_std_17)
 
 target_sources(MCFBlock PRIVATE
@@ -31,19 +40,17 @@ target_sources(MCFBlock PRIVATE
 
 target_include_directories(MCFBlock PUBLIC
                            $<INSTALL_INTERFACE:include/SMS++>
-                           $<BUILD_INTERFACE:${PROJECT_INCLUDE_DIR}>
-                           )
+                           $<BUILD_INTERFACE:${PROJECT_INCLUDE_DIR}>)
 
 target_link_libraries(MCFBlock PUBLIC
                       SMS++::SMSpp
                       MCFClass::MCFClass
-                      Boost::boost
-                      Eigen3::Eigen)
+                      NetCDF::NetCDFCxx)
 
 # Alias for testing
 add_library(SMS++::MCFBlock ALIAS MCFBlock)
 
-# ----- Install instructions ---------------------------------------------------
+# ----- Install instructions --------------------------------------------------
 include(GNUInstallDirs)
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
 
@@ -82,14 +89,23 @@ install(FILES
         ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfigVersion.cmake
         DESTINATION ${INSTALL_CONFIGDIR})
 
-# ----- Export from the build tree ---------------------------------------------
+# ----- Export from the build tree --------------------------------------------
 export(EXPORT MCFBlock-targets
        FILE ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockTargets.cmake
        NAMESPACE SMS++::)
 
+# Export the find modules and the config file so other projects will use them
+configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake/FindnetCDF.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/FindnetCDF.cmake
+               COPYONLY)
+
+configure_file(${CMAKE_CURRENT_LIST_DIR}/CMakeConfig.txt
+               ${CMAKE_CURRENT_BINARY_DIR}/CMakeConfig.txt
+               COPYONLY)
+
 # Register package in user's package registry (~/.cmake/registry)
 export(PACKAGE MCFBlock)
 
-# ----- Subdirectories ---------------------------------------------------------
+# ----- Subdirectories --------------------------------------------------------
 add_subdirectory(test)
 add_subdirectory(tools)
