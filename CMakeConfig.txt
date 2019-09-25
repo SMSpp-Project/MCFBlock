@@ -1,7 +1,0 @@
-# Uncomment and edit these variables to override paths
-# -----------------------------------------------------------------------------
-# NetCDF headers location
-#set(NETCDF_INC  "/usr/local/include/")
-
-# NetCDF library location
-#set(NETCDF_LIB  "/usr/local/lib")

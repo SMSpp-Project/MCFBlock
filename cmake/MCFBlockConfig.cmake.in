@@ -1,20 +1,39 @@
-# This file contains instructions on how to generate the MCFBlockConfig.cmake
-
+# --------------------------------------------------------------------------- #
+#    Package configuration file                                               #
+#                                                                             #
+#    This file contains instructions on how to generate ***Config.cmake,      #
+#    that is, the file that tells CMake how the package should be             #
+#    configured when found by other projects using find_package().            #
+#                                                                             #
+#    ***Targets.cmake (to be found alongside this file) is the target import  #
+#    file that tells where the headers and library are. It will be different  #
+#    depending on a local build or an installed package.                      #
+#                                                                             #
+#                              Niccolo' Iardella                              #
+#                          Operations Research Group                          #
+#                         Dipartimento di Informatica                         #
+#                             Universita' di Pisa                             #
+# --------------------------------------------------------------------------- #
 get_filename_component(MCFBlock_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
+# ----- Requirements -------------------------------------------------------- #
 # This is needed to find the custom modules we provide
 list(APPEND CMAKE_MODULE_PATH ${MCFBlock_CMAKE_DIR})
 
-include(${MCFBlock_CMAKE_DIR}/CMakeConfig.txt OPTIONAL)
-find_package(SMSpp REQUIRED)
-find_package(MCFClass REQUIRED)
-find_package(netCDF REQUIRED)
+# FIXME: Not a good idea because CMakeCustom.txt is not to be installed
+#include(${MCFBlock_CMAKE_DIR}/CMakeCustom.txt OPTIONAL)
+
+# find_dependency() is to be preferred inside configuration files
+find_dependency(SMSpp REQUIRED)
+find_dependency(MCFClass REQUIRED)
+find_dependency(netCDF REQUIRED)
 
 list(REMOVE_AT CMAKE_MODULE_PATH -1)
 
-if(NOT TARGET SMS++::MCFBlock)
+# ----- Import target ------------------------------------------------------- #
+if (NOT TARGET SMS++::MCFBlock)
     include("${MCFBlock_CMAKE_DIR}/MCFBlockTargets.cmake")
-endif()
+endif ()
 
 set(MCFBlock_LIBRARIES SMS++::MCFBlock)
