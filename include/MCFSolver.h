@@ -764,52 +764,52 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
    {
     const auto tmod = std::dynamic_pointer_cast<MCFBlockRngdMod>( mod );
     if( tmod ) {
-     switch( tmod->f_type ) {
+     switch( tmod->type() ) {
       case( MCFBlockMod::eChgCost ):
-       if( tmod->f_rng.second == tmod->f_rng.first + 1 )
-        MCFC::ChgCost( tmod->f_rng.first , MCFB->get_C( tmod->f_rng.first ) );
+       if( tmod->rng().second == tmod->rng().first + 1 )
+        MCFC::ChgCost( tmod->rng().first , MCFB->get_C( tmod->rng().first ) );
        else
-	MCFC::ChgCosts( MCFB->get_C().data() + tmod->f_rng.first , nullptr,
-			tmod->f_rng.first , tmod->f_rng.second );
+	MCFC::ChgCosts( MCFB->get_C().data() + tmod->rng().first , nullptr,
+			tmod->rng().first , tmod->rng().second );
        break;
 
       case( MCFBlockMod::eChgCaps ):
-       if( tmod->f_rng.second == tmod->f_rng.first + 1 )
-        MCFC::ChgUCap( tmod->f_rng.first , MCFB->get_U( tmod->f_rng.first ) );
+       if( tmod->rng().second == tmod->rng().first + 1 )
+        MCFC::ChgUCap( tmod->rng().first , MCFB->get_U( tmod->rng().first ) );
        else
-	MCFC::ChgUCaps( MCFB->get_U().data() + tmod->f_rng.first , nullptr,
-			tmod->f_rng.first , tmod->f_rng.second );
+	MCFC::ChgUCaps( MCFB->get_U().data() + tmod->rng().first , nullptr,
+			tmod->rng().first , tmod->rng().second );
        break;
 
       case( MCFBlockMod::eChgDfct ):
-       if( tmod->f_rng.second == tmod->f_rng.first + 1 )
-        MCFC::ChgDfct( tmod->f_rng.first , MCFB->get_B( tmod->f_rng.first ) );
+       if( tmod->rng().second == tmod->rng().first + 1 )
+        MCFC::ChgDfct( tmod->rng().first , MCFB->get_B( tmod->rng().first ) );
        else
-	MCFC::ChgDfcts( MCFB->get_B().data() + tmod->f_rng.first , nullptr,
-			tmod->f_rng.first , tmod->f_rng.second );
+	MCFC::ChgDfcts( MCFB->get_B().data() + tmod->rng().first , nullptr,
+			tmod->rng().first , tmod->rng().second );
        break;
 
       case( MCFBlockMod::eOpenArc ):
-       for( auto arc = tmod->f_rng.first ; arc < tmod->f_rng.second ; )
+       for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
 	MCFC::OpenArc( arc++ );
        break;
 
       case( MCFBlockMod::eCloseArc ):
-       for( auto arc = tmod->f_rng.first ; arc < tmod->f_rng.second ; )
+       for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
 	MCFC::CloseArc( arc++ );
        break;
 
       case( MCFBlockMod::eAddArc ): {
-       auto arc = MCFC::AddArc( MCFB->get_SN( tmod->f_rng.first ) ,
-				MCFB->get_EN( tmod->f_rng.first ) ,
-				MCFB->get_U( tmod->f_rng.first ) ,
-				MCFB->get_C( tmod->f_rng.first ) );
-       if( arc != tmod->f_rng.first )
+       auto arc = MCFC::AddArc( MCFB->get_SN( tmod->rng().first ) ,
+				MCFB->get_EN( tmod->rng().first ) ,
+				MCFB->get_U( tmod->rng().first ) ,
+				MCFB->get_C( tmod->rng().first ) );
+       if( arc != tmod->rng().first )
 	throw( std::logic_error( "name mismatch in AddArc()" ) );
        break;
        }
       case( MCFBlockMod::eRmvArc ):
-       MCFC::DelArc( tmod->f_rng.second - 1 );
+       MCFC::DelArc( tmod->rng().second - 1 );
        break;
 
       default:
@@ -824,25 +824,25 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
    {
     const auto tmod = std::dynamic_pointer_cast<MCFBlockSbstMod>( mod );
     if( tmod ) {
-     switch( tmod->f_type ) {
+     switch( tmod->type() ) {
       case( MCFBlockMod::eOpenArc ):
-       for( auto arc : tmod->f_nms )
+       for( auto arc : tmod->nms() )
 	MCFC::OpenArc( arc );
        return;
 
       case( MCFBlockMod::eCloseArc ):
-       for( auto arc : tmod->f_nms )
+       for( auto arc : tmod->nms() )
 	MCFC::CloseArc( arc );
        return;
       }
 
      // have to InINF-terminate the vector of indices (damn!)
-     MCFBlock::Subset nmsI( tmod->f_nms.size() + 1 );
-     *copy( tmod->f_nms.begin() , tmod->f_nms.end() , nmsI.begin() ) =
+     MCFBlock::Subset nmsI( tmod->nms().size() + 1 );
+     *copy( tmod->nms().begin() , tmod->nms().end() , nmsI.begin() ) =
                                                        Inf<MCFBlock::Index>();
-     switch( tmod->f_type ) {
+     switch( tmod->type() ) {
       case( MCFBlockMod::eChgCost ): {
-       MCFBlock::Vec_CNumber NCost( tmod->f_nms.size() );
+       MCFBlock::Vec_CNumber NCost( tmod->nms().size() );
        auto C = MCFB->get_C();
        for( MCFBlock::Index i = 0 ; i < NCost.size() ; i++ )
 	NCost[ i ] = C[ nmsI[ i ] ];
@@ -852,7 +852,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
        }
 
       case( MCFBlockMod::eChgCaps ): {
-       MCFBlock::Vec_FNumber NCap( tmod->f_nms.size() );
+       MCFBlock::Vec_FNumber NCap( tmod->nms().size() );
        auto U = MCFB->get_U();
        for( MCFBlock::Index i = 0 ; i < NCap.size() ; i++ )
 	NCap[ i ] = U[ nmsI[ i ] ];
@@ -862,7 +862,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
        }
 
       case( MCFBlockMod::eChgDfct ): {
-       MCFBlock::Vec_FNumber NDfct( tmod->f_nms.size() );
+       MCFBlock::Vec_FNumber NDfct( tmod->nms().size() );
        auto B = MCFB->get_B();
        for( MCFBlock::Index i = 0 ; i < NDfct.size() ; i++ )
 	NDfct[ i ] = B[ nmsI[ i ] ];

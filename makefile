@@ -44,7 +44,7 @@
 
 MCFBkOBJ = $(MCFBkSDR)obj/MCFBlock.o $(MCFBkSDR)obj/MCFSolver.o
 
-MCFBkINC = -I$(MCFBkSDR)
+MCFBkINC = -I$(MCFBkSDR)/include
 
 MCFBkH   = $(MCFBkSDR)include/MCFBlock.h $(MCFBkSDR)include/MCFSolver.h
 
@@ -57,10 +57,12 @@ clean::
 
 $(MCFBkSDR)obj/MCFBlock.o: $(MCFBkSDR)src/MCFBlock.cpp \
 	$(MCFBkSDR)include/MCFBlock.h $(SMS++OBJ)
-	$(CC) -c $*.cpp -o $@ $(MCFBkINC) $(SMS++INC) $(SW)
+	$(CC) -c $(MCFBkSDR)src/MCFBlock.cpp -o $@ \
+	$(MCFBkINC) $(SMS++INC) $(SW)
 
 $(MCFBkSDR)obj/MCFSolver.o: $(MCFBkSDR)src/MCFSolver.cpp $(MCFBkH) \
 	$(SMS++OBJ) $(libMCFClOBJ) 
-	$(CC) -c $*.cpp -o $@ $(MCFBkINC) $(SMS++INC) $(libMCFClINC) $(SW)
+	$(CC) -c $(MCFBkSDR)src/MCFSolver.cpp -o $@ \
+	$(MCFBkINC) $(SMS++INC) $(libMCFClINC) $(SW)
 
 ########################## End of makefile ###################################

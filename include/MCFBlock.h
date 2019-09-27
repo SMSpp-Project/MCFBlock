@@ -2197,7 +2197,7 @@ class MCFBlockMod : public Modification
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// accessor to the type of modification
 
- int * type( void ) { return( f_type ); }
+ int type( void ) { return( f_type ); }
 
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 

@@ -874,8 +874,10 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
    for( Index j = 0 ; j < xi->get_num_active() ; ++j ) {
     ThinVarDepInterface * ci = xi->get_active( j );
     auto rci = dynamic_cast<FRowConstraint *>( ci );
-    if( rci )
-     RCi -= rci->get_dual() * get_lfc( rci )->get_coefficient( xi );
+    if( rci ) {
+     auto lrci = get_lfc( rci );
+     RCi -= rci->get_dual() * lrci->get_coefficient( lrci->is_active( xi ) );
+     }
     else {
      auto bci = dynamic_cast<BoxConstraint *>( ci );
      assert( bci );
@@ -946,7 +948,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   if( HasStaticX() ) {
    if( UB.empty() ) {
     for( ; i < get_NStaticArcs() ; ++i ) {
-     c_CNumber Ci = lfo->get_coefficient( &x[ i ] );
+     c_CNumber Ci = lfo->get_coefficient( i );
      CNumber RCi = RC[ i ];
      if( Ci )
       RCi /= Ci;
@@ -956,7 +958,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
     }
    else
     for( ; i < get_NStaticArcs() ; ++i ) {
-     c_CNumber Ci = lfo->get_coefficient( &x[ i ] );
+     c_CNumber Ci = lfo->get_coefficient( i );
      CNumber RCi = RC[ i ];
      if( Ci )
       RCi /= Ci;
@@ -982,7 +984,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
    if( dUB.empty() ) {
     for( ; i < get_NStaticArcs() ; ++i )
      if( ! is_deleted( i ) ) {
-      c_CNumber Ci = lfo->get_coefficient( &(*dxi) );
+      c_CNumber Ci = lfo->get_coefficient( i );
       CNumber RCi = RC[ i ];
       if( Ci )
        RCi /= Ci;
@@ -995,7 +997,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 
     for( ; i < get_NArcs() ; ++i )
      if( ! is_deleted( i ) ) {
-      c_CNumber Ci = lfo->get_coefficient( &(*dxi) );
+      c_CNumber Ci = lfo->get_coefficient( i );
       CNumber RCi = RC[ i ];
       if( Ci )
        RCi /= Ci;
@@ -2000,7 +2002,8 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
   C.assign( get_MaxNArcs() , 0 );
   }
 
- if( std::equal( NCost.begin() , NCost.end() , C.begin() + rng.first ) )
+ if( std::equal( NCost , NCost + ( rng.second - rng.first ) ,
+		 C.begin() + rng.first ) )
   return;  // actually nothing changes, avoid issuing the Modification
 
  if( not_dry_run( issueMod ) ) {
@@ -2018,6 +2021,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 					  NCost + ( rng.second - rng.first )
 					  ) , rng , issueAMod );
    }
+  }
 
  f_cond_lower = NAN;  // reset conditional bounds
  
@@ -2047,7 +2051,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
   C.assign( get_MaxNArcs() , 0 );
   }
 
- if( is_equal( C , nms , NCost , get_NArcs() )
+ if( is_equal( C , nms , NCost , get_NArcs() ) )
   return;  // actually nothing changes, avoid issuing the Modification
 
  if( not_dry_run( issueMod ) ) {
@@ -2055,20 +2059,16 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
 
   copyidx( C , nms , NCost );
 
-  std::copy( NCost , NCost + ( rng.second - rng.first ) ,
-	             C.begin() + rng.first );
-
   if( AR & HasObj ) {  // the abstract representation is there
    // change it as well - - - - - - - - - - - - - - - - - - - - - - - - - - -
    // note that modify_coefficients owns both vectors, so two copies have
    // to be made
 
    auto lfo = get_lfo();
-   lfo->modify_coefficients( Vec_CNumber( NCost ,
-					  NCost + ( rng.second - rng.first )
-					  ) ,
+   lfo->modify_coefficients( Vec_CNumber( NCost , NCost + nms.size() ) ,
 			     Subset( nms ) , issueAMod );
    }
+  }
 
  f_cond_lower = NAN;  // reset conditional bounds
 
@@ -2106,7 +2106,7 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
   // in the meantime, if so instructed also issue abstract Modification
   C[ arc ] = NCost;
 
-  get_lfo()->modify_coefficient( i2p_x( arc ) , NCost , issueAMod );
+  get_lfo()->modify_coefficient( arc , NCost , issueAMod );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -3083,12 +3083,12 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
     if( AR & HasFlw ) {
      auto snc = get_lfc( i2p_e( sn ) );
      auto sni = snc->is_active( rxi );
-     if( sni >= sni->get_num_active_var() )
+     if( sni >= snc->get_num_active_var() )
       throw( std::logic_error( "x variable not active in flow constraint" ) );
      snc->remove_variable( sni , ampar );
      auto enc = get_lfc( i2p_e( en ) );
      auto eni = enc->is_active( rxi );
-     if( eni >= eni->get_num_active_var() )
+     if( eni >= enc->get_num_active_var() )
       throw( std::logic_error( "x variable not active in flow constraint" ) );
      enc->remove_variable( eni , ampar );
      }
@@ -3126,8 +3126,16 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 
    // delete contribution to flow constraint (if any)
    if( AR & HasFlw ) {
-    get_lfc( i2p_e( sn ) )->remove_variable( rx , ampar );
-    get_lfc( i2p_e( en ) )->remove_variable( rx , ampar );
+    auto snc = get_lfc( i2p_e( sn ) );
+    auto sni = snc->is_active( rx );
+    if( sni >= snc->get_num_active_var() )
+     throw( std::logic_error( "x variable not active in flow constraint" ) );
+    snc->remove_variable( sni , ampar );
+    auto enc = get_lfc( i2p_e( en ) );
+    auto eni = enc->is_active( rx );
+    if( eni >= enc->get_num_active_var() )
+     throw( std::logic_error( "x variable not active in flow constraint" ) );
+    enc->remove_variable( eni , ampar );
     }
    }
 
@@ -3340,7 +3348,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    else {                            // changing many costs at once
     Vec_CNumber NC( tmod->range().second - tmod->range().first );
     auto NCit = NC.begin();
-    for( Index i = tmod->range().first ; i < tmod->range().second )
+    for( Index i = tmod->range().first ; i < tmod->range().second ; )
      *(NCit++) = lfo->get_coefficient( i++ );
 
     chg_costs( NC.begin() , tmod->range() , eNoBlck , eDryRun );
@@ -3365,13 +3373,14 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    // note: in the following we can assume that the Subset in tmod is
    //       precisely the one we have to use since no Variable can have
    //       been added or deleted, which saves *a lot* of trouble
+   // note: chg_costs() owns subset, so a copy has to be made
 
    Vec_CNumber NC( tmod->subset().size() );
    auto NCit = NC.begin();
    for( auto i : tmod->subset() )
     *(NCit++) = lfo->get_coefficient( i++ );
 
-   chg_costs( NC.begin() , tmod->range() , tmod->ordered() ,
+   chg_costs( NC.begin() , Subset( tmod->subset() ) , tmod->ordered() ,
 	      eNoBlck , eDryRun );
    return;
    }
