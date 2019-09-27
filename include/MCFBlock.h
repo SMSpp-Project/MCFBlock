@@ -5,9 +5,9 @@
  * Header file for the *concrete* class MCFBlock, which implements the Block
  * concept [see Block.h] for (linear) Min-Cost Flow problems.
  *
- * \version 1.20
+ * \version 1.30
  *
- * \date 27 - 08 - 2019
+ * \date 27 - 09 - 2019
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -51,19 +51,18 @@ namespace SMSpp_di_unipi_it
 /** @defgroup MCFBlock_TYPES MCFBlock-related types
  *  @{ */
 
- typedef MCFBlock * p_MCFBlock;
- ///< a pointer to MCFBlock
+ using p_MCFBlock = MCFBlock *;  ///< a pointer to MCFBlock
 
- typedef std::vector<p_MCFBlock> Vec_MCFBlock;
+ using Vec_MCFBlock = std::vector<p_MCFBlock>;
  ///< a vector of pointers to MCFBlock
 
- typedef Vec_MCFBlock::iterator Vec_MCFBlock_it;
+ using Vec_MCFBlock_it = Vec_MCFBlock::iterator;
  ///< iterator for a Vec_MCFBlock
 
- typedef const std::vector<p_MCFBlock> c_Vec_MCFBlock;
+ using c_Vec_MCFBlock = const Vec_MCFBlock;
  ///< a const vector of pointers to MCFBlock
 
- typedef c_Vec_MCFBlock::iterator c_Vec_MCFBlock_it;
+ using c_Vec_MCFBlock_it = c_Vec_MCFBlock::iterator;
  ///< iterator for a c_Vec_MCFBlock
 
 /** @}  end( group( MCFBlock_TYPES ) ) */ 
@@ -71,7 +70,7 @@ namespace SMSpp_di_unipi_it
 /*------------------------------- CLASSES ----------------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @defgroup MCFBlock_CLASSES Classes in MCFBlock.h
- *  @{ */
+Vec_MCFBlock *  @{ */
 
 /*--------------------------------------------------------------------------*/
 /*-------------------------- CLASS MCFBlock --------------------------------*/
@@ -266,10 +265,10 @@ public:
   * can be of any type, defaulting to nullpt so that this can also be used as
   * the void constructor. */
 
- MCFBlock( Block *father = nullptr ) : Block( father ) , NNodes( 0 ) ,
-  NArcs( 0 ) , MaxNNodes( 0 ) , NStaticNodes( 0 ) , NStaticArcs( 0 ) ,
-  AR( 0 ) , f_cond_lower( - Inf<double>() ) , f_cond_upper( - Inf<double>() )
-  { }
+ explicit MCFBlock( Block *father = nullptr )
+  : Block( father ) , NNodes( 0 ) , NArcs( 0 ) , MaxNNodes( 0 ) ,
+    NStaticNodes( 0 ) , NStaticArcs( 0 ) , AR( 0 ) ,
+    f_cond_lower( - Inf<double>() ) , f_cond_upper( - Inf<double>() ) { }
 
 /*--------------------------------------------------------------------------*/
  /// destructor of MCFBlock: deletes the abstract representation, if any
@@ -340,12 +339,11 @@ public:
   * Like load( std::istream & ), if there is any Solver attached to this
   * MCFBlock then a NBModification (the "nuclear option") is issued. */
 
- virtual void load( c_Index n , c_Index m ,
-		    c_Subset & pEn , c_Subset & pSn ,
-		    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
-		    c_Vec_FNumber & pB = {} ,
-		    c_Index dn = 0 , c_Index dm = 0 ,
-		    c_Index mdn = 0 , c_Index mdm = 0 );
+ void load( c_Index n , c_Index m , c_Subset & pEn , c_Subset & pSn ,
+	    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
+	    c_Vec_FNumber & pB = {} ,
+	    c_Index dn = 0 , c_Index dm = 0 ,
+	    c_Index mdn = 0 , c_Index mdm = 0 );
 
 /*--------------------------------------------------------------------------*/
  /// extends Block::deserialize( netCDF::NcGroup )
@@ -424,7 +422,7 @@ public:
   * missing they are treated as being 0 (this happening for all four means
   * that the graph is "fully static" and cannot be changed). */
 
- virtual void deserialize( netCDF::NcGroup & group ) override;
+ void deserialize( netCDF::NcGroup & group ) override;
 
 /*--------------------------------------------------------------------------*/
  /// generate the abstract variables of the MCF
@@ -444,8 +442,7 @@ public:
   * done because new dynamic arcs can be created any time, and the list of
   * dynamic Variable is there ready for when this happens. */
 
- virtual void generate_abstract_variables( Configuration *stvv = nullptr )
-  override;
+ void generate_abstract_variables( Configuration *stvv = nullptr ) override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the static constraint of the MCF
@@ -473,16 +470,16 @@ public:
   *
   * Note that the dynamic flow conservation constraints are actually created
   * if get_MaxNNodes() > get_NStaticNodes(), which may mean that the list can
-  * be empty when it is created (if get_MaxNNodes() > get_NNodes() 
+  * be empty when it is created (if get_MaxNNodes() > get_NNodes() =
   * get_NStaticNodes()); this is done because new dynamic nodes can be created
   * any time, and the list of dynamic Constraint is there ready for when this
   * happens.
   *
   * Regarding the bound constraints, these have fixed 0 LHS and a generic RHS,
   * which can be Inf<Fnumber>(). If *all* the RHS are +Infty, it is possible
-  * to avoid creating the LB0Constraint entirely and just use the fact that the
-  * ColVariable can be defined to be non-negative. The parameter stcc is used
-  * to decide if this is done: if
+  * to avoid creating the LB0Constraint entirely and just use the fact that
+  * the ColVariable can be defined to be non-negative. The parameter stcc is
+  * used to decide if this is done: if
   *
   * - all the RHS are +Infty;
   *
@@ -515,8 +512,7 @@ public:
   * the MCFBlock will throw exception while processing the corresponding
   * "abstract" Modification. */
  
- virtual void generate_abstract_constraints( Configuration *stcc = nullptr )
-  override;
+ void generate_abstract_constraints( Configuration *stcc = nullptr ) override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the objective of the MCF
@@ -568,7 +564,7 @@ public:
   * THEREFORE, ADDING THEM) IS NOT ALLOWED, the MCFBlock will throw exception
   * while processing the corresponding "abstract" Modification. */
 
- virtual void generate_objective( Configuration *objc = nullptr ) override;
+ void generate_objective( Configuration *objc = nullptr ) override;
 
 /**@} ----------------------------------------------------------------------*/
 /*-------------- Methods for reading the data of the MCFBlock --------------*/
@@ -579,7 +575,7 @@ public:
 /*--------------------------------------------------------------------------*/
  /// getting the current sense of the Objective, which is minimization
 
- virtual int get_objective_sense( void ) const override final {
+ int get_objective_sense( void ) const override final {
   return( Objective::eMin );
   }
   
@@ -604,7 +600,7 @@ public:
   *       is surely not empty, and thus the conditionally valid upper bound is
   *       also a globally valid upper bound. */
 
- virtual double get_valid_upper_bound( const bool conditional = false )
+ double get_valid_upper_bound( const bool conditional = false )
   override final {
   if( ! conditional )
    return( + Inf<double>() );
@@ -626,7 +622,7 @@ public:
   * cannot be unbounded below (although it can still be empty, but that's an
   * issue for upper bound, this being a minimization problem). */
 
- virtual double get_valid_lower_bound( const bool conditional = false )
+ double get_valid_lower_bound( const bool conditional = false )
   override final {
   if( isnan( f_cond_lower ) )
    compute_conditional_bounds();
@@ -636,42 +632,48 @@ public:
 
 /*--------------------------------------------------------------------------*/
  /// get the number of nodes
+
  inline Index get_NNodes( void ) const { return( NNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of arcs
+
  inline Index get_NArcs( void ) const { return( NArcs ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the maximum number of nodes
+
  inline Index get_MaxNNodes( void ) const { return( MaxNNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the maximum number of arcs
+
  inline Index get_MaxNArcs( void ) const { return( SN.size() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static nodes
+
  inline Index get_NStaticNodes( void ) const { return( NStaticNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static arcs
+
  inline Index get_NStaticArcs( void ) const { return( NStaticArcs ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// returns true if there are static nodes (= flow constraints if constructed)
+ /// returns true if there are static nodes (= possibly flow constraints)
 
  inline bool HasStaticE( void ) const { return( get_NStaticNodes() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// returns true if there are dynamic nodes (= flow constraints)
+ /// returns true if there are dynamic nodes (= possibly flow constraints)
 
  inline bool HasDynamicE( void ) const {
   return( get_NNodes() > get_NStaticNodes() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// returns true if there may ever be dynamic nodes  (= flow constraints)
+ /// returns true if there may ever be dynamic nodes (= flow constraints)
 
  inline bool MayHaveDynE( void ) const {
   return( get_MaxNNodes() > get_NStaticNodes() );
@@ -780,9 +782,9 @@ public:
 /*--------------------------------------------------------------------------*/
  /// given a pointer to a flow Constraint, returns the index of the arc
  /** Given a pointer to a flow Constraint (formally a Constraint *, but
-  * immediately static_cast-ed to a FRowConstraint * right inside), returns the
-  * index of the corresponding arc. Throws exception if the pointer is not to
-  * a [FRow]Constraint of the MCFBlock. */
+  * immediately static_cast-ed to a FRowConstraint * right inside), returns
+  * the index of the corresponding arc. Throws exception if the pointer is
+  * not to a [FRow]Constraint of the MCFBlock. */
 
  inline Index p2i_e( Constraint * const cns ) const
  {
@@ -802,16 +804,14 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the arc is closed
 
- inline bool is_closed( c_Index arc ) const
- {
+ inline bool is_closed( c_Index arc ) const {
   return( i2p_x( arc )->is_fixed() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the arc is deleted
 
- inline bool is_deleted( c_Index arc ) const
- {
+ inline bool is_deleted( c_Index arc ) const {
   return( SN[ arc ] >= Inf<Index>() );
   }
 
@@ -865,7 +865,7 @@ public:
  /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the cost of arc i (0 <= i < get_NArcs())
 
- inline CNumber get_C( c_Index i ) const { return( C.size() ? C[ i ] : 0 ); }
+ inline CNumber get_C( c_Index i ) const { return( C.empty() ? 0 : C[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc upper bounds
@@ -878,8 +878,9 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the upper bound of arc i (0 <= i < get_NArcs())
 
- inline FNumber get_U( c_Index i ) const { return( U.size() ? U[ i ] :
-						   Inf<FNumber>() ); }
+ inline FNumber get_U( c_Index i ) const { return( U.empty() ?
+						   Inf<FNumber>() : U[ i ]
+						   ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of node deficits
@@ -897,7 +898,7 @@ public:
   * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
   * "names" between 1 and get_NNodes(). */
 
- inline FNumber get_B( c_Index i ) const { return( B.size() ? B[ i ] : 0 ); }
+ inline FNumber get_B( c_Index i ) const { return( B.empty() ? 0 : B[ i ] ); }
 
 /**@} ----------------------------------------------------------------------*/
 /*--------------------- Methods for checking the Block ---------------------*/
@@ -987,8 +988,8 @@ public:
   *
   * - otherwise, it is 0. */
  
- virtual bool is_feasible( bool useabstract = false ,
-			   Configuration *fsbc = nullptr ) override;
+ bool is_feasible( bool useabstract = false , Configuration *fsbc = nullptr )
+  override;
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is (approximately) optimal
@@ -999,8 +1000,8 @@ public:
   * bound constraints is approximately feasible, and that the two
   * approximately satisfies the Complementary Slackness Conditions. This
   * clearly requires that both the Variable and the Constraint of the
-  * MCFBlock to have been defined, i.e., that generate_abstract_variables() and
-  * generate_abstract_constraints() have been called prior to this method.
+  * MCFBlock to have been defined, i.e., that generate_abstract_variables()
+  * and generate_abstract_constraints() have been called prior to this method.
   *
   * This requires two parameters for deciding what "approximately feasible"
   * means, one for the primal (feps) and one for the dual (ceps), like in
@@ -1021,8 +1022,8 @@ public:
   *
   * - otherwise, ceps == feps == 0. */
  
- virtual bool is_optimal( bool useabstract = false  ,
-			  Configuration *optc = nullptr ) override;
+ bool is_optimal( bool useabstract = false  , Configuration *optc = nullptr )
+  override;
 
 /**@} ----------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
@@ -1038,7 +1039,7 @@ public:
   *
   */
 
- virtual Block * get_R3_Block( Configuration *r3bc = nullptr ) override;
+ Block * get_R3_Block( Configuration *r3bc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /// maps back the solution from a copy MCFBlock to the current one
@@ -1072,8 +1073,8 @@ public:
   * the corresponding Variable/Constraint have not been constructed yet:
   * this throws an exception. */ 
 
- virtual void map_back_solution( Block *R3B , Configuration *r3bc = nullptr ,
-				 Configuration *solc = nullptr ) override;
+ void map_back_solution( Block *R3B , Configuration *r3bc = nullptr ,
+			 Configuration *solc = nullptr ) override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// maps the solution of the current MCFBlock to a copy MCFBlock
@@ -1107,9 +1108,8 @@ public:
   * required solution, if the corresponding Variable/Constraint have not
   * been constructed yet: this throws an exception. */ 
 
- virtual void map_forward_solution( Block *R3B ,
-				    Configuration *r3bc = nullptr ,
-				    Configuration *solc = nullptr ) override;
+ void map_forward_solution( Block *R3B , Configuration *r3bc = nullptr ,
+			    Configuration *solc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
@@ -1142,11 +1142,10 @@ public:
   * reason for it to issue "abstract" Modification with concerns_Block() ==
   * true. */
 
- virtual bool map_forward_Modification( Block *R3B , sp_Mod mod ,
-					Configuration *r3bc = nullptr ,
-					c_ModParam issuePMod = eNoBlck ,
-					c_ModParam issueAMod = eModBlck )
-  override;
+ bool map_forward_Modification( Block *R3B , sp_Mod mod ,
+				Configuration *r3bc = nullptr ,
+				c_ModParam issuePMod = eNoBlck ,
+				c_ModParam issueAMod = eModBlck ) override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
@@ -1155,11 +1154,10 @@ public:
   * map_forward_Modification() in reverse, so see the comments to the latter
   * method. */
 
- virtual bool map_back_Modification( Block *R3B , sp_Mod mod ,
-				     Configuration *r3bc = nullptr ,
-				     c_ModParam issuePMod = eNoBlck ,
-				     c_ModParam issueAMod = eModBlck )
-  override;
+ bool map_back_Modification( Block *R3B , sp_Mod mod ,
+			     Configuration *r3bc = nullptr ,
+			     c_ModParam issuePMod = eNoBlck ,
+			     c_ModParam issueAMod = eModBlck ) override;
 
 /**@} ----------------------------------------------------------------------*/
 /*----------------------- Methods for handling Solution --------------------*/
@@ -1205,8 +1203,8 @@ public:
   * define MCFSolution before MCFBlock because the former uses some type
   * information declared in the latter. */ 
 
- virtual Solution * get_Solution( Configuration *solc = nullptr ,
-				  bool emptys = true ) override;
+ Solution * get_Solution( Configuration *solc = nullptr ,
+			  bool emptys = true ) override;
 
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the flow solution
@@ -1220,7 +1218,9 @@ public:
  /// gets the flow solution for an arbitrary subset of arcs
  /** Method to get the flow solution; upon return, FSol[ i ] contains the
   * current value of the flow solution for arc nms[ i ] for all 0 <= i < 
-  * nms.size(). */
+  * nms.size(). Note that
+  *
+  *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
 
  void get_x( Vec_FNumber & FSol , c_Subset & nms );
 
@@ -1254,7 +1254,10 @@ public:
   * current value of the potential solution for node nms[ i ] for all 0 <= i
   * < nms.size(). Note that "node names" here go from 0 to get_NNodes() - 1,
   * despite the fact that get_SN() and get_EN() report node "names" between
-  * 1 and get_NNodes(). */
+  * 1 and get_NNodes(). Also, note that
+  *
+  *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
+
 
  void get_pi( Vec_CNumber & PSol , c_Subset & nms );
 
@@ -1289,7 +1292,9 @@ public:
  /// gets the reduced costs for an arbitrary subset of arcs
  /** Method to get the reduced costs; upon return, RC[ i ] contains the
   * current value of the reduced costs for arc nms[ i ] for all 0 <= i < 
-  * nms.size(). */
+  * nms.size(). Note that
+  *
+  *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
 
  void get_rc( Vec_CNumber & RC , c_Subset & nms );
 
@@ -1418,9 +1423,9 @@ public:
   * - GroupModification, that are simply unpacked into the individual
   *   sub-[Group]Modification and dealt with individually;
   *
-  * - C05FunctionModLin changing coefficients coming from the (LinearFunction
-  *   into the FRow)Objective, but *not* from the (LinearFunction into the
-  *   FRow)Constraint;
+  * - C05FunctionModRngd and C05FunctionModSbst changing coefficients coming
+  *   from the (LinearFunction into the FRow)Objective, but *not* from the
+  *   (LinearFunction into the FRow)Constraint;
   *
   * - RowConstraintMod changing the RHS of the bound constraints and both
   *   sides at once of the flow conservation ones, but not any other
@@ -1436,7 +1441,7 @@ public:
   * Any other Modification reaching the MCFBlock will lead to exception
   * being thrown. */
 
- virtual void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
+ void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
 
 /**@} ----------------------------------------------------------------------*/
 /*------------ METHODS FOR LOADING, PRINTING & SAVING THE MCFBlock ---------*/
@@ -1449,7 +1454,7 @@ public:
   * MCFBlock. See MCFBlock::deserialize( netCDF::NcGroup ) for details of the
   * format of the created netCDF group. */
 
- virtual void serialize( netCDF::NcGroup & group ) const override;
+ void serialize( netCDF::NcGroup & group ) const override;
 
 /**@} ----------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
@@ -1923,7 +1928,7 @@ public:
  /** Protected method to print information about the MCFBlock; with the
   * "complete" level it outputs the MCFBlock in DIMACS formar. */
 
- virtual void print( std::ostream &output ) const override;
+ void print( std::ostream &output ) const override;
 
 /*--------------------------------------------------------------------------*/
  /// loads the MCF instance from file in DIMACS standard format
@@ -1960,7 +1965,7 @@ public:
   * Like load( memory ), if there is any Solver attached to this MCFBlock
   * then a NBModification (the "nuclear option") is issued. */
 
- virtual void load( std::istream &input ) override;
+ void load( std::istream &input ) override;
 
 /**@} ----------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
@@ -2049,10 +2054,12 @@ public:
   register_method< MCFBlock >( "MCFBlock::chg_dfcts" , &MCFBlock::chg_dfcts ,
 			       MS_dbl_sbst::args() );
 
-  register_method< MCFBlock >( "MCFBlock::close_arcs" , &MCFBlock::close_arcs ,
+  register_method< MCFBlock >( "MCFBlock::close_arcs" ,
+			       &MCFBlock::close_arcs ,
 			       MS_rngd::args() );
 
-  register_method< MCFBlock >( "MCFBlock::close_arcs" , &MCFBlock::close_arcs ,
+  register_method< MCFBlock >( "MCFBlock::close_arcs" ,
+			       &MCFBlock::close_arcs ,
 			       MS_sbst::args() );
 
   register_method< MCFBlock >( "MCFBlock::open_arcs" , &MCFBlock::open_arcs ,
@@ -2179,14 +2186,18 @@ class MCFBlockMod : public Modification
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
- virtual ~MCFBlockMod() { }   ///< destructor, does nothing
+ virtual ~MCFBlockMod() = default;   ///< destructor, does nothing
 
-/*---------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
+/*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
 
- MCFBlock *f_Block;
-               ///< pointer to the MCFBlock to which the MCFBlockMod refers
+ /// accessor to the MCFBlock to which the MCFBlockMod refers
 
- int f_type;   ///< type of modification
+ MCFBlock * block( void ) { return( f_Block ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+ /// accessor to the type of modification
+
+ int * type( void ) { return( f_type ); }
 
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2194,7 +2205,8 @@ class MCFBlockMod : public Modification
 
 /*-------------------------- PROTECTED METHODS -----------------------------*/
  /// print the MCFBlockMod
- virtual inline void print( std::ostream &output ) const {
+
+ void print( std::ostream &output ) const override {
   output << "MCFBlockMod[" << this << "]: ";
   switch( f_type ) {
    case( eChgCost ):  output << "change costs "; break;
@@ -2206,6 +2218,13 @@ class MCFBlockMod : public Modification
    default:           output << "remove arcs ";
    }
   }
+
+/*--------------------- PROTECTED FIELDS OF THE CLASS ----------------------*/
+
+ MCFBlock *f_Block;
+               ///< pointer to the MCFBlock to which the MCFBlockMod refers
+
+ int f_type;   ///< type of modification
 
 /*--------------------------------------------------------------------------*/
 
@@ -2235,11 +2254,13 @@ class MCFBlockRngdMod : public MCFBlockMod
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
- virtual ~MCFBlockRngdMod() { }   ///< destructor, does nothing
+ virtual ~MCFBlockRngdMod() = default;   ///< destructor, does nothing
 
-/*--------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
+/*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
 
- Block::Range f_rng;     ///< the range
+ /// accessor to the range
+
+ Block::c_Range & rng( void ) { return( f_rng ); }
  
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2247,10 +2268,15 @@ class MCFBlockRngdMod : public MCFBlockMod
 
 /*-------------------------- PROTECTED METHODS -----------------------------*/
  /// print the MCFBlockRngdMod
- virtual inline void print( std::ostream &output ) const {
+
+ void print( std::ostream &output ) const override {
   MCFBlockMod::print( output );
   output << "[ " << f_rng.first << ", " << f_rng.second << " )" << std::endl;
   }
+
+/*--------------------- PROTECTED FIELDS OF THE CLASS ----------------------*/
+
+ Block::Range f_rng;     ///< the range
 
 /*--------------------------------------------------------------------------*/
 
@@ -2284,22 +2310,29 @@ class MCFBlockSbstMod : public MCFBlockMod
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
- virtual ~MCFBlockSbstMod() { }   ///< destructor, does nothing
+ virtual ~MCFBlockSbstMod() = default;  ///< destructor, does nothing
 
-/*--------------------- PUBLIC FIELDS OF THE CLASS ------------------------*/
+/*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
 
- Block::Subset f_nms;   ///< the subset
- 
+ /// accessor to the subset
+
+ Block::c_Subset & nms( void ) { return( f_nms ); }
+
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
  protected:
 
 /*-------------------------- PROTECTED METHODS -----------------------------*/
  /// print the MCFBlockSbstMod
- virtual inline void print( std::ostream &output ) const {
+
+ void print( std::ostream &output ) const override {
   MCFBlockMod::print( output );
   output << "(# " << f_nms.size() << ")" << std::endl;
   }
+
+/*--------------------- PROTECTED FIELDS OF THE CLASS ----------------------*/
+
+ Block::Subset f_nms;   ///< the subset
 
 /*--------------------------------------------------------------------------*/
 
@@ -2363,21 +2396,21 @@ class MCFSolution : public Solution {
 
 /*---------------- CONSTRUCTING AND DESTRUCTING MCFSolution ----------------*/
 
- MCFSolution() { }  /// constructor, it has nothing to do
+ explicit MCFSolution() { }  /// constructor, it has nothing to do
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- virtual void deserialize( netCDF::NcGroup & group ) override final;
+ void deserialize( netCDF::NcGroup & group ) override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- virtual ~MCFSolution() { }  ///< destructor: it is virtual, and empty
+ ~MCFSolution() = default;  ///< destructor: it is virtual, and empty
 
 /*------------- METHODS DESCRIBING THE BEHAVIOR OF A MCFSolution -----------*/
 
- virtual void read( const Block * const block ) override final;
+ void read( const Block * const block ) override final;
 
- virtual void write( Block * const block ) override final;
+ void write( Block * const block ) override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// serialize a MCFSolution into a netCDF::NcGroup
@@ -2402,16 +2435,15 @@ class MCFSolution : public Solution {
   *   dimension NumNodes. The variable is optional, if it is not specified
   *   then the MCFSolution object does not contain any node potentials. */
  
- virtual void serialize( netCDF::NcGroup & group )  override final;
+ void serialize( netCDF::NcGroup & group )  override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- virtual MCFSolution * scale( double factor ) const override final;
+ MCFSolution * scale( double factor ) const override final;
 
- virtual void sum( const Solution * solution , double multiplier )
-  override final;
+ void sum( const Solution * solution , double multiplier ) override final;
 
- virtual MCFSolution * clone( bool empty = false ) const override final;
+ MCFSolution * clone( bool empty = false ) const override final;
 
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 
@@ -2419,7 +2451,7 @@ class MCFSolution : public Solution {
 
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 
- virtual void print( std::ostream &output ) const override final {
+ void print( std::ostream &output ) const override final {
   output << "MCFSolution [" << this << "]: " << v_x.size() << " flows and "
 	 << v_pi.size() << " potentials" << std::endl;
   }
