@@ -6,13 +6,9 @@
 #                         Dipartimento di Informatica                         #
 #                             Universita' di Pisa                             #
 # --------------------------------------------------------------------------- #
-cmake_minimum_required(VERSION 3.8)
-# ----- Project description and directories --------------------------------- #
+cmake_minimum_required(VERSION 3.8...3.15)
 # TODO: set proper version
-project(MCFBlock VERSION 1.0.0)
-
-set(PROJECT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+project(MCFBlock VERSION 1.0.0 LANGUAGES CXX)
 
 # ----- Requirements -------------------------------------------------------- #
 # find_package() is used to find libraries and automatically configure them.
@@ -24,7 +20,7 @@ set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # If we are building this project alone we use its settings but we check
 # also for settings in its parent directory.
 # TODO: Check if this behaviour is correct
-if (NOT SMS++_CONFIG_ALL)
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     include(CMakeCustom.txt OPTIONAL)
     include(../CMakeCustom.txt OPTIONAL)
 endif ()
@@ -41,16 +37,17 @@ add_library(MCFBlock STATIC)
 target_compile_features(MCFBlock PUBLIC cxx_std_17)
 
 target_sources(MCFBlock PRIVATE
-               ${PROJECT_SOURCE_DIR}/MCFSolver.cpp
-               ${PROJECT_SOURCE_DIR}/MCFBlock.cpp
+               src/MCFSolver.cpp
+               src/MCFBlock.cpp
                )
 
 # Different INSTALL_INTERFACE and BUILD_INTERFACE paths are used when
 # generating the target import file (***Targets.cmake), that must be different
 # for local build and installation.
-target_include_directories(MCFBlock PUBLIC
-                           $<INSTALL_INTERFACE:include/SMS++>
-                           $<BUILD_INTERFACE:${PROJECT_INCLUDE_DIR}>)
+target_include_directories(
+        MCFBlock PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include/SMS++>)
 
 target_link_libraries(MCFBlock PUBLIC
                       SMS++::SMSpp
@@ -65,7 +62,6 @@ add_library(SMS++::MCFBlock ALIAS MCFBlock)
 # Not required for local builds (see below).
 
 include(GNUInstallDirs)
-set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
 
 # Install library
 install(TARGETS MCFBlock
@@ -81,7 +77,7 @@ install(DIRECTORY include/
 install(EXPORT MCFBlock-targets
         FILE MCFBlockTargets.cmake
         NAMESPACE SMS++::
-        DESTINATION ${INSTALL_CONFIGDIR})
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
 
 # Generate package version file
 include(CMakePackageConfigHelpers)
@@ -94,36 +90,40 @@ write_basic_package_version_file(
 configure_package_config_file(
         ${CMAKE_CURRENT_LIST_DIR}/cmake/MCFBlockConfig.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfig.cmake
-        INSTALL_DESTINATION ${INSTALL_CONFIGDIR})
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
 
-# Install package version and configuration files
-# TODO: Check if we should install also find modules
+# Install package version and configuration files.
 install(FILES
         ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfigVersion.cmake
-        # ${CMAKE_CURRENT_LIST_DIR}/cmake/FindnetCDF.cmake
-        DESTINATION ${INSTALL_CONFIGDIR})
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
+
+# Shipping custom find modules should not be encouraged because third
+# party developers should provide them.
+# We ship FindnetCDF because the provided one has shortcomings.
+install(FILES
+        ${CMAKE_CURRENT_LIST_DIR}/cmake/FindnetCDF.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
 
 # ----- Export from the build tree ------------------------------------------ #
 # This is needed so other projects can find the library in a local build.
 # It does not affect installation.
 
-export(EXPORT MCFBlock-targets
-       FILE ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockTargets.cmake
-       NAMESPACE SMS++::)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_EXPORT_PACKAGE_REGISTRY ON)
 
-# Export also the find modules for the local config file to use it
-configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake/FindnetCDF.cmake
-               ${CMAKE_CURRENT_BINARY_DIR}/FindnetCDF.cmake
-               COPYONLY)
+    export(EXPORT MCFBlock-targets
+           FILE ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockTargets.cmake
+           NAMESPACE SMS++::)
 
-# FIXME: I think that exporting this is a bad idea
-#configure_file(${CMAKE_CURRENT_LIST_DIR}/CMakeCustom.txt
-#               ${CMAKE_CURRENT_BINARY_DIR}/CMakeCustom.txt
-#               COPYONLY)
+    # Export also the find modules for the local config file to use it
+    configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake/FindnetCDF.cmake
+                   ${CMAKE_CURRENT_BINARY_DIR}/FindnetCDF.cmake
+                   COPYONLY)
 
-# Register package in user's package registry (~/.cmake/registry)
-export(PACKAGE MCFBlock)
+    # Register package in user's package registry (~/.cmake/registry)
+    export(PACKAGE MCFBlock)
+endif ()
 
 # ----- Subdirectories ------------------------------------------------------ #
 add_subdirectory(test)
