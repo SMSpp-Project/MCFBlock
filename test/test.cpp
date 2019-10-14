@@ -672,7 +672,7 @@ int main( int argc , char **argv )
      auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
      assert( lf );
      LinearFunction::v_coeff nc = { newcst };
-     lf->modify_coefficient( mMCFB->i2p_x( arc ) , nc.front() );
+     lf->modify_coefficient( arc , nc.front() );
      }
     else  // change via call to chg_* method
      mMCFB->chg_cost( newcst , arc );
@@ -697,23 +697,8 @@ int main( int argc , char **argv )
       auto obj = static_cast<FRealObjective *>( mMCFB->get_objective() );
       auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
       assert( lf );
-      if( mMCFB->HasDynamicX() ) {
-       LinearFunction::v_coeff_pair chg( tochange );
-       for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
-	chg[ i ].first = mMCFB->i2p_x( i + strt );
-	chg[ i ].second = newcsts[ i ];
-        }
-       // chg is ordered only if all arcs are static
-       lf->modify_coefficients( chg , stp <= mMCFB->get_NStaticArcs() );
-       }
-      else {
-       // note that all static Variable are consecutive, but not
-       // necessarily the first ones as dynamic Variable may come first
-       auto dlt = lf->is_active( mMCFB->i2p_x( 0 ) );
-       strt += dlt;
-       stp += dlt;
-       lf->modify_coefficients( newcsts.begin() , strt , stp );
-       }
+      lf->modify_coefficients( std::move( newcsts ) ,
+			       Function::Range( strt , stp ) );
       }
      else {  // change via call to chg_* method
       // in 50% of the cases a direct call, otherwise use the methos factory
@@ -751,17 +736,8 @@ int main( int argc , char **argv )
       auto obj = static_cast<FRealObjective *>( mMCFB->get_objective() );
       auto lf = dynamic_cast<LinearFunction *>( obj->get_function() );
       assert( lf );
-      if( mMCFB->HasDynamicX() ) {
-       LinearFunction::v_coeff_pair chg( tochange );
-       for( MCFBlock::Index i = 0 ; i < tochange ; ++i ) {
-	chg[ i ].first = mMCFB->i2p_x( nms[ i ] );
-	chg[ i ].second = newcsts[ i ];
-        }
-       // chg is ordered only if all arcs are static
-       lf->modify_coefficients( chg , nms.back() < mMCFB->get_NStaticArcs() );
-       }
-      else
-       lf->modify_coefficients( newcsts.begin() , nms , true );
+      lf->modify_coefficients( std::move( newcsts ) , std::move( nms ) ,
+			       true );
       }
      else {  // change via call to chg_* method
       // in 50% of the cases a direct call, otherwise use the methos factory
