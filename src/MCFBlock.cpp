@@ -508,20 +508,16 @@ void MCFBlock::generate_abstract_variables( Configuration *stvv )
 
  if( HasStaticX() ) {
   x.resize( get_NStaticArcs() );
-  for( auto & var : x ) {
+  for( auto & var : x )
    var.is_positive( true , eNoBlck );
-   var.set_Block( this );
-   }
 
   add_static_variable( x );
   }
 
  if( MayHaveDynX() ) {
   dx.resize( get_NArcs() - get_NStaticArcs() );
-  for( auto & var : dx ) {
+  for( auto & var : dx )
    var.is_positive( true , eNoBlck );
-   var.set_Block( this );
-   }
 
   add_dynamic_variable( dx );
   } 
@@ -586,7 +582,6 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
    for( Index i = 0 ; i < get_NStaticNodes() ; ++i ) {
     E[ i ].set_both( B.empty() ? 0 : B[ i ] );
     E[ i ].set_function( new LinearFunction( std::move( coeffs[ i ] ) , 0 ) );
-    E[ i ].set_Block( this );  // this is done last ==> no Modification
     }
 
    add_static_constraint( E );
@@ -600,7 +595,6 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
    for( auto & cnst : dE ) {
     cnst.set_both( B.empty() ? 0 : B[ i ] );
     cnst.set_function( new LinearFunction( std::move( coeffs[ i++ ] ) , 0 ) );
-    cnst.set_Block( this );  // this is done last ==> no Modification
     }
 
    add_dynamic_constraint( dE );
@@ -634,7 +628,6 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   for( Index i = 0 ; i < get_NStaticArcs() ; ++i ) {
    UB[ i ].set_variable( & x[ i ] , eNoBlck );
    UB[ i ].set_rhs( U[ i ] , eNoBlck );
-   UB[ i ].set_Block( this );  // this is done last ==> no Modification
    }
 
   add_static_constraint( UB );
@@ -649,7 +642,6 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   for( auto & cnst : dUB ) {
    cnst.set_variable( &(*(dxi++)) , eNoBlck );
    cnst.set_rhs( *(ui++) , eNoBlck );
-   cnst.set_Block( this );  // this is done last ==> no Modification
    }
 
   add_dynamic_constraint( dUB );
