@@ -600,7 +600,7 @@ public:
   *       is surely not empty, and thus the conditionally valid upper bound is
   *       also a globally valid upper bound. */
 
- double get_valid_upper_bound( const bool conditional = false )
+ double get_valid_upper_bound( bool conditional = false )
   override final {
   if( ! conditional )
    return( + Inf<double>() );
@@ -622,7 +622,7 @@ public:
   * cannot be unbounded below (although it can still be empty, but that's an
   * issue for upper bound, this being a minimization problem). */
 
- double get_valid_lower_bound( const bool conditional = false )
+ double get_valid_lower_bound( bool conditional = false )
   override final {
   if( isnan( f_cond_lower ) )
    compute_conditional_bounds();
@@ -2074,8 +2074,7 @@ public:
 
   register_method< MCFBlock , MF_dbl_it , Subset && , const bool >(
 			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
-   */
-
+  */
   }
 
 /*--------------------------------------------------------------------------*/
