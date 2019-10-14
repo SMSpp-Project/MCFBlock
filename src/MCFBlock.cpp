@@ -3394,8 +3394,8 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     throw( std::invalid_argument(
 			     "Modification to non-constructed Constraint" ) );
 
-   if( tmod->f_type == RowConstraintMod::eChgRHS ) {
-    auto cp = dynamic_cast<LB0Constraint * const>( tmod->f_constraint );
+   if( tmod->type() == RowConstraintMod::eChgRHS ) {
+    auto cp = dynamic_cast<LB0Constraint * const>( tmod->constraint() );
     if( ! cp )
      throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
@@ -3403,8 +3403,8 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     return;
     }
 
-   if( tmod->f_type == RowConstraintMod::eChgBTS ) {
-    auto cp = static_cast<FRowConstraint * const>( tmod->f_constraint );
+   if( tmod->type() == RowConstraintMod::eChgBTS ) {
+    auto cp = static_cast<FRowConstraint * const>( tmod->constraint() );
     if( ! cp )
      throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
@@ -3420,7 +3420,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
  {
   const auto tmod = std::dynamic_pointer_cast<VariableMod>( mod );
   if( tmod ) {
-   auto xi = dynamic_cast<ColVariable * const>( tmod->f_variable );
+   auto xi = dynamic_cast<ColVariable * const>( tmod->variable() );
    if( ! xi )
     throw( std::logic_error( "Modification to wrong type of Variable" ) );
    if( ( xi->get_type() != ColVariable::kNonNegative ) &&
