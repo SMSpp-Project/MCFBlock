@@ -605,7 +605,7 @@ public:
   if( ! conditional )
    return( + Inf<double>() );
    
-  if( isnan( f_cond_upper ) )
+  if( std::isnan( f_cond_upper ) )
    compute_conditional_bounds();
 
   return( f_cond_upper );
@@ -624,7 +624,7 @@ public:
 
  double get_valid_lower_bound( bool conditional = false )
   override final {
-  if( isnan( f_cond_lower ) )
+  if( std::isnan( f_cond_lower ) )
    compute_conditional_bounds();
 
   return( f_cond_lower );
