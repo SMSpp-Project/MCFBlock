@@ -2904,7 +2904,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
   ++arc;
 
  if( arc >= get_MaxNArcs() )
-  return( Inf<FNumber>() );
+  return( Inf<Index>() );
 
  // change the physical representation- - - - - - - - - - - - - - - - - - - -
  if( not_dry_run( issueMod ) ) {
