@@ -30,7 +30,7 @@ find_package(MCFClass REQUIRED)
 find_package(netCDF REQUIRED)
 
 # ----- Library ------------------------------------------------------------- #
-add_library(MCFBlock STATIC)
+add_library(MCFBlock)
 target_compile_features(MCFBlock PUBLIC cxx_std_17)
 
 target_sources(MCFBlock PRIVATE
