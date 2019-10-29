@@ -78,7 +78,7 @@ install(DIRECTORY include/
 install(EXPORT MCFBlock-targets
         FILE MCFBlockTargets.cmake
         NAMESPACE SMS++::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MCFBlock)
 
 # Generate package version file
 include(CMakePackageConfigHelpers)
@@ -91,13 +91,13 @@ write_basic_package_version_file(
 configure_package_config_file(
         ${CMAKE_CURRENT_LIST_DIR}/cmake/MCFBlockConfig.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfig.cmake
-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MCFBlock)
 
 # Install package version and configuration files.
 install(FILES
         ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfig.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MCFBlock)
 
 # Shipping custom find modules should not be encouraged because third
 # party developers should provide them.
@@ -105,7 +105,7 @@ install(FILES
 # TODO Here
 #install(FILES
 #        ${CMAKE_CURRENT_LIST_DIR}/cmake/FindnetCDF.cmake
-#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SMS++)
+#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/MCFBlock)
 
 # ----- Export from the build tree ------------------------------------------ #
 # This is needed so other projects can find the library in a local build.
