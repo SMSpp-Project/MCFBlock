@@ -1398,7 +1398,17 @@ public:
 /** @name Methods for handling Modification
  *  @{ */
 
- /// adding a new Modification to the MCFBlock
+ /// returns true if there is any Solver "listening to this MCFBlock"
+ /** Returns true if there is any Solver "listening to this MCFBlock", or if
+  * the MCFBlock has to "listen" anyway because the "abstract" representation
+  * is constructed, and therefore "abstract" Modification have to be generated
+  * anyway to keep the two representations in sync. */
+
+ bool anyone_there( void ) const override {
+  return( AR ? true : Block::anyone_there() );
+  }
+
+/*--------------------------------------------------------------------------*/ /// adding a new Modification to the MCFBlock
  /** Method for handling Modification.
   *
   * The version of MCFBlock has to intercept any "abstract Modification" that
@@ -2069,7 +2079,7 @@ public:
 			       MS_sbst::args() );
 
   /* explicit versions
-  register_method< MCFBlock , MF_dbl_it , c_Range & >(
+  register_method< MCFBlock , MF_dbl_it , Range >(
 			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
 
   register_method< MCFBlock , MF_dbl_it , Subset && , const bool >(
@@ -2188,6 +2198,12 @@ class MCFBlockMod : public Modification
  virtual ~MCFBlockMod() = default;   ///< destructor, does nothing
 
 /*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
+
+ /// returns the [MCF]Block to which the MCFBlockMod refers
+
+ Block * get_Block( void ) const override  { return( f_Block ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
  /// accessor to the MCFBlock to which the MCFBlockMod refers
 
