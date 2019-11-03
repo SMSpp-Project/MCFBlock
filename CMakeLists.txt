@@ -10,17 +10,30 @@ cmake_minimum_required(VERSION 3.8...3.15)
 # TODO: set proper version
 project(MCFBlock VERSION 1.0.0 LANGUAGES CXX)
 
-# ----- Requirements -------------------------------------------------------- #
-# find_package() is used to find libraries and automatically configure them.
-# It requires either a package configuration module (***Config.cmake) or a
-# find module (Find***.cmake), usually provided by libraries.
-
-# We can provide a settings file with -DSETTINGS="filename"
-if ((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME) AND SETTINGS)
-    message(STATUS "Using CMake custom settings in ${SETTINGS}")
-    include(${SETTINGS} OPTIONAL)
+# ----- Settings ------------------------------------------------------------ #
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    enable_testing()
 endif ()
 
+# MCF Solver
+set(MCF_SOLVER "relax" CACHE STRING "MCF Solver")
+set_property(CACHE MCF_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
+
+if (MCF_SOLVER STREQUAL "relax")
+    message(STATUS "Using RelaxIV solver")
+    add_compile_definitions(HAVE_RELAX)
+elseif (MCF_SOLVER STREQUAL "cplex")
+    message(STATUS "Using CPLEX solver")
+    add_compile_definitions(HAVE_CPLEX)
+elseif (MCF_SOLVER STREQUAL "mfsmx")
+    message(STATUS "Using Simplex solver")
+    add_compile_definitions(HAVE_MFSMX)
+elseif (MCF_SOLVER STREQUAL "sptree")
+    message(STATUS "Using Shortest Path Tree solver")
+    add_compile_definitions(HAVE_SPTRE)
+endif ()
+
+# ----- Requirements -------------------------------------------------------- #
 find_package(SMSpp REQUIRED)
 find_package(MCFClass REQUIRED)
 
@@ -30,8 +43,7 @@ target_compile_features(MCFBlock PUBLIC cxx_std_17)
 
 target_sources(MCFBlock PRIVATE
                src/MCFSolver.cpp
-               src/MCFBlock.cpp
-               )
+               src/MCFBlock.cpp)
 
 # Different INSTALL_INTERFACE and BUILD_INTERFACE paths are used when
 # generating the target import file (***Targets.cmake), that must be different
