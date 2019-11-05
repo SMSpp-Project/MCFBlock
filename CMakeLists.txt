@@ -11,10 +11,6 @@ cmake_minimum_required(VERSION 3.8...3.15)
 project(MCFBlock VERSION 1.0.0 LANGUAGES CXX)
 
 # ----- Settings ------------------------------------------------------------ #
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    enable_testing()
-endif ()
-
 # MCF Solver
 set(MCF_SOLVER "relax" CACHE STRING "MCF Solver")
 set_property(CACHE MCF_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
@@ -105,8 +101,7 @@ install(FILES
 # This is needed so other projects can find the library in a local build.
 # It does not affect installation.
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_EXPORT_PACKAGE_REGISTRY ON)
+if (CMAKE_EXPORT_PACKAGE_REGISTRY)
 
     export(EXPORT MCFBlock-targets
            FILE ${CMAKE_CURRENT_BINARY_DIR}/MCFBlockTargets.cmake
