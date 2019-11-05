@@ -1931,7 +1931,7 @@ void MCFBlock::add_Modification( sp_Mod mod , ChnlName chnl )
 
  if( mod->concerns_Block() ) {
   mod->concerns_Block( false );
-  guts_of_add_Modification( mod );
+  guts_of_add_Modification( mod , chnl );
   }
 
  Block::add_Modification( mod , chnl );
@@ -3296,7 +3296,7 @@ void MCFBlock::guts_of_destructor( void )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::guts_of_add_Modification( sp_Mod mod )
+void MCFBlock::guts_of_add_Modification( sp_Mod mod , ChnlName chnl )
 {
  // process abstract Modification - - - - - - - - - - - - - - - - - - - - - -
  /* This requires to patiently sift through the possible Modification types
@@ -3336,14 +3336,15 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    if( tmod->range().second == tmod->range().first + 1 )
     // changing one cost only
     chg_cost( lfo->get_coefficient( tmod->range().first ) ,
-	      tmod->range().first , eNoBlck , eDryRun );
+	      tmod->range().first , make_par( eNoBlck , chnl ) , eDryRun );
    else {                            // changing many costs at once
     Vec_CNumber NC( tmod->range().second - tmod->range().first );
     auto NCit = NC.begin();
     for( Index i = tmod->range().first ; i < tmod->range().second ; )
      *(NCit++) = lfo->get_coefficient( i++ );
 
-    chg_costs( NC.begin() , tmod->range() , eNoBlck , eDryRun );
+    chg_costs( NC.begin() , tmod->range() ,
+	       make_par( eNoBlck , chnl ) , eDryRun );
     }
 
    return;
@@ -3373,7 +3374,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     *(NCit++) = lfo->get_coefficient( i++ );
 
    chg_costs( NC.begin() , Subset( tmod->subset() ) , tmod->ordered() ,
-	      eNoBlck , eDryRun );
+	      make_par( eNoBlck , chnl ) , eDryRun );
    return;
    }
   }
@@ -3391,7 +3392,8 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     if( ! cp )
      throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
-    chg_ucap( cp->get_rhs() , p2i_ub( cp ) , eNoBlck , eDryRun );
+    chg_ucap( cp->get_rhs() , p2i_ub( cp ) ,
+	      make_par( eNoBlck , chnl ) , eDryRun );
     return;
     }
 
@@ -3400,7 +3402,8 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
     if( ! cp )
      throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
-    chg_dfct( cp->get_rhs() , p2i_e( cp ) , eNoBlck , eDryRun );
+    chg_dfct( cp->get_rhs() , p2i_e( cp ) ,
+	      make_par( eNoBlck , chnl ) , eDryRun );
     return;
     }
 
@@ -3421,9 +3424,9 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod )
    
    auto i = p2i_x( xi );
    if( xi->is_fixed() )
-    close_arc( i , eNoBlck , eDryRun );
+    close_arc( i , make_par( eNoBlck , chnl ) , eDryRun );
    else
-    open_arc( i , eNoBlck , eDryRun );
+    open_arc( i , make_par( eNoBlck , chnl ) , eDryRun );
 
    return;
    }

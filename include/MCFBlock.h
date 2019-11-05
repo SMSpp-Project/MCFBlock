@@ -1449,7 +1449,10 @@ public:
   *   thrown otherwise.
   *
   * Any other Modification reaching the MCFBlock will lead to exception
-  * being thrown. */
+  * being thrown.
+  *
+  * Note: any "physical" Modification resulting from processing an "abstract"
+  *       one will be sent to the same channel (chnl). */
 
  void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
 
@@ -2131,7 +2134,7 @@ public:
 
  void guts_of_destructor( void );
 
- void guts_of_add_Modification( sp_Mod mod );
+ void guts_of_add_Modification( sp_Mod mod , ChnlName chnl );
 
  void compute_conditional_bounds( void );
 
