@@ -2189,9 +2189,9 @@ class MCFBlockMod : public Modification
 
 /*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
 
- /// accessor to the MCFBlock to which the MCFBlockMod refers
+ /// accessor to the [MCF]Block to which the MCFBlockMod refers
 
- MCFBlock * block( void ) { return( f_Block ); }
+ Block * get_Block( void ) const override { return( f_Block ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// accessor to the type of modification
