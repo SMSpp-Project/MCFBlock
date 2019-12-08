@@ -11,6 +11,9 @@ cmake_minimum_required(VERSION 3.8...3.15)
 project(MCFBlock VERSION 1.0.0 LANGUAGES CXX)
 
 # ----- Settings ------------------------------------------------------------ #
+include(CTest)
+
+# ----- Settings ------------------------------------------------------------ #
 # MCF Solver
 set(MCF_SOLVER "relax" CACHE STRING "MCF Solver")
 set_property(CACHE MCF_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
@@ -111,5 +114,9 @@ if (CMAKE_EXPORT_PACKAGE_REGISTRY)
     export(PACKAGE MCFBlock)
 endif ()
 
-# ----- Tools --------------------------------------------------------------- #
+# ----- Subdirectories ------------------------------------------------------ #
 add_subdirectory(tools)
+
+if (BUILD_TESTING)
+    add_subdirectory(test)
+endif()

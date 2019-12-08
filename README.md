@@ -41,14 +41,32 @@ find_package(MCFBlock)
 target_link_libraries(<my_target> SMS++::MCFBlock)
 ```
 
-## Tests
+### Tools
 
-`test` directory contains a reasonably sophisticated test that takes some existing
-MCF instance in the DIMACS standard format, reads it into a MCFBlock and an
-:MCFClass object, create a MCFSolver using the very same :MCFClass solver,
-and then repeatedly modifies both instances in the same way (possibly
-passing to a "copy" R3Block of the initial MCFBlock) in order to verify that
-the different Modification involved correctly do their work.
+We provide a simple tool that converts MCF instances written in the DIMACS
+standard into netCDF files.
+Optionally it hacks into the netCDF file to change the number of static
+and dynamic nodes and arcs, as well as the maximum number of nodes and
+arcs.
+
+You can run the tool from the `<build-dir>/tools` directory or install it with
+the library (see above).
+Run the tool without arguments for info on its usage:
+
+```sh
+dmx2nc4
+```
+
+## Running the tests
+
+A simple unit test will be built with the library,
+To disable it, configure the library with the option `-DBUILD_TESTING=OFF`.
+
+The test takes an instance of a MCF in DIMACS or NC4 format.
+The MCF problem is then repeatedly solved with several changes in
+costs/capacities/deficits, arcs openings/closures and arcs additions/deletions.
+The same operations are performed on the two solvers,
+and the results are compared.
 
 ## Contributing
 
