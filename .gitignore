@@ -1,3 +1,6 @@
+# tester executable
+test/test
+
 ### C/C++ template
 # Prerequisites
 *.d
