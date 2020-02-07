@@ -1398,7 +1398,17 @@ public:
 /** @name Methods for handling Modification
  *  @{ */
 
- /// adding a new Modification to the MCFBlock
+ /// returns true if there is any Solver "listening to this MCFBlock"
+ /** Returns true if there is any Solver "listening to this MCFBlock", or if
+  * the MCFBlock has to "listen" anyway because the "abstract" representation
+  * is constructed, and therefore "abstract" Modification have to be generated
+  * anyway to keep the two representations in sync. */
+
+ bool anyone_there( void ) const override {
+  return( AR ? true : Block::anyone_there() );
+  }
+
+/*--------------------------------------------------------------------------*/ /// adding a new Modification to the MCFBlock
  /** Method for handling Modification.
   *
   * The version of MCFBlock has to intercept any "abstract Modification" that
@@ -1439,7 +1449,10 @@ public:
   *   thrown otherwise.
   *
   * Any other Modification reaching the MCFBlock will lead to exception
-  * being thrown. */
+  * being thrown.
+  *
+  * Note: any "physical" Modification resulting from processing an "abstract"
+  *       one will be sent to the same channel (chnl). */
 
  void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
 
@@ -2069,7 +2082,7 @@ public:
 			       MS_sbst::args() );
 
   /* explicit versions
-  register_method< MCFBlock , MF_dbl_it , c_Range & >(
+  register_method< MCFBlock , MF_dbl_it , Range >(
 			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
 
   register_method< MCFBlock , MF_dbl_it , Subset && , const bool >(
@@ -2121,7 +2134,7 @@ public:
 
  void guts_of_destructor( void );
 
- void guts_of_add_Modification( sp_Mod mod );
+ void guts_of_add_Modification( sp_Mod mod , ChnlName chnl );
 
  void compute_conditional_bounds( void );
 
@@ -2189,9 +2202,10 @@ class MCFBlockMod : public Modification
 
 /*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
 
- /// accessor to the [MCF]Block to which the MCFBlockMod refers
+ /// returns the [MCF]Block to which the MCFBlockMod refers
 
- Block * get_Block( void ) const override { return( f_Block ); }
+ Block * get_Block( void ) const override  { return( f_Block ); }
+
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// accessor to the type of modification
