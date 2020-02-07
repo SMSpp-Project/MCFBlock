@@ -2206,7 +2206,6 @@ class MCFBlockMod : public Modification
 
  Block * get_Block( void ) const override  { return( f_Block ); }
 
-
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// accessor to the type of modification
 
