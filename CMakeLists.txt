@@ -7,8 +7,7 @@
 #                             Universita' di Pisa                             #
 # --------------------------------------------------------------------------- #
 cmake_minimum_required(VERSION 3.8...3.15)
-# TODO: set proper version
-project(MCFBlock VERSION 1.0.0 LANGUAGES CXX)
+project(MCFBlock VERSION 0.1.1 LANGUAGES CXX)
 
 # ----- Settings ------------------------------------------------------------ #
 include(CTest)
