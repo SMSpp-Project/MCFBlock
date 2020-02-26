@@ -491,11 +491,10 @@ void MCFBlock::deserialize( netCDF::NcGroup & group )
 
  generate_abstract_variables();
 
- // issue Modification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
- // note: this is a NBModification, the "nuclear option"
+ // call the method of Block- - - - - - - - - - - - - - - - - - - - - - - - -
+ // inside thus issue a NBModification, the "nuclear option"
 
- if( anyone_there() )
-  add_Modification( std::make_shared<NBModification>( this ) );
+ Block::deserialize( group );
 
  }  // end( MCFBlock::deserialize )
 
@@ -1943,7 +1942,11 @@ void MCFBlock::add_Modification( sp_Mod mod , ChnlName chnl )
 
 void MCFBlock::serialize( netCDF::NcGroup & group ) const
 {
- group.putAtt( "type" , "MCFBlock" );
+ // call the method of Block- - - - - - - - - - - - - - - - - - - - - - - - -
+
+ Block::serialize( group );
+
+ // now the MCFBlock data - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  netCDF::NcDim nn = group.addDim( "NNodes" , get_NNodes() );
  netCDF::NcDim na = group.addDim( "NArcs" , get_NArcs() );
