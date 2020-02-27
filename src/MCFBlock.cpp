@@ -492,7 +492,7 @@ void MCFBlock::deserialize( netCDF::NcGroup & group )
  generate_abstract_variables();
 
  // call the method of Block- - - - - - - - - - - - - - - - - - - - - - - - -
- // inside thus issue a NBModification, the "nuclear option"
+ // inside this the NBModification, the "nuclear option",  is issued
 
  Block::deserialize( group );
 
