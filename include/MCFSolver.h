@@ -44,9 +44,7 @@
 /// namespace for the Structured Modeling System++ (SMS++)
 namespace SMSpp_di_unipi_it
 {
- #if( OPT_USE_NAMESPACES )
-  using namespace MCFClass_di_unipi_it;
- #endif
+ using namespace MCFClass_di_unipi_it;
 
 /*--------------------------------------------------------------------------*/
 /*------------------------------- CLASSES ----------------------------------*/
