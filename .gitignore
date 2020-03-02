@@ -1,5 +1,5 @@
 # tester executable
-./test/test
+test/test
 
 ### C/C++ template
 # Prerequisites
