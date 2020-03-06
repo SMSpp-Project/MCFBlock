@@ -11,9 +11,9 @@
  * template over the underlying :MCFClass object, which implies that most of
  * the code is in the header file.
  *
- * \version 1.11
+ * \version 1.12
  *
- * \date 16 - 09 - 2019
+ * \date 27 - 02 - 2020
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n

@@ -348,8 +348,8 @@ public:
 /*--------------------------------------------------------------------------*/
  /// extends Block::deserialize( netCDF::NcGroup )
  /** Extends Block::deserialize( netCDF::NcGroup ) to the specific format of
-  * a MCFBlock. Besides the mandatory "type" attribute of any :Block, the
-  * group should contain the following:
+  * a MCFBlock. Besides what is managed by the serialize() method of the base
+  * Block class, the group should contain the following:
   *
   * - the dimension "NNodes" containing the number of nodes in the graph;
   *
