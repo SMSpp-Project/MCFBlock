@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class SmsppConan(ConanFile):
     name = "mcfblock"
-    version = "0.1.2"
+    version = "0.2.0"
     description = "SMS++ Block and Solver for linear Min-Cost Flow problems"
     topics = ("conan", "smspp", "mcfblock")
     url = "https://gitlab.com/smspp/mcfblock"
@@ -17,7 +17,7 @@ class SmsppConan(ConanFile):
 
     requires = (
         "mcfclass/20200227@smspp/testing",
-        "smspp/0.1.1@smspp/testing"
+        "smspp/0.2.0@smspp/testing"
     )
 
     exports_sources = [
@@ -31,8 +31,8 @@ class SmsppConan(ConanFile):
     def source(self):
         tools.replace_in_file(
             "CMakeLists.txt",
-            '''project(MCFBlock VERSION 0.1.2 LANGUAGES CXX)''',
-            '''project(MCFBlock VERSION 0.1.2 LANGUAGES CXX)\n''' +
+            '''project(MCFBlock VERSION 0.2.0 LANGUAGES CXX)''',
+            '''project(MCFBlock VERSION 0.2.0 LANGUAGES CXX)\n''' +
             '''include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)\n''' +
             '''conan_basic_setup()'''
         )
