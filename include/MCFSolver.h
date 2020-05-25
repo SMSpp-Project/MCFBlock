@@ -724,9 +724,7 @@ template< class MCFC >
 void MCFSolver< MCFC >::process_outstanding_Modification( void )
 {
  // no-frills loop: do them in order, with no attempt at optimizing
- while( ! v_mod.empty() ) {
-  auto mod = v_mod.front();  // pick (a reference to) the first Modification
-
+ for( auto mod = front() ; mod ; mod = front() ) {
   /* Use a Lambda to define a "guts" of the method that can be called
      recursively. Note the trick of defining the std::function object and
      "passing" it to the lambda, which allows recursive calls. Note the need
@@ -888,7 +886,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
   guts_of_poM( mod );  // now the actual call
 
-  v_mod.pop_front();   // now the Modification is processed: remove it
+  pop_front();   // now the Modification is processed: remove it
   
   }  // end( while( there are Modification ) )
  }  // end( MCFSolver::process_outstanding_Modification )
