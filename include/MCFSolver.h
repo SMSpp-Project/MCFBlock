@@ -293,7 +293,14 @@ public:
    Solver::kError };
 
   // first, process any outstanding Modification
+  // in order to do that, first try to read_lock() the MCFBlock
+  if( ( ! f_Block ) || ( ! f_Block->read_lock() ) )
+   return( kBlockLocked );  // return error on failure
+
   process_outstanding_Modification();
+
+  // once done, read_unlock the MCFBlock
+  f_Block->read_unlock();
 
   // then (try to) solve the MCF
   this->MCFC::SolveMCF();
