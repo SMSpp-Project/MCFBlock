@@ -236,6 +236,9 @@ public:
     throw( std::invalid_argument(
 		         "MCFSolver:set_Block: block must be a MCFBlock" ) );
 
+   if( ! MCFB->read_lock() )
+    throw( std::logic_error( "cannot acquire read_lock on MCFBlock" ) );
+
    // load the new MCFBlock into the :MCFClass object
    MCFC::LoadNet( MCFB->get_MaxNNodes() , MCFB->get_MaxNArcs() ,
 		  MCFB->get_NNodes() , MCFB->get_NArcs() ,
@@ -251,6 +254,9 @@ public:
    //       has to be disabled for now; maybe later on someone will take
    //       care to make this work (or maybe not).
    // MCFC::PreProcess();
+
+   // once done, read_unlock the MCFBlock
+   MCFB->read_unlock();
 
    // TODO: maybe log it
    }
