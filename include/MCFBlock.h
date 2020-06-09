@@ -1835,6 +1835,9 @@ public:
   *     to the two flow conservation constraints of its starting and ending
   *     node;
   *
+  *   = one OneVarConstraintMod with type RowConstraintMod::eChgRHS for
+  *      modifying the flow bound;
+  *
   *   = if the "name" of the arc is == get_NArcs() (before the call):
   *
   *     * a BlockModAdd< ColVariable > corresponding to the addition of a
@@ -1850,9 +1853,6 @@ public:
   *   = if, instead, the "name" of the arc is < get_NArcs() (before the call):
   *
   *     * one C05FunctionModLin for modifying the cost coefficients;
-  *
-  *     * one OneVarConstraintMod with type RowConstraintMod::eChgRHS for
-  *       modifying the flow bound;
   *
   *     * one VariableMod making the flow variable "free";
   *       
