@@ -400,7 +400,16 @@ static inline bool SolveMCF( void )
    FakeSolver * fs = dynamic_cast<FakeSolver *>(
 				  (mMCFB->get_registered_solvers()).front() );
    assert( fs );
+   fs->lock_Modification_list();  // acquire the lock on the Modification list
    Lst_sp_Mod & modlist = fs->get_Modification_list();
+
+   // before making changes, lock() oMCFB: this is of course useless since
+   // nothing else has it, but there you go. Use "mcf" as the "owner", since
+   // it clearly it cannot be a reserved address
+
+   bool owned = oMCFB->is_owned_by( mcf );
+   if( ( ! owned ) && ( ! oMCFB->lock( mcf ) ) )
+    throw( std::logic_error( "can't lock mMCFB" ) );
 
    if( mMCFB == oMCFB ) {  // modify the original, solve the R3
     for( auto mod : modlist ) {
@@ -416,6 +425,11 @@ static inline bool SolveMCF( void )
     }
 
    modlist.clear();  // clear the processed Modification
+   fs->unlock_Modification_list();  // release the lock on the Modification list
+
+   // unlock oMCFB
+   if( ! owned )
+    oMCFB->unlock( mcf );
    }
 
   // solve the MCFBlock- - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -679,6 +693,14 @@ int main( int argc , char **argv )
  for( auto iter = 0 ; iter < n_repeat ; ++iter ) {
 
   LOG1( iter << ": " );
+
+  // before making changes, lock() mMCFB: this is of course useless since
+  // nothing else has it, but there you go. Use "mcf" as the "owner", since
+  // it clearly it cannot be a reserved address
+
+  bool owned = mMCFB->is_owned_by( mcf );
+  if( ( ! owned ) && ( ! mMCFB->lock( mcf ) ) )
+   throw( std::logic_error( "can't lock mMCFB" ) );
 
   // change costs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1169,6 +1191,10 @@ int main( int argc , char **argv )
      }
     }
    }
+
+  // since all changes are doe, unlock mMCFB
+  if( ! owned )
+   mMCFB->unlock( mcf );
 
   // finally, re-solve the problems- - - - - - - - - - - - - - - - - - - - -
   // yet, if the problem is either unfeasible or unbounded, or something has

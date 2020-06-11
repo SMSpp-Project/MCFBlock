@@ -236,6 +236,9 @@ public:
     throw( std::invalid_argument(
 		         "MCFSolver:set_Block: block must be a MCFBlock" ) );
 
+   if( ! MCFB->read_lock() )
+    throw( std::logic_error( "cannot acquire read_lock on MCFBlock" ) );
+
    // load the new MCFBlock into the :MCFClass object
    MCFC::LoadNet( MCFB->get_MaxNNodes() , MCFB->get_MaxNArcs() ,
 		  MCFB->get_NNodes() , MCFB->get_NArcs() ,
@@ -251,6 +254,9 @@ public:
    //       has to be disabled for now; maybe later on someone will take
    //       care to make this work (or maybe not).
    // MCFC::PreProcess();
+
+   // once done, read_unlock the MCFBlock
+   MCFB->read_unlock();
 
    // TODO: maybe log it
    }
@@ -293,7 +299,14 @@ public:
    Solver::kError };
 
   // first, process any outstanding Modification
+  // in order to do that, first try to read_lock() the MCFBlock
+  if( ( ! f_Block ) || ( ! f_Block->read_lock() ) )
+   return( kBlockLocked );  // return error on failure
+
   process_outstanding_Modification();
+
+  // once done, read_unlock the MCFBlock
+  f_Block->read_unlock();
 
   // then (try to) solve the MCF
   this->MCFC::SolveMCF();
@@ -724,9 +737,7 @@ template< class MCFC >
 void MCFSolver< MCFC >::process_outstanding_Modification( void )
 {
  // no-frills loop: do them in order, with no attempt at optimizing
- while( ! v_mod.empty() ) {
-  auto mod = v_mod.front();  // pick (a reference to) the first Modification
-
+ for( auto mod = front() ; mod ; mod = front() ) {
   /* Use a Lambda to define a "guts" of the method that can be called
      recursively. Note the trick of defining the std::function object and
      "passing" it to the lambda, which allows recursive calls. Note the need
@@ -888,7 +899,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
   guts_of_poM( mod );  // now the actual call
 
-  v_mod.pop_front();   // now the Modification is processed: remove it
+  pop_front();   // now the Modification is processed: remove it
   
   }  // end( while( there are Modification ) )
  }  // end( MCFSolver::process_outstanding_Modification )

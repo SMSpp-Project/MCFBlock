@@ -2993,7 +2993,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 
   // set new arc capacity: abstract part
   if( AR & HasBnd )
-   nUB->set_rhs( cap , eNoBlck );
+   nUB->set_rhs( cap , ampar );
 
   // set contribution to flow constraint: abstract part
   if( AR & HasFlw ) {
