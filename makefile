@@ -23,11 +23,11 @@
 #           $(SMS++OBJ)    = the core SMS++ library                          #
 #           $(libMCFClINC) = the -I$( MCFClass library )                     #
 #           $(libMCFClOBJ) = the MCFClass library                            #
-#           $(MCFBkSDR)  = the directory where the source is                 #
+#           $(MCFBkSDR)    = the directory where the source is               #
 #                                                                            #
-#   Output: $(MCFBkOBJ) = the final object(s) / library                      #
-#           $(MCFBkH)   = the .h files to include                            #
-#           $(MCFBkINC) = the -I$( source directory )                        #
+#   Output: $(MCFBkOBJ)    = the final object(s) / library                   #
+#           $(MCFBkH)      = the .h files to include                         #
+#           $(MCFBkINC)    = the -I$( source directory )                     #
 #                                                                            #
 #                                VERSION 2.00                                #
 #                               13 - 11 - 2018                               #

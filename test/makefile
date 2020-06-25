@@ -24,12 +24,21 @@ NAME = test
 # basic directory
 DIR = ./
 
-# here is where the specific MCFClass to be tested is decided
+# switch to select the :MCFClass solver, supported values are
+# -DHAVE_CSCL2      for the CS2 class
+# -DHAVE_CPLEX      for the MCFCplex class
+# -DHAVE_MFSMX      for the MCFSimplex class
+# -DHAVE_MFZIB      for the MCFZIB class
+# -DHAVE_RELAX      for the RelaxIV class
+# -DHAVE_CPLEX      for the MCFCplex class
+# -DHAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
+#                   most MCF instances, except those with SPT structure
+MCFCS = -DHAVE_MFSMX
+
 # debug switches
-SW = -DHAVE_MFSMX -g -glldb -fno-inline -std=c++17 -ferror-limit=1
-#SW = -DHAVE_RELAX -g -glldb -fno-inline -std=c++17 -ferror-limit=1
+SW = -g -glldb -fno-inline -std=c++17 -ferror-limit=1 $(MCFCS)
 # production switches
-#SW = -DHAVE_MFSMX -O3 -std=c++17 -DNDEBUG
+#SW = -O3 -std=c++17 -DNDEBUG $(MCFCS)
 
 # compiler
 CC = clang++
