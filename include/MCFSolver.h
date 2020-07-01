@@ -298,15 +298,18 @@ public:
    kUnEval , Solver::kOK , kStopTime , kInfeasible , Solver::kUnbounded ,
    Solver::kError };
 
-  // first, process any outstanding Modification
-  // in order to do that, first try to read_lock() the MCFBlock
-  if( ( ! f_Block ) || ( ! f_Block->read_lock() ) )
-   return( kBlockLocked );  // return error on failure
+  if( ! f_Block )           // there is no [MCFBlock] to solve
+   return( kBlockLocked );  // return error 
 
+  bool owned = f_Block->is_owned_by( f_id );       // check if already locked
+  if( ( ! owned ) && ( ! f_Block->read_lock() ) )  // if not try to read_lock
+   return( kBlockLocked );                         // return error on failure
+  
+  // while [read_]locked, process any outstanding Modification
   process_outstanding_Modification();
 
-  // once done, read_unlock the MCFBlock
-  f_Block->read_unlock();
+  if( ! owned )             // if the [MCF]Block was actually read_locked
+   f_Block->read_unlock();  // read_unlock it
 
   // then (try to) solve the MCF
   this->MCFC::SolveMCF();

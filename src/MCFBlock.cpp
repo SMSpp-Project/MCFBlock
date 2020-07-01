@@ -2001,22 +2001,22 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 		 C.begin() + rng.first ) )
   return;  // actually nothing changes, avoid issuing the Modification
 
- if( not_dry_run( issueMod ) ) {
-  // change the physical representation - - - - - - - - - - - - - - - - - - -
-
+ if( not_dry_run( issueAMod ) && ( AR & HasObj ) ) {
+  // change abstract and physical representation together - - - - - - - - - -
+  // in the meantime, if so instructed also issue abstract Modification
   std::copy( NCost , NCost + ( rng.second - rng.first ) ,
-	             C.begin() + rng.first );
+	     C.begin() + rng.first );
 
-  if( AR & HasObj ) {  // the abstract representation is there
-   // change it as well - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   // note that modify_coefficients owns the vector, so a copy has to be made
-
-   auto lfo = get_lfo();
-   lfo->modify_coefficients( Vec_CNumber( NCost ,
-					  NCost + ( rng.second - rng.first )
-					  ) , rng , issueAMod );
-   }
+  // note that modify_coefficients owns the vector, so a copy has to be made
+  get_lfo()->modify_coefficients( Vec_CNumber( NCost , NCost +
+					       ( rng.second - rng.first ) ) ,
+				  rng , issueAMod );
   }
+ else
+  // only change the physical representation- - - - - - - - - - - - - - - - -
+  if( not_dry_run( issueMod ) )
+   std::copy( NCost , NCost + ( rng.second - rng.first ) ,
+	      C.begin() + rng.first );
 
  f_cond_lower = NAN;  // reset conditional bounds
  
@@ -2049,21 +2049,20 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
  if( is_equal( C , nms , NCost , get_NArcs() ) )
   return;  // actually nothing changes, avoid issuing the Modification
 
- if( not_dry_run( issueMod ) ) {
-  // change the physical representation - - - - - - - - - - - - - - - - - - -
-
+ if( not_dry_run( issueAMod ) && ( AR & HasObj ) ) {
+  // change abstract and physical representation together - - - - - - - - - -
+  // in the meantime, if so instructed also issue abstract Modification
   copyidx( C , nms , NCost );
 
-  if( AR & HasObj ) {  // the abstract representation is there
-   // change it as well - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   // note that modify_coefficients owns both vectors, so two copies have
-   // to be made
-
-   auto lfo = get_lfo();
-   lfo->modify_coefficients( Vec_CNumber( NCost , NCost + nms.size() ) ,
-			     Subset( nms ) , issueAMod );
-   }
+  // note that modify_coefficients owns both vectors, so two copies have
+  // to be made
+  get_lfo()->modify_coefficients( Vec_CNumber( NCost , NCost + nms.size() ) ,
+				  Subset( nms ) , ordered , issueAMod );
   }
+ else
+  // only change the physical representation- - - - - - - - - - - - - - - - -
+  if( not_dry_run( issueMod ) )
+   copyidx( C , nms , NCost );
 
  f_cond_lower = NAN;  // reset conditional bounds
 
@@ -3376,7 +3375,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod , ChnlName chnl )
    for( auto i : tmod->subset() )
     *(NCit++) = lfo->get_coefficient( i++ );
 
-   chg_costs( NC.begin() , Subset( tmod->subset() ) , tmod->ordered() ,
+   chg_costs( NC.begin() , Subset( tmod->subset() ) , true ,
 	      make_par( eNoBlck , chnl ) , eDryRun );
    return;
    }
