@@ -373,5 +373,113 @@ const std::string & MCFSolver<RelaxIV>::dbl_par_idx2str(
 #endif
 
 /*--------------------------------------------------------------------------*/
+/* Managing parameters for CPLEX -------------------------------------------*/
+
+#ifdef HAVE_CPLEX
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_int = {
+ MCFClass::kMaxIter,        // intMaxIter
+ -1,                        // intMaxSol
+ -1,                        // intLogVerb
+ -1,                        // intMaxDSol
+ MCFClass::kReopt,          // intLastParCDAS
+ MCFCplex::kQPMethod
+};
+
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+template<>
+const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_dbl = {
+ MCFClass::kMaxTime,        // dblMaxTime
+ -1,                        // dblRelAcc
+ MCFClass::kEpsFlw,         // dblAbsAcc
+ -1,                        // dblUpCutOff
+ -1,                        // dblLwCutOff
+ -1,                        // dblRAccSol
+ -1,                        // dblAAccSol
+ -1,                        // dblFAccSol
+ -1,                        // dblRAccDSol
+ MCFClass::kEpsCst,         // dblAAccDSol
+ -1                         // dblFAccDSol
+};
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+Solver::idx_type MCFSolver< MCFCplex >::get_num_int_par() const {
+ return ( CDASolver::get_num_int_par() + 2 );
+}
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+// template<>
+// Solver::idx_type MCFSolver< MCFCplex >::get_num_dbl_par() const {
+// }
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+int MCFSolver< MCFCplex >::get_dflt_int_par( const idx_type par ) const {
+ static const std::vector< int > my_dflt_int_par = { MCFClass::kYes,
+                                                     MCFClass::kYes };
+
+ return ( par >= intLastParCDAS ?
+          my_dflt_int_par[ par - intLastParCDAS ] :
+          CDASolver::get_dflt_int_par( par ) );
+}
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+// template<>
+// double MCFSolver< MCFCplex >::get_dflt_dbl_par( const idx_type par ) const {
+// }
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+Solver::idx_type MCFSolver< MCFCplex >::int_par_str2idx(
+ const std::string & name ) const {
+ if( name == "kReopt" )
+  return ( intLastParCDAS );
+ if( name == "kQPMethod" )
+  return ( kQPMethod + 1 );
+
+ return ( CDASolver::dbl_par_str2idx( name ) );
+}
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+// template<>
+// Solver::idx_type
+// MCFSolver< MCFCplex >::dbl_par_str2idx( const std::string & name ) const {
+// }
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+const std::string & MCFSolver< MCFCplex >::int_par_idx2str(
+ const idx_type idx ) const {
+ static const std::vector< std::string > my_int_pars_str = { "kReopt",
+                                                             "kQPMethod" };
+
+ return ( idx >= intLastParCDAS ?
+          my_int_pars_str[ idx - intLastParCDAS ] :
+          CDASolver::int_par_idx2str( idx ) );
+}
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+// template<>
+// const std::string &
+// MCFSolver< MCFCplex >::dbl_par_idx2str( const idx_type idx ) const {
+// }
+
+#endif
+
+/*--------------------------------------------------------------------------*/
 /*----------------------- End File MCFSolver.cpp ---------------------------*/
 /*--------------------------------------------------------------------------*/
