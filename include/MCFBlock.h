@@ -2138,10 +2138,17 @@ public:
 
  void compute_conditional_bounds( void );
 
- inline ModParam make_amod_param( c_ModParam issueAMod , c_Index num );
+ ModParam make_amod_param( c_ModParam issueAMod , c_Index num );
 
- inline void unmake_amod_param( c_ModParam oldiAM , c_ModParam newiAM ,
-				c_Index num );
+ void unmake_amod_param( c_ModParam oldiAM , c_ModParam newiAM , c_Index num );
+
+/*--------------------------------------------------------------------------*/
+
+#ifndef NDEBUG
+
+ void CheckAbsVSPhys( void );
+ 
+#endif
 
 /*--------------------------------------------------------------------------*/
 /*---------------------------- PRIVATE FIELDS ------------------------------*/

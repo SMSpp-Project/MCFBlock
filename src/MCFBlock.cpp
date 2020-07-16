@@ -26,6 +26,19 @@
 #include "MCFBlock.h"
 
 /*--------------------------------------------------------------------------*/
+/*--------------------------------- MACROS ---------------------------------*/
+/*--------------------------------------------------------------------------*/
+
+#ifndef NDEBUG
+ #define CHECK_DS 1
+ /* Perform long and costly checks on the data structures representing the
+  * astract and the physical representations agree. */
+#else
+ #define CHECK_DS 0
+ // never change this
+#endif
+
+/*--------------------------------------------------------------------------*/
 /*------------------------- NAMESPACE AND USING ----------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -531,12 +544,12 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 {
  if( ! ( AR & HasFlw ) ) {
   // count number of nonzeroes in each constraint, i.e., #FS( i ) + #BS( i )
-  std::vector<Index> count( get_NNodes() );
+  Subset count( get_NNodes() );
  
   for( Index i = 0 ; i < get_NStaticArcs() ; ++i ) {
-    count[ SN[ i ] - 1 ]++;
-    count[ EN[ i ] - 1 ]++;
-    }
+   count[ SN[ i ] - 1 ]++;
+   count[ EN[ i ] - 1 ]++;
+   }
 
   for( Index i = NStaticArcs ; i < get_NArcs() ; ++i )
    if( ! is_deleted( i ) ) {
@@ -648,6 +661,10 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 
  AR |= HasBnd;
 
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
+
  }  // end( MCFBlock::generate_abstract_constraints )
 
 /*--------------------------------------------------------------------------*/
@@ -702,6 +719,10 @@ void MCFBlock::generate_objective( Configuration *objc )
  set_objective( & c , eNoMod );
 
  AR |= HasObj;
+
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::generate_objective )
 
@@ -2026,6 +2047,9 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 					      MCFBlockMod::eChgCost , rng ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::chg_costs( range ) )
 
@@ -2077,6 +2101,11 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
                                   MCFBlockMod::eChgCost , std::move( nms ) ) ,
 			   Observer::par2chnl( issueMod ) );
   }
+
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
+
  }  // end( MCFBlock::chg_costs( subset ) )
 
 /*--------------------------------------------------------------------------*/
@@ -2111,7 +2140,10 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 			   MCFBlockMod::eChgCost , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
- 
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
+
  }  // end( MCFBlock::chg_cost )
 
 /*--------------------------------------------------------------------------*/
@@ -2182,6 +2214,9 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 				              MCFBlockMod::eChgCaps , rng ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::chg_ucaps( range ) )
 
@@ -2299,6 +2334,11 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
 
   Block::add_Modification( mod , Observer::par2chnl( issueMod ) );
   }
+
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
+
  }  // end( MCFBlock::chg_ucaps( subset ) )
 
 /*--------------------------------------------------------------------------*/
@@ -2339,6 +2379,9 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 			   MCFBlockMod::eChgCaps , Range( arc , arc + 1 )  ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::chg_ucap )
 
@@ -2403,6 +2446,9 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 				              MCFBlockMod::eChgDfct , rng ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::chg_dfcts( range ) )
 
@@ -2512,6 +2558,11 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
                                  MCFBlockMod::eChgDfct , std::move( nms ) ) ,
 			   Observer::par2chnl( issueMod ) );
   }
+
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
+
  }  // end( MCFBlock::chg_dfcts( subset ) )
 
 /*--------------------------------------------------------------------------*/
@@ -2545,6 +2596,9 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 			   MCFBlockMod::eChgDfct , Range( nde , nde + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::chg_dfct )
 
@@ -2608,6 +2662,9 @@ void MCFBlock::close_arcs( Range rng ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 				             MCFBlockMod::eCloseArc , rng ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::close_arcs( range ) )
 
@@ -2684,6 +2741,9 @@ void MCFBlock::close_arcs( Subset && nms , const bool ordered  ,
   Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
                                  MCFBlockMod::eCloseArc , std::move( nms ) ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::close_arcs( subset ) )
 
@@ -2719,6 +2779,9 @@ void MCFBlock::close_arc( c_Index arc ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 			   MCFBlockMod::eCloseArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::close_arc )
 
@@ -2778,6 +2841,9 @@ void MCFBlock::open_arcs( Range rng ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 				             MCFBlockMod::eOpenArc , rng ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::open_arcs( range ) )
 
@@ -2852,6 +2918,9 @@ void MCFBlock::open_arcs( Subset && nms , const bool ordered  ,
   Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
                                   MCFBlockMod::eOpenArc , std::move( nms ) ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::open_arcs( subset ) )
 
@@ -2885,6 +2954,9 @@ void MCFBlock::open_arc( c_Index arc ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 			   MCFBlockMod::eOpenArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::open_arc )
 
@@ -3012,6 +3084,9 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
   Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
 			    MCFBlockMod::eAddArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  return( arc );
 
@@ -3148,6 +3223,9 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 				     MCFBlockMod::eRmvArc ,
 				     Range( arc - rmvdarcs + 1 , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
+ #if CHECK_DS
+  CheckAbsVSPhys();
+ #endif
 
  }  // end( MCFBlock::remove_arc )
 
@@ -3495,8 +3573,7 @@ void MCFBlock::compute_conditional_bounds( void )
 
 /*--------------------------------------------------------------------------*/
 
-inline ModParam MCFBlock::make_amod_param( c_ModParam issueAMod ,
-					   c_Index num )
+ModParam MCFBlock::make_amod_param( c_ModParam issueAMod , c_Index num )
 {
  if( issue_mod( issueAMod ) ) {
   ChnlName chnl = par2chnl( issueAMod );
@@ -3520,8 +3597,8 @@ inline ModParam MCFBlock::make_amod_param( c_ModParam issueAMod ,
 
 /*--------------------------------------------------------------------------*/
 
-inline void MCFBlock::unmake_amod_param( c_ModParam oldiAM ,
-					 c_ModParam newiAM , c_Index num )
+void MCFBlock::unmake_amod_param( c_ModParam oldiAM , c_ModParam newiAM ,
+				  c_Index num )
 {
  if( newiAM == eNoMod )
   return;
@@ -3534,6 +3611,212 @@ inline void MCFBlock::unmake_amod_param( c_ModParam oldiAM ,
    close_channel( chnl );      // close it
   }
  }
+
+/*--------------------------------------------------------------------------*/
+
+#ifndef NDEBUG
+
+void MCFBlock::CheckAbsVSPhys( void )
+{
+ // check that the (part that has actually been constructed of the) abstract
+ // representation coincides with the physical representation
+
+ if( AR & HasFlw ) {
+  if( x.size() != get_NStaticArcs() )
+   std::cerr << "x.size() != NStaticArcs" << std::endl;
+ 
+  if( E.size() != get_NStaticNodes() )
+   std::cerr << "E.size() != NStaticNodes" << std::endl;
+
+  if( dx.size() < get_NArcs() - get_NStaticArcs() )
+   std::cerr << "dx.size() too small" << std::endl;
+
+  if( dE.size() < get_NNodes() - get_NStaticNodes() )
+   std::cerr << "dE.size() too small" << std::endl;
+  
+  Subset NRIncid( get_NNodes() , 0 );
+
+  Index expnc = 2;   // expected number of active stuff per constraint
+  Index objbnd = 0;  // if active in obj and bound
+  if( AR & HasBnd )
+   ++objbnd;
+  if( AR & HasObj )
+   ++objbnd;
+  expnc += objbnd;
+
+  // static arcs
+  Index a = 0;
+  for( auto xi = x.begin() ; a < get_NStaticArcs() ; ++a , ++xi ) {
+   if( is_deleted( a ) ) {
+    std::cerr << "static arc " << a << " deleted" << std::endl;
+    continue;
+    }
+   
+   if( xi->get_num_active() != expnc )
+    std::cerr << "arc " << a << " active in " << xi->get_num_active()
+	      << " constraints" << std::endl;
+
+   Index sna = SN[ a ];
+   if( ! sna )
+    std::cerr << "SN[ " << a << " ] == 0" << std::endl;
+   else
+    --sna;
+   if( sna >= get_NArcs() )
+    std::cerr << "SN[ " << a << " ] == " << sna << " >= |A!" << std::endl;
+
+   if( ( SN[ a ] > 0 ) && ( sna < get_NArcs() ) ) {
+    ++NRIncid[ sna ];
+    auto snc = get_lfc( i2p_e( sna ) );
+    auto sni = snc->is_active( &(*xi) );
+    if( sni >= snc->get_num_active_var() )
+     std::cerr << "static arc " << a
+	       << " absent in flow constraint for SN[ a ] == "
+	       << sna << std::endl;
+    }
+    
+   Index ena = EN[ a ];
+   if( ! ena )
+    std::cerr << "EN[ " << a << " ] == 0" << std::endl;
+   else
+    --ena;
+   if( ena >= get_NArcs() )
+    std::cerr << "EN[ " << a << " ] == " << ena << " >= |A!" << std::endl;
+
+   if( ( EN[ a ] > 0 ) && ( ena < get_NArcs() ) ) {
+    ++NRIncid[ ena ];
+    auto enc = get_lfc( i2p_e( ena ) );
+    auto eni = enc->is_active( &(*xi) );
+    if( eni >= enc->get_num_active_var() )
+     std::cerr << "static arc " << a
+	       << " absent in flow constraint for EN[ a ] == "
+	       << ena << std::endl;
+    }
+   }
+
+  // dynamic arcs
+  for( auto xi = dx.begin() ; a < get_NArcs() ; ++a , ++xi ) {
+   if( is_deleted( a ) ) {
+    if( xi->get_num_active() != objbnd )
+     std::cerr << "deleted arc " << a << " active in "
+	       << xi->get_num_active() << " constraints" << std::endl;
+    continue;
+    }
+   
+   if( xi->get_num_active() != expnc )
+    std::cerr << "arc " << a << " active in " << xi->get_num_active()
+	      << " constraints" << std::endl;
+
+   Index sna = SN[ a ];
+   if( ! sna )
+    std::cerr << "SN[ " << a << " ] == 0 " << std::endl;
+   else
+    --sna;
+   if( sna >= get_NArcs() )
+    std::cerr << "SN[ " << a << " ] == " << sna << " >= |A!" << std::endl;
+
+   if( ( SN[ a ] > 0 ) && ( sna < get_NArcs() ) ) {
+    ++NRIncid[ sna ];
+    auto snc = get_lfc( i2p_e( sna ) );
+    auto sni = snc->is_active( &(*xi) );
+    if( sni >= snc->get_num_active_var() )
+     std::cerr << "static arc " << a
+	       << " absent in flow constraint for SN[ a ] == "
+	       << sna << std::endl;
+    }
+
+   Index ena = EN[ a ];
+   if( ! ena )
+    std::cerr << "EN[ " << a << " ] == 0 " << std::endl;
+   else
+    --ena;
+   if( ena >= get_NArcs() )
+    std::cerr << "EN[ " << a << " ] == " << ena << " >= |A!" << std::endl;
+
+   if( ( EN[ a ] > 0 ) && ( ena < get_NArcs() ) ) {
+    ++NRIncid[ ena ];
+    auto enc = get_lfc( i2p_e( ena ) );
+    auto eni = enc->is_active( &(*xi) );
+    if( eni >= enc->get_num_active_var() )
+     std::cerr << "static arc " << a
+	       << " absent in flow constraint for EN[ a ] == "
+	       << ena << std::endl;
+    }
+   }
+
+  if( ( get_NArcs() > get_NStaticArcs() ) &&
+      is_deleted( get_NArcs() - 1 ) )
+   std::cerr << "last dynamic arc is deleted" << std::endl;
+
+  // static nodes
+  Index n = 0;
+  for( auto ni = E.begin() ; n < get_NStaticNodes() ; ++n , ++ni ) {
+   auto lni = get_lfc( &(*ni) );
+   if( lni->get_num_active_var() != NRIncid[ n ] )
+    std::cerr << "active variables in static flow constraint " << n
+	      << " == " << lni->get_num_active_var()
+	      << " do not match with incident arcs " << NRIncid[ n ]
+	      << std::endl;
+  }
+   
+  // dynamic nodes
+  for( auto ni = dE.begin() ; n < get_NNodes() ; ++n , ++ni ) {
+   auto lni = get_lfc( &(*ni) );
+   if( lni->get_num_active_var() != NRIncid[ n ] )
+    std::cerr << "active variables in dynamic flow constraint " << n
+	      << " == " << lni->get_num_active_var()
+	      << " do not match with incident arcs " << NRIncid[ n ]
+	      << std::endl;
+   }
+  }  // end( if( AR & HasFlw ) )
+
+ if( AR & HasBnd ) {
+  // static bounds
+  Index a = 0;
+  auto UBi = UB.begin();
+  for( auto xi = x.begin() ; xi != x.end() ; ++a , ++xi , ++UBi ) {
+   if( is_deleted( a ) )
+    continue;
+
+   if( UBi->is_active( &(*xi) ) >= UBi->get_num_active_var() )
+    std::cerr << "static arc " << a << " absent in bound constraint"
+	      << std::endl;
+   }
+
+ // dynamic bounds
+  auto dUBi = dUB.begin();
+  for( auto xi = dx.begin() ; xi != dx.end() ; ++a , ++xi , ++dUBi ) {
+   if( is_deleted( a ) )
+    continue;
+
+   if( dUBi->is_active( &(*xi) ) >= dUBi->get_num_active_var() )
+    std::cerr << "dynamic arc " << a << " absent in bound constraint"
+	      << std::endl;
+   }
+  }  // ( end( if( AR & HasBnd ) )
+
+ if( AR & HasObj ) {
+  auto lfo = get_lfo();
+  if( lfo->get_num_active_var() != get_NArcs() )
+   std::cerr << "objective has " << lfo->get_num_active_var()
+	     << " variables while |A| = " << get_NArcs() << std::endl;
+
+  Index a = 0;
+  for( auto & xi : x ) {
+   if( lfo->is_active( & xi ) >= get_NArcs() )
+    std::cerr << "static arc " << a << " absent from objective " << std::endl;
+   ++a;
+   }
+
+  for( auto & xi : dx ) {
+   if( lfo->is_active( & xi ) >= get_NArcs() )
+    std::cerr << "dynamic arc " << a << " absent from objective "
+	      << std::endl;
+   ++a;
+   }
+  }  // end( if( AR & HasObj ) )
+ }  // end( MCFBlock::CheckAbsVSPhys )
+
+#endif
 
 /*--------------------------------------------------------------------------*/
 /*-------------------------- METHODS OF MCFSolution ------------------------*/

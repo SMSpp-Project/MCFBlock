@@ -201,7 +201,7 @@ static inline void CreateProb( unsigned int Optns )
  #ifdef HAVE_CPLEX  // - - - - - - - - - - - - - - - - - - - - - - - - - - -
   MCFCplex *cpx = new MCFCplex();
   if( Optns >= 0 )
-   cpx->SetPar( CPX_PARAM_NETPPRIIND , Optns );
+   cpx->SetPar( CPX_PARAM_NETPPRIIND , int( Optns ) );
   mcf = cpx;
   LOG1( "MCFCplex" );
   assert( false );  // MCFCplex not fully supported yet
@@ -536,7 +536,7 @@ int main( int argc , char **argv )
 		<< endl <<
            "             0 = cost, 1 = cap, 2 = dfct, 3 = o.arc, 4 = c.arc"
 		<< endl <<
-           "             5 = add arc, 6 = delete arc"
+           "             5 = delete arc, 6 = add arc"
 		<< endl <<
 	   "       optns: bit 0 = re-optimize, other bits MCF-specific" 
 		<< endl <<
