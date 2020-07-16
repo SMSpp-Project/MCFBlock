@@ -6,7 +6,7 @@
  *
  * \version 1.30
  *
- * \date 27 - 09 - 2019
+ * \date 15 - 07 - 2020
  *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
@@ -614,9 +614,9 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   auto tstcc = dynamic_cast<SimpleConfiguration<int> *>( stcc );
 
   if( ( ! tstcc ) && f_BlockConfig &&
-      f_BlockConfig->f_static_constraints_Configuration )
+      f_BlockConfig->get_static_constraints_Configuration() )
    tstcc = dynamic_cast<SimpleConfiguration<int> *>(
-			 f_BlockConfig->f_static_constraints_Configuration );
+                         f_BlockConfig->get_static_constraints_Configuration() );
   if( tstcc && ( tstcc->f_value != 0 ) )
    return;
   }
@@ -1073,9 +1073,9 @@ bool MCFBlock::is_feasible( bool useabstract , Configuration *fsbc )
  auto tfsbc = dynamic_cast<SimpleConfiguration<FNumber> *>( fsbc );
 
  if( ( ! tfsbc ) && f_BlockConfig &&
-     f_BlockConfig->f_is_feasible_Configuration )
+     f_BlockConfig->get_is_feasible_Configuration() )
   tfsbc = dynamic_cast<SimpleConfiguration<FNumber> *>(
-			         f_BlockConfig->f_is_feasible_Configuration );
+                        f_BlockConfig->get_is_feasible_Configuration() );
  if( tfsbc )
   eps = tfsbc->f_value;
 
@@ -1102,15 +1102,15 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
    auto ttoptc = dynamic_cast<SimpleConfiguration<CNumber> *>( optc );
 
    if( ( ! ttoptc ) && f_BlockConfig &&
-       f_BlockConfig->f_is_optimal_Configuration )
+       f_BlockConfig->get_is_optimal_Configuration() )
     ttoptc = dynamic_cast<SimpleConfiguration<CNumber> *>(
-			          f_BlockConfig->f_is_optimal_Configuration );
+                           f_BlockConfig->get_is_optimal_Configuration() );
    if( ttoptc )
     ceps = ttoptc->f_value;
 
-   if( f_BlockConfig && f_BlockConfig->f_is_feasible_Configuration ) {
+   if( f_BlockConfig && f_BlockConfig->get_is_feasible_Configuration() ) {
     auto fsbc = dynamic_cast<SimpleConfiguration<FNumber> *>(
-			         f_BlockConfig->f_is_feasible_Configuration );
+                              f_BlockConfig->get_is_feasible_Configuration() );
     if( fsbc )
      feps = fsbc->f_value;
     }
@@ -1118,16 +1118,16 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
   }
  else
   if( f_BlockConfig ) {
-   if( f_BlockConfig->f_is_optimal_Configuration ) {
+   if( f_BlockConfig->get_is_optimal_Configuration() ) {
     auto csbc = dynamic_cast<SimpleConfiguration<CNumber> *>(
-		                  f_BlockConfig->f_is_optimal_Configuration );
+                              f_BlockConfig->get_is_optimal_Configuration() );
     if( csbc )
      ceps = csbc->f_value;
     }
 
-   if( f_BlockConfig->f_is_feasible_Configuration ) {
+   if( f_BlockConfig->get_is_feasible_Configuration() ) {
     auto fsbc = dynamic_cast<SimpleConfiguration<FNumber> *>(
-			        f_BlockConfig->f_is_feasible_Configuration );
+                              f_BlockConfig->get_is_feasible_Configuration() );
     if( fsbc )
      feps = fsbc->f_value;
     }
@@ -1178,9 +1178,10 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
  int wsol = 0;
  auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
 
- if( ( ! tsolc ) && f_BlockConfig && f_BlockConfig->f_solution_Configuration )
+ if( ( ! tsolc ) && f_BlockConfig &&
+     f_BlockConfig->get_solution_Configuration() )
    tsolc = dynamic_cast<SimpleConfiguration<int> *>(
-			            f_BlockConfig->f_solution_Configuration );
+                         f_BlockConfig->get_solution_Configuration() );
  if( tsolc )
   wsol = tsolc->f_value;
 
@@ -1298,9 +1299,10 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  int wsol = 0;
  auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
 
- if( ( ! tsolc ) && f_BlockConfig && f_BlockConfig->f_solution_Configuration )
+ if( ( ! tsolc ) && f_BlockConfig &&
+     f_BlockConfig->get_solution_Configuration() )
   tsolc = dynamic_cast<SimpleConfiguration<int> *>(
-			            f_BlockConfig->f_solution_Configuration );
+                        f_BlockConfig->get_solution_Configuration() );
  if( tsolc )
   wsol = tsolc->f_value;
 
@@ -1647,9 +1649,10 @@ Solution * MCFBlock::get_Solution( Configuration *solc , bool emptys )
  int wsol = 0;
  auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
 
- if( ( ! tsolc ) && f_BlockConfig && f_BlockConfig->f_solution_Configuration )
+ if( ( ! tsolc ) && f_BlockConfig &&
+     f_BlockConfig->get_solution_Configuration() )
   tsolc = dynamic_cast<SimpleConfiguration<int> *>(
-			            f_BlockConfig->f_solution_Configuration );
+                        f_BlockConfig->get_solution_Configuration() );
  if( tsolc )
   wsol = tsolc->f_value;
 
