@@ -3621,28 +3621,29 @@ void MCFBlock::CheckAbsVSPhys( void )
  // check that the (part that has actually been constructed of the) abstract
  // representation coincides with the physical representation
 
- if( AR & HasFlw ) {
-  if( x.size() != get_NStaticArcs() )
-   std::cerr << "x.size() != NStaticArcs" << std::endl;
- 
+ // check variables, these are always there - - - - - - - - - - - - - - - - -
+ if( x.size() != get_NStaticArcs() )
+  std::cerr << "x.size() != NStaticArcs" << std::endl;
+
+ if( dx.size() < get_NArcs() - get_NStaticArcs() )
+  std::cerr << "dx.size() too small" << std::endl;
+
+ // check flow constraints- - - - - - - - - - - - - - - - - - - - - - - - - -
+ if( AR & HasFlw ) { 
   if( E.size() != get_NStaticNodes() )
    std::cerr << "E.size() != NStaticNodes" << std::endl;
-
-  if( dx.size() < get_NArcs() - get_NStaticArcs() )
-   std::cerr << "dx.size() too small" << std::endl;
 
   if( dE.size() < get_NNodes() - get_NStaticNodes() )
    std::cerr << "dE.size() too small" << std::endl;
   
   Subset NRIncid( get_NNodes() , 0 );
 
-  Index expnc = 2;   // expected number of active stuff per constraint
-  Index objbnd = 0;  // if active in obj and bound
+  Index objbnd = 0;          // number of actives between obj and bound
   if( AR & HasBnd )
    ++objbnd;
   if( AR & HasObj )
    ++objbnd;
-  expnc += objbnd;
+  Index expnc = 2 + objbnd;  // total number of active stuff per variable
 
   // static arcs
   Index a = 0;
@@ -3743,8 +3744,7 @@ void MCFBlock::CheckAbsVSPhys( void )
     }
    }
 
-  if( ( get_NArcs() > get_NStaticArcs() ) &&
-      is_deleted( get_NArcs() - 1 ) )
+  if( HasDynamicX() && is_deleted( get_NArcs() - 1 ) )
    std::cerr << "last dynamic arc is deleted" << std::endl;
 
   // static nodes
@@ -3756,7 +3756,7 @@ void MCFBlock::CheckAbsVSPhys( void )
 	      << " == " << lni->get_num_active_var()
 	      << " do not match with incident arcs " << NRIncid[ n ]
 	      << std::endl;
-  }
+   }
    
   // dynamic nodes
   for( auto ni = dE.begin() ; n < get_NNodes() ; ++n , ++ni ) {
@@ -3769,14 +3769,12 @@ void MCFBlock::CheckAbsVSPhys( void )
    }
   }  // end( if( AR & HasFlw ) )
 
+ // check bound constraints - - - - - - - - - - - - - - - - - - - - - - - - -
  if( AR & HasBnd ) {
   // static bounds
   Index a = 0;
   auto UBi = UB.begin();
   for( auto xi = x.begin() ; xi != x.end() ; ++a , ++xi , ++UBi ) {
-   if( is_deleted( a ) )
-    continue;
-
    if( UBi->is_active( &(*xi) ) >= UBi->get_num_active_var() )
     std::cerr << "static arc " << a << " absent in bound constraint"
 	      << std::endl;
@@ -3792,8 +3790,9 @@ void MCFBlock::CheckAbsVSPhys( void )
     std::cerr << "dynamic arc " << a << " absent in bound constraint"
 	      << std::endl;
    }
-  }  // ( end( if( AR & HasBnd ) )
+  }  // end( if( AR & HasBnd ) )
 
+ // check objective - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  if( AR & HasObj ) {
   auto lfo = get_lfo();
   if( lfo->get_num_active_var() != get_NArcs() )
