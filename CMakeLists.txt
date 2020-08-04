@@ -31,6 +31,11 @@ elseif (MCF_SOLVER STREQUAL "sptree")
     add_compile_definitions(HAVE_SPTRE)
 endif ()
 
+# Check for representation issues
+if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_compile_definitions(NDEBUG)
+endif ()
+
 # ----- Requirements -------------------------------------------------------- #
 find_package(SMSpp REQUIRED)
 find_package(MCFClass REQUIRED)
