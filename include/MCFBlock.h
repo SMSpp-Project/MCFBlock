@@ -1039,7 +1039,8 @@ public:
   *
   */
 
- Block * get_R3_Block( Configuration *r3bc = nullptr ) override;
+ Block * get_R3_Block( Configuration *r3bc = nullptr ,
+		       Block * base = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /// maps back the solution from a copy MCFBlock to the current one

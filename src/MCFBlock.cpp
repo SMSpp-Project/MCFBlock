@@ -1165,12 +1165,19 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
 
-Block * MCFBlock::get_R3_Block( Configuration *r3bc )
+Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base )
 {
  if( r3bc != nullptr )
   throw( std::invalid_argument( "non-nullptr R3B Configuration" ) );
 
- auto MCFB = new MCFBlock();
+ MCFBlock *MCFB;
+ if( base ) {
+  MCFB = dynamic_cast< MCFBlock * >( base );
+  if( ! MCFB )
+   throw( std::invalid_argument( "base is not a MCFBlock" ) );
+  }
+ else
+  MCFB = new MCFBlock();
 
  MCFB->load( get_NNodes() , get_NArcs() , EN , SN , U , C , B ,
 	     get_NNodes() - get_NStaticNodes() ,
@@ -3125,14 +3132,9 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
   if( arc == get_NArcs() - 1 ) {
    // removing the last arc (and possibly more)
 
-   // vector holding the iterators to the removed variables
-   std::vector< typename std::list< ColVariable >::iterator > rmvdx;
    // reverse iterator into dx
    auto ritdx = dx.rbegin();
-   // vector holding the iteratos to the removed constraints (if any)
-   std::vector< typename std::list< LB0Constraint >::iterator > rmvdub;
-   // reverse iterator into dub
-   auto ritdub = dUB.rbegin();
+
    // pointer to LinearFunction in the objective (if any)
    LinearFunction * lfo;
    if( AR & HasObj )
@@ -3140,9 +3142,7 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
 
    // scan from the end backwards, eliminate all deleted arcs
    for( Index ai = arc ; ritdx != dx.rend() ; ++rmvdarcs , --ai ) {
-    auto itdx = (ritdx++).base();
-    rmvdx.push_back( --itdx );      // &*(rit.base() - 1) == &*rit
-    auto rxi = &(*itdx);
+    auto rxi = &(*(ritdx++));
 
     // delete contribution to objective (if any)
     if( AR & HasObj )
@@ -3162,12 +3162,6 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
      enc->remove_variable( eni , ampar );
      }
 
-    // delete arc capacity constraint (if any)
-    if( AR & HasBnd ) {
-     auto itdub = (ritdub++).base();
-     rmvdub.push_back( --itdub );     // &*(rit.base() - 1) == &*rit
-     }
-
     if( rmvdarcs >= get_NArcs() - get_NStaticArcs() )
      break;
 
@@ -3175,14 +3169,18 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
      break;
     }
 
+   // define the range of removed stuff
+   Range range( get_NArcs() - get_NStaticArcs() - rmvdarcs ,
+		get_NArcs() - get_NStaticArcs() );
+   
    // now actually remove and clear the UB Constraint(s) (if any)
    // do this before removing the flow Variable(s), so that if they are
    // processed in FIFO order it is seen before
    if( AR & HasBnd )
-    Block::remove_dynamic_constraints( dUB , rmvdub , ampar );
+    Block::remove_dynamic_constraints( dUB , range , ampar );
 
    // now actually remove the flow Variable(s) (if any)
-   Block::remove_dynamic_variables( dx , rmvdx , ampar );
+   Block::remove_dynamic_variables( dx , range , ampar );
    }
   else {
    // deleting one arc in the middle
