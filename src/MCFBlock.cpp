@@ -1507,6 +1507,12 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
    if( tmod ) {
     switch( tmod->type() ) {
      case( MCFBlockMod::eChgCost ):
+      #ifndef NDEBUG
+       if( ( tmod->rng().second > get_NArcs() ) ||
+	   ( tmod->rng().second > MCFB->get_NArcs() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       if( tmod->rng().second == tmod->rng().first + 1 )
        MCFB->chg_cost( C[ tmod->rng().first ] , tmod->rng().first ,
 		       iPM , iPA );
@@ -1515,6 +1521,12 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 			iPM , iPA );
       break;
      case( MCFBlockMod::eChgCaps ):
+      #ifndef NDEBUG
+       if( ( tmod->rng().second > get_NArcs() ) ||
+	   ( tmod->rng().second > MCFB->get_NArcs() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       if( tmod->rng().second == tmod->rng().first + 1 )
        MCFB->chg_ucap( U[ tmod->rng().first ] , tmod->rng().first ,
 		       iPM , iPA );
@@ -1523,6 +1535,12 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 			iPM , iPA );
       break;
      case( MCFBlockMod::eChgDfct ):
+      #ifndef NDEBUG
+       if( ( tmod->rng().second > get_NNodes() ) ||
+	   ( tmod->rng().second > MCFB->get_NNodes() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       if( tmod->rng().second == tmod->rng().first + 1 )
        MCFB->chg_dfct( B[ tmod->rng().first ] , tmod->rng().first ,
 		       iPM , iPA );
@@ -1531,18 +1549,35 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 			iPM , iPA );
       break;
      case( MCFBlockMod::eOpenArc ):
+      #ifndef NDEBUG
+       if( ( tmod->rng().second > get_NArcs() ) ||
+	   ( tmod->rng().second > MCFB->get_NArcs() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       if( tmod->rng().second == tmod->rng().first + 1 )
        MCFB->open_arc( tmod->rng().first , iPM , iPA );
       else
        MCFB->open_arcs( tmod->rng() , iPM , iPA );
       break;
      case( MCFBlockMod::eCloseArc ):
+      #ifndef NDEBUG
+       if( ( tmod->rng().second > get_NArcs() ) ||
+	   ( tmod->rng().second > MCFB->get_NArcs() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       if( tmod->rng().second == tmod->rng().first + 1 )
        MCFB->close_arc( tmod->rng().first , iPM , iPA );
       else
        MCFB->close_arcs( tmod->rng() , iPM , iPA );
       break;
      case( MCFBlockMod::eAddArc ):
+      #ifndef NDEBUG
+       if( tmod->rng().first > get_NArcs() )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       if( MCFB->add_arc( get_SN( tmod->rng().first ) ,
 			 get_EN( tmod->rng().first ) ,
 			 get_C( tmod->rng().first ) ,
@@ -1551,6 +1586,11 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
        throw( std::logic_error( "inconsistency between arc names" ) );       
       break;
      case( MCFBlockMod::eRmvArc ):
+      #ifndef NDEBUG
+       if( tmod->rng().first > MCFB->get_NArcs() )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       MCFB->remove_arc( tmod->rng().second - 1 , iPM , iPA );
       break;
      default:
@@ -1572,6 +1612,12 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
    if( tmod ) {
     switch( tmod->type() ) {
      case( MCFBlockMod::eChgCost ): {
+      #ifndef NDEBUG
+       if( ( tmod->nms().back() >= get_NArcs() ) ||
+	   ( tmod->nms().back() >= MCFB->get_NArcs() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       Vec_CNumber NCost( tmod->nms().size() );
       for( Index i = 0 ; i < NCost.size() ; i++ )
        NCost[ i ] = C[ tmod->nms()[ i ] ];
@@ -1580,6 +1626,12 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       break;
       }
      case( MCFBlockMod::eChgCaps ): {
+      #ifndef NDEBUG
+       if( ( tmod->nms().back() >= get_NArcs() ) ||
+	   ( tmod->nms().back() >= MCFB->get_NArcs() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       Vec_FNumber NCap( tmod->nms().size() );
       for( Index i = 0 ; i < NCap.size() ; i++ )
        NCap[ i ] = U[ tmod->nms()[ i ] ];
@@ -1589,6 +1641,12 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       break;
       }
      case( MCFBlockMod::eChgDfct ): {
+      #ifndef NDEBUG
+       if( ( tmod->nms().back() >= get_NNodes() ) ||
+	   ( tmod->nms().back() >= MCFB->get_NNodes() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       Vec_FNumber NDfct( tmod->nms().size() );
       for( Index i = 0 ; i < NDfct.size() ; i++ )
        NDfct[ i ] = B[ tmod->nms()[ i ] ];
@@ -1598,9 +1656,21 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       break;
       }
      case( MCFBlockMod::eOpenArc ):
+      #ifndef NDEBUG
+       if( ( tmod->nms().back() >= get_NArcs() ) ||
+	   ( tmod->nms().back() >= MCFB->get_NArcs() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       MCFB->open_arcs( Subset( tmod->nms() ) , iPM , iPA );
       break;
      case( MCFBlockMod::eCloseArc ):
+      #ifndef NDEBUG
+       if( ( tmod->nms().back() >= get_NArcs() ) ||
+	   ( tmod->nms().back() >= MCFB->get_NArcs() ) )
+	throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+      #endif
       MCFB->close_arcs( Subset( tmod->nms() ) , iPM , iPA );
       break;
      default:

@@ -1035,8 +1035,7 @@ public:
  /** Gets an R3 Block of the MCFBlock. The list of currently supported R3
   * Block is:
   *
-  * - r3bc == nullptr: the copy (an MCFBlock identical to the current one).
-  *
+  * - r3bc == nullptr: the copy (an MCFBlock identical to this)
   */
 
  Block * get_R3_Block( Configuration *r3bc = nullptr ,
@@ -1134,6 +1133,19 @@ public:
   * - NBModification
   *
   * Any other Modification is ignored (and false is returned).
+  *
+  *     IMPORTANT NOTE: MCFBlockRngdMod ALLOW TO ADD/DELETE ARCS IN THE
+  *     PROBLEM, WHICH ALSO CHANGES THE "NAMES" OF EXISTING ARCS. MCFBlock
+  *     IMPLEMENTS map_forward_Modification() IN A WAY THAT IS ONLY
+  *     GUARANTEED TO BE CORRECT IF:
+  *
+  *     = EITHER THE SET OF ARCS IS NEVER CHANGED;
+  *
+  *     = OR THE Modification ARE MAPPED IMMEDIATELY AFTER THEY ARE ISSUED.
+  *
+  * This is because otherwise MCFBlock should have to understand whether the
+  * set of arc "names" in the Modification is still correct and do something
+  * in case it is not, which is too complex to do at the moment.
   *
   * Note that for GroupModification, true is returned only if all the
   * inner Modification of the GroupModification return true.
