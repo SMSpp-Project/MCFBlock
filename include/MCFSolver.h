@@ -758,9 +758,9 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
    // GroupModification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
    {
-    const auto tmod = std::dynamic_pointer_cast<GroupModification>( mod );
+    const auto tmod = std::dynamic_pointer_cast< GroupModification >( mod );
     if( tmod ) {
-     for( const auto & submod : tmod->v_sub_Modifications )
+     for( const auto & submod : tmod->sub_Modifications() )
       guts_of_poM( submod );
 
      return;
@@ -774,7 +774,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
       (a Modification changin nothing from the "empty" state is not issued).
       */
    {
-    const auto tmod = std::dynamic_pointer_cast<MCFBlockRngdMod>( mod );
+    const auto tmod = std::dynamic_pointer_cast< MCFBlockRngdMod >( mod );
     if( tmod ) {
      switch( tmod->type() ) {
       case( MCFBlockMod::eChgCost ):
@@ -834,7 +834,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
    // MCFBlockSbstMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    {
-    const auto tmod = std::dynamic_pointer_cast<MCFBlockSbstMod>( mod );
+    const auto tmod = std::dynamic_pointer_cast< MCFBlockSbstMod >( mod );
     if( tmod ) {
      switch( tmod->type() ) {
       case( MCFBlockMod::eOpenArc ):
@@ -891,9 +891,8 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
      }
     }
 
-   // IMPORTANT NOTE: any remaining Modification is plainly ignored. It must
-   // be an "abstract" Modification, which this Solver does not need to look
-   // at
+   // any remaining Modification is plainly ignored, since it must be an
+   // "abstract" Modification, which this Solver does not need to look at
 
    };  // end( guts_of_poM ) - - - - - - - - - - - - - - - - - - - - - - - - -
        //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

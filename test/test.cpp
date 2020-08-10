@@ -82,6 +82,8 @@
 #include <fstream>
 #include <iomanip>
 
+#include <random>
+
 #ifdef HAVE_CSCL2
 #include "CS2.h"
 #define MCFC CS2
@@ -127,17 +129,25 @@
 /*-------------------------------- USING -----------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-#if( OPT_USE_NAMESPACES )
 using namespace MCFClass_di_unipi_it;
-#else
-using namespace std;
-#endif
-
 using namespace SMSpp_di_unipi_it;
 
 // FIXME: Avoid these declarations
 template<> const std::vector<int> MCFSolver<MCFC>::Solver_2_MCFClass_int;
 template<> const std::vector<int> MCFSolver<MCFC>::Solver_2_MCFClass_dbl;
+
+/*--------------------------------------------------------------------------*/
+/*-------------------------------- TYPES -----------------------------------*/
+/*--------------------------------------------------------------------------*/
+
+using Index = Block::Index;
+using c_Index = Block::c_Index;
+
+using Range = Block::Range;
+using c_Range = Block::c_Range;
+
+using Subset = Block::Subset;
+using c_Subset = Block::c_Subset;
 
 /*--------------------------------------------------------------------------*/
 /*------------------------------- GLOBALS ----------------------------------*/
@@ -154,29 +164,47 @@ MCFClass * mcf;                // the MCFClass object
 
 bool isnc4 = false;            // true if the file is a ntCDF one
 
+std::mt19937 rg;               // base random generator
+std::uniform_real_distribution<> dis( 0.0 , 1.0 );
+
 /*--------------------------------------------------------------------------*/
 /*------------------------------ FUNCTIONS ---------------------------------*/
 /*--------------------------------------------------------------------------*/
 
 template<class T>
-static inline void Str2Sthg( const char* const str , T &sthg )
+static void Str2Sthg( const char* const str , T &sthg )
 {
  istringstream( str ) >> sthg;
  }
 
 /*--------------------------------------------------------------------------*/
 
-static inline double rndfctr( void )
+static double rndfctr( void )
 {
  // return a random number between 0.5 and 2, with 50% probability of being
  // < 1
- double fctr = drand48() - 0.5;
+ double fctr = dis( rg ) - 0.5;
  return( fctr < 0 ? - fctr : fctr * 4 );
  }
 
 /*--------------------------------------------------------------------------*/
 
-static inline void CreateProb( unsigned int Optns )
+static Subset GenerateRand( Index m , Index k )
+{
+ // generate a sorted random k-vector of unique integers in 0 ... m - 1
+
+ Subset rnd( m );
+ std::iota( rnd.begin() , rnd.end() , 0 );
+ std::shuffle( rnd.begin() , rnd.end() , rg );    
+ rnd.resize( k );
+ sort( rnd.begin() , rnd.end() );
+
+ return( std::move( rnd ) );
+ }
+
+/*--------------------------------------------------------------------------*/
+
+static void CreateProb( unsigned int Optns )
 {
  bool reoptmz = Optns & 1u;
  Optns /= 2;
@@ -251,7 +279,7 @@ static inline void CreateProb( unsigned int Optns )
 
 /*--------------------------------------------------------------------------*/
 
-static inline void load( char * fn )
+static void load( char * fn )
 {
  try {
   // note that usually the "original" MCFBlock is loaded, unless mode == 2
@@ -353,7 +381,7 @@ static inline void load( char * fn )
 
 /*--------------------------------------------------------------------------*/
 
-static inline bool SolveMCF( void ) 
+static bool SolveMCF( void ) 
 {
  try {
   // solve the MCFClass- - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -618,7 +646,7 @@ int main( int argc , char **argv )
  // - up to n_change arcs are closed, then the two problems are re-solved;
  //   the same arcs arcs are re-opened, then the two problems are re-solved
 
- srand48( seed );  // seed the pseudo-random number generator
+ rg.seed( seed );  // seed the pseudo-random number generator
 
  bool diffarcs = false;  // whether added arcs ended up with different names
 
@@ -636,20 +664,20 @@ int main( int argc , char **argv )
 
   // change costs - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( ( wchg & 1u ) && ( drand48() <= p_change ) ) {
-   MCFBlock::Index tochange = max( double( 1 ) , drand48() * n_change );
+  if( ( wchg & 1u ) && ( dis( rg ) <= p_change ) ) {
+   MCFBlock::Index tochange = max( double( 1 ) , dis( rg ) * n_change );
 
    LOG1( tochange << " cost" );
 
    if( tochange == 1 ) {
     MCFBlock::CNumber newcst = c_min +
-                          MCFBlock::CNumber( drand48() * ( c_max - c_min ) );
+                          MCFBlock::CNumber( dis( rg ) * ( c_max - c_min ) );
 
-    MCFBlock::Index arc = MCFBlock::Index( drand48() * ( m - 1 ) );
+    MCFBlock::Index arc = MCFBlock::Index( dis( rg ) * ( m - 1 ) );
 
     mcf->ChgCost( arc , newcst );
 
-    if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+    if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
      // change via abstract representation
      LOG1( "(a)" );
      auto *obj = static_cast<FRealObjective *>( mMCFB->get_objective() );
@@ -667,15 +695,15 @@ int main( int argc , char **argv )
     MCFBlock::Vec_CNumber newcsts( tochange );
     for( MCFBlock::Index i = 0 ; i < tochange ; i++ )
      newcsts[ i ] = c_min +
-                          MCFBlock::CNumber( drand48() * ( c_max - c_min ) );
+                          MCFBlock::CNumber( dis( rg ) * ( c_max - c_min ) );
 
     // in 50% of the cases do a ranged change, in the others a sparse change
-    if( drand48() <= 0.5 ) {
-     MCFBlock::Index strt = drand48() * ( m - tochange );
+    if( dis( rg ) <= 0.5 ) {
+     MCFBlock::Index strt = dis( rg ) * ( m - tochange );
      MCFBlock::Index stp = strt + tochange;
      mcf->ChgCosts( newcsts.data() , nullptr , strt , stp );
 
-     if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+     if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
       // change via abstract representation
       LOG1( "s(r,a) - " );
       auto *obj = static_cast<FRealObjective *>( mMCFB->get_objective() );
@@ -686,7 +714,7 @@ int main( int argc , char **argv )
       }
      else {  // change via call to chg_* method
       // in 50% of the cases a direct call, otherwise use the methos factory
-      if( drand48() <= 0.5 ) {
+      if( dis( rg ) <= 0.5 ) {
        mMCFB->chg_costs( newcsts.begin() , Block::Range( strt , stp ) );
        LOG1( "s(r) - " );
        }
@@ -703,19 +731,13 @@ int main( int argc , char **argv )
       }
      }
     else {
-     Block::Subset nms( m + 1 );
-     std::iota( nms.begin() , nms.end() , 0 );
+     Subset nms( GenerateRand( m , tochange ) );
+     nms.push_back( OPTtypes_di_unipi_it::Inf<MCFClass::Index>() );
 
-     for( Block::Index i = 0 ; i < tochange ; i++ )
-      swap( nms[ i ] , nms[ i + drand48() * ( m - i ) ] );
-
-     auto end = nms.begin() + tochange;
-     sort( nms.begin() , end );
-     *end = OPTtypes_di_unipi_it::Inf<MCFClass::Index>();
      mcf->ChgCosts( newcsts.data() , nms.data() );
      nms.resize( tochange );
 
-     if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+     if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
       // change via abstract representation
       LOG1( "s(s,a) - " );
       auto *obj = static_cast<FRealObjective *>( mMCFB->get_objective() );
@@ -726,7 +748,7 @@ int main( int argc , char **argv )
       }
      else {  // change via call to chg_* method
       // in 50% of the cases a direct call, otherwise use the methos factory
-      if( drand48() <= 0.5 ) {
+      if( dis( rg ) <= 0.5 ) {
        mMCFB->chg_costs( newcsts.begin() , std::move( nms ) , true );
        LOG1( "s(s) - " );
        }
@@ -747,16 +769,16 @@ int main( int argc , char **argv )
 
   // change capacities- - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( ( wchg & 2u ) && ( drand48() <= p_change ) ) {
-   MCFBlock::Index tochange = max( double( 1 ) , drand48() * n_change );
+  if( ( wchg & 2u ) && ( dis( rg ) <= p_change ) ) {
+   MCFBlock::Index tochange = max( double( 1 ) , dis( rg ) * n_change );
    LOG1( tochange << " capacit" );
 
    if( tochange == 1 ) {
-    MCFBlock::Index arc = MCFBlock::Index( drand48() * ( m - 1 ) );
+    MCFBlock::Index arc = MCFBlock::Index( dis( rg ) * ( m - 1 ) );
     MCFBlock::CNumber newcap = mcf->MCFUCap( arc ) * rndfctr();
     mcf->ChgUCap( arc , newcap );
 
-    if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+    if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
      // change via abstract representation
      LOG1( "y(a) - " );
      mMCFB->i2p_ub( arc )->set_rhs( newcap );
@@ -770,14 +792,14 @@ int main( int argc , char **argv )
     MCFBlock::Vec_FNumber newcaps( tochange );
 
     // in 50% of the cases do a ranged change, in the others a sparse change
-    if( drand48() <= 0.5 ) {
-     MCFBlock::Index strt = drand48() * ( m - tochange );
+    if( dis( rg ) <= 0.5 ) {
+     MCFBlock::Index strt = dis( rg ) * ( m - tochange );
      MCFBlock::Index stp = strt + tochange;
      for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
       newcaps[ i ] = mcf->MCFUCap( i + strt ) * rndfctr();
      mcf->ChgUCaps( newcaps.data() , nullptr , strt , stp );
 
-     if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+     if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
       // change via abstract representation
       LOG1( "ies(a,r) - " );
       for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
@@ -785,7 +807,7 @@ int main( int argc , char **argv )
       }
      else {  // change via call to chg_* method
       // in 50% of the cases a direct call, otherwise use the methos factory
-      if( drand48() <= 0.5 ) {
+      if( dis( rg ) <= 0.5 ) {
        mMCFB->chg_ucaps( newcaps.begin() , Block::Range( strt , stp ) );
        LOG1( "ies(r) - " );
        }
@@ -802,21 +824,13 @@ int main( int argc , char **argv )
       }
      }
     else {
-     Block::Subset nms( m + 1 );
-     std::iota( nms.begin() , nms.end() , 0 );
+     Subset nms( GenerateRand( m , tochange ) );
+     nms.push_back( OPTtypes_di_unipi_it::Inf<MCFClass::Index>() );
 
-     for( Block::Index i = 0 ; i < tochange ; i++ ) {
-      swap( nms[ i ] , nms[ i + drand48() * ( m - i ) ] );
-      newcaps[ i ] = mcf->MCFUCap( nms[ i ]  ) * rndfctr();
-      }
-
-     auto end = nms.begin() + tochange;
-     sort( nms.begin() , end );
-     *end = OPTtypes_di_unipi_it::Inf<MCFClass::Index>();
      mcf->ChgUCaps( newcaps.data() , nms.data() );
      nms.resize( tochange );
 
-     if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+     if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
       // change via abstract representation
       LOG1( "ies(a,s) - " );
       for( MCFBlock::Index i = 0 ; i < tochange ; ++i )
@@ -824,7 +838,7 @@ int main( int argc , char **argv )
       }
      else {  // change via call to chg_* method
       // in 50% of the cases a direct call, otherwise use the methos factory
-      if( drand48() <= 0.5 ) {
+      if( dis( rg ) <= 0.5 ) {
        mMCFB->chg_ucaps( newcaps.begin() , std::move( nms ) , true );
        LOG1( "ies(s) - " );
        }
@@ -845,7 +859,7 @@ int main( int argc , char **argv )
 
   // change deficits- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( ( wchg & 4u ) && ( drand48() <= p_change ) ) {
+  if( ( wchg & 4u ) && ( dis( rg ) <= p_change ) ) {
    LOG1( "2 deficits" );
 
    MCFClass::Index posn = 0;
@@ -858,23 +872,23 @@ int main( int argc , char **argv )
     mcf->MCFDfcts( dfcts.data() );
 
     do
-     posn = MCFClass::Index( drand48() * n );  // select node with positive
+     posn = MCFClass::Index( dis( rg ) * n );  // select node with positive
     while( dfcts[ posn ] <= 0 );               // deficit (one must exist)
     posd = dfcts[ posn ];
 
     do
-     negn = MCFClass::Index( drand48() * n );  // select node with negative
+     negn = MCFClass::Index( dis( rg ) * n );  // select node with negative
     while( dfcts[ negn ] >= 0 );               // deficit (one must exist)
     negd = dfcts[ negn ];
     }
    else {
-    posn = MCFClass::Index( drand48() * n );   // just select at random
-    negn = MCFClass::Index( drand48() * n );
+    posn = MCFClass::Index( dis( rg ) * n );   // just select at random
+    negn = MCFClass::Index( dis( rg ) * n );
     posd = negd = 0;
     }
 
-   MCFClass::FNumber Dlt = u_avg * 2 * drand48();
-   if( drand48() <= 0.5 ) {  // in 50% of cases up, in 50% of cases down
+   MCFClass::FNumber Dlt = u_avg * 2 * dis( rg );
+   if( dis( rg ) <= 0.5 ) {  // in 50% of cases up, in 50% of cases down
     posd += Dlt;
     negd -= Dlt;
     }
@@ -887,7 +901,7 @@ int main( int argc , char **argv )
    mcf->ChgDfct( posn , posd );
    mcf->ChgDfct( negn , negd );
 
-   if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+   if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
     // change via abstract representation
     LOG1( "(a)" );
     mMCFB->i2p_e( posn )->set_both( posd );
@@ -904,7 +918,7 @@ int main( int argc , char **argv )
 
   // closing arcs- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( ( wchg & 8u ) && ( drand48() <= p_change ) ) {
+  if( ( wchg & 8u ) && ( dis( rg ) <= p_change ) ) {
    MCFBlock::Index changed = 0;
 
    MCFBlock::Subset nms( n_change );
@@ -914,7 +928,7 @@ int main( int argc , char **argv )
      continue;
     if( mcf->IsClosedArc( i ) )
      continue;
-    if( drand48() <= 0.5 )
+    if( dis( rg ) <= 0.5 )
      continue;
     
     nms[ changed++ ] = i;
@@ -928,7 +942,7 @@ int main( int argc , char **argv )
     nms.resize( changed );
     LOG1( changed << " close" );
 
-    if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+    if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
      // change via abstract representation
      LOG1( "(a)" );
      for( auto i : nms ) {
@@ -939,7 +953,7 @@ int main( int argc , char **argv )
      }
     else {  // change via call to chg_* method
      // in 50% of the cases a direct call, otherwise use the methos factory
-     //!! if( drand48() <= 0.5 )
+     //!! if( dis( rg ) <= 0.5 )
      if( true )
       mMCFB->close_arcs( std::move( nms ) );
      else {
@@ -960,7 +974,7 @@ int main( int argc , char **argv )
 
   // re-opening arcs - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( ( wchg & 16u ) && ( drand48() <= p_change ) ) {
+  if( ( wchg & 16u ) && ( dis( rg ) <= p_change ) ) {
    MCFBlock::Index changed = 0;
 
    MCFBlock::Subset nms( n_change );
@@ -970,7 +984,7 @@ int main( int argc , char **argv )
      continue;
     if( ! mcf->IsClosedArc( i ) )
      continue;
-    if( drand48() <= 0.5 )
+    if( dis( rg ) <= 0.5 )
      continue;
     
     nms[ changed++ ] = i;
@@ -984,7 +998,7 @@ int main( int argc , char **argv )
     nms.resize( changed );
     LOG1( changed << " open" );
 
-    if( ( mode & 16u ) && ( drand48() < 0.5 ) ) {
+    if( ( mode & 16u ) && ( dis( rg ) < 0.5 ) ) {
      // change via abstract representation
      LOG1( "(a)" );
      for( auto i : nms )
@@ -992,7 +1006,7 @@ int main( int argc , char **argv )
      }
     else {  // change via call to chg_* method
      // in 50% of the cases a direct call, otherwise use the methos factory
-     if( drand48() <= 0.5 )
+     if( dis( rg ) <= 0.5 )
       mMCFB->open_arcs( std::move( nms ) );
      else {
       std::string mthd_name = "MCFBlock::open_arcs";
@@ -1012,17 +1026,17 @@ int main( int argc , char **argv )
 
   // deleting arcs - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( ( wchg & 32u ) && ( drand48() <= p_change ) ) {
+  if( ( wchg & 32u ) && ( dis( rg ) <= p_change ) ) {
    MCFBlock::Index changed = 0;
 
-   if( drand48() < 0.5 ) {
+   if( dis( rg ) < 0.5 ) {
     // delete somewhere in the middle
 
     for( MCFBlock::Index i = mMCFB->get_NStaticArcs() ;
 	 i < mMCFB->get_NArcs() ; ++i ) {
      if( mcf->IsDeletedArc( i ) )
       continue;
-     if( drand48() <= 0.75 )
+     if( dis( rg ) <= 0.75 )
       continue;
 
      mcf->DelArc( i );
@@ -1038,7 +1052,7 @@ int main( int argc , char **argv )
 	 --i >= mMCFB->get_NStaticArcs() ; ) {
      if( mcf->IsDeletedArc( i ) )
       continue;
-     if( drand48() <= 0.13 )
+     if( dis( rg ) <= 0.13 )
       break;
 
      mcf->DelArc( i );
@@ -1053,12 +1067,12 @@ int main( int argc , char **argv )
 
   // creating new arcs - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  if( ( wchg & 64u ) && ( drand48() <= p_change ) ) {
+  if( ( wchg & 64u ) && ( dis( rg ) <= p_change ) ) {
 
    MCFBlock::Index changed = 0;
    MCFBlock::Index afterend = 0;
    while( changed < n_change ) {
-    if( drand48() <= 0.13 )
+    if( dis( rg ) <= 0.13 )
      break;
 
     ++changed;
@@ -1067,15 +1081,15 @@ int main( int argc , char **argv )
     MCFBlock::Index sn = 0;
     MCFBlock::Index en = 0;
     do {
-     sn = drand48() * mMCFB->get_NNodes() + 1;
-     en = drand48() * mMCFB->get_NNodes() + 1;
+     sn = dis( rg ) * mMCFB->get_NNodes() + 1;
+     en = dis( rg ) * mMCFB->get_NNodes() + 1;
      } while( sn == en );
 
     // random cost in [ - c_max , c_max ]
-    auto cst = c_max * ( 1 - 2 * drand48() );
+    auto cst = c_max * ( 1 - 2 * dis( rg ) );
 
     // random capacity <= 0.75 u_avg
-    auto cap = 1.5 * ( u_avg - u_min ) * drand48() + u_min;
+    auto cap = 1.5 * ( u_avg - u_min ) * dis( rg ) + u_min;
 
     auto arc = mMCFB->add_arc( sn , en , cst , cap );
     if( arc != mcf->AddArc( sn , en , cap , cst ) )

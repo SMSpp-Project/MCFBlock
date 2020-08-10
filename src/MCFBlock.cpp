@@ -45,6 +45,21 @@
 using namespace SMSpp_di_unipi_it;
 
 /*--------------------------------------------------------------------------*/
+/*-------------------------------- TYPES -----------------------------------*/
+/*--------------------------------------------------------------------------*/
+
+using Index = Block::Index;
+using c_Index = Block::c_Index;
+
+using Range = Block::Range;
+using c_Range = Block::c_Range;
+
+using Subset = Block::Subset;
+using c_Subset = Block::c_Subset;
+
+using FNumber = MCFBlock::FNumber;
+
+/*--------------------------------------------------------------------------*/
 /*-------------------------------- CONSTANTS -------------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -53,7 +68,8 @@ using namespace SMSpp_di_unipi_it;
 /*--------------------------------------------------------------------------*/
 
 // in the DIMACS format, comment lines start with 'c'
-static inline std::istream & eatDMXcomments( std::istream& is )
+
+static std::istream & eatDMXcomments( std::istream& is )
 {
  for(;;) {
   is >> std::ws;  // skip whitespaces
@@ -70,7 +86,7 @@ static inline std::istream & eatDMXcomments( std::istream& is )
 
 /*--------------------------------------------------------------------------*/
 
-static inline void print_UB( std::ostream& os , MCFBlock::FNumber ub )
+static void print_UB( std::ostream& os , FNumber ub )
 {
  if( ub == Inf<MCFBlock::FNumber>() )
   os << "+Inf";
@@ -80,7 +96,7 @@ static inline void print_UB( std::ostream& os , MCFBlock::FNumber ub )
 
 /*--------------------------------------------------------------------------*/
 
-static MCFBlock::FNumber read_UB( std::istream & iStrm )
+static FNumber read_UB( std::istream & iStrm )
 {
  iStrm >> eatcomments;
  int c = iStrm.peek();
@@ -88,7 +104,7 @@ static MCFBlock::FNumber read_UB( std::istream & iStrm )
   throw( std::invalid_argument( "error reading the input stream" ) );
   
  if( ( c != 'I' ) && ( c != 'i' ) ) {
-  MCFBlock::FNumber res;
+  FNumber res;
   iStrm >> res;
   if( ! iStrm )
    throw( std::invalid_argument( "error reading the input stream" ) );
@@ -103,15 +119,16 @@ static MCFBlock::FNumber read_UB( std::istream & iStrm )
 	   ( c != iStrm.widen( '\n' ) ) &&
 	   ( c != iStrm.widen( '\t' ) ) );
 
- return( Inf<MCFBlock::FNumber>() );
+ return( Inf<FNumber>() );
  }
 
 /*--------------------------------------------------------------------------*/
 // returns the number of elements where two vectors differ
+
 template< typename T >
-static inline MCFBlock::Index countdiff( T beg , T end , T cmp )
+static Index countdiff( T beg , T end , T cmp )
 {
- MCFBlock::Index ndiff = 0;
+ Index ndiff = 0;
  for( ; beg != end ; )
   if( *(beg++) != *(cmp++) )
    ndiff++;
@@ -122,10 +139,11 @@ static inline MCFBlock::Index countdiff( T beg , T end , T cmp )
 /*--------------------------------------------------------------------------*/
 // returns true if two vectors differ, one of them being given as a base
 // vector and a subset of indices
+
 template< typename T >
-static inline bool is_equal( std::vector<T> & vec , MCFBlock::c_Subset & nms ,
-			     typename std::vector<T>::const_iterator cmp ,
-			     MCFBlock::c_Index n_max )
+static bool is_equal( std::vector<T> & vec , c_Subset & nms ,
+		      typename std::vector<T>::const_iterator cmp ,
+		      Index n_max )
 {
  for( auto nm : nms ) {
   if( nm >= n_max )
@@ -140,13 +158,13 @@ static inline bool is_equal( std::vector<T> & vec , MCFBlock::c_Subset & nms ,
 /*--------------------------------------------------------------------------*/
 // returns the number of elements where two vectors differ, one of them
 // being given as a base vector and a subset of indices
+
 template< typename T >
-static inline MCFBlock::Index countdiff( std::vector<T> & vec ,
-				MCFBlock::c_Subset & nms ,
-				typename std::vector<T>::const_iterator cmp ,
-				MCFBlock::c_Index n_max )
+static Index countdiff( std::vector<T> & vec , c_Subset & nms ,
+			typename std::vector<T>::const_iterator cmp ,
+			Index n_max )
 {
- MCFBlock::Index ndiff = 0;
+ Index ndiff = 0;
  for( auto nm : nms ) {
   if( nm >= n_max )
    throw( std::invalid_argument( "invalid name in nms" ) );
@@ -159,10 +177,10 @@ static inline MCFBlock::Index countdiff( std::vector<T> & vec ,
 
 /*--------------------------------------------------------------------------*/
 // copys one vector to a given subset of another
+
 template< typename T >
-static inline void copyidx( std::vector<T> & vec ,
-			    MCFBlock::c_Subset & nms ,
-			    typename std::vector<T>::const_iterator cpy )
+static void copyidx( std::vector<T> & vec , c_Subset & nms ,
+		     typename std::vector<T>::const_iterator cpy )
 {
  for( auto nm : nms )
   vec[ nm ] = *(cpy++);
@@ -173,6 +191,7 @@ static inline void copyidx( std::vector<T> & vec ,
 /*--------------------------------------------------------------------------*/
 
 // register MCFBlock to the Block factory
+
 SMSpp_insert_in_factory_cpp_1( MCFBlock );
 
 /*--------------------------------------------------------------------------*/
@@ -181,10 +200,10 @@ SMSpp_insert_in_factory_cpp_1( MCFBlock );
 /*-------------------------- OTHER INITIALIZATIONS -------------------------*/
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::load( c_Index n , c_Index m , c_Subset & pEn , c_Subset & pSn ,
+void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
 		     c_Vec_FNumber & pU , c_Vec_CNumber & pC ,
-		     c_Vec_FNumber & pB , c_Index dn , c_Index dm ,
-		     c_Index mdn , c_Index mdm )
+		     c_Vec_FNumber & pB , Index dn , Index dm ,
+		     Index mdn , Index mdm )
 {
  // sanity checks - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1432,10 +1451,13 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
 
 bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 					 Configuration *r3bc ,
-					 c_ModParam issuePMod ,
-					 c_ModParam issueAMod )
+					 ModParam issuePMod ,
+					 ModParam issueAMod )
 {
- auto MCFB = dynamic_cast<MCFBlock *>( R3B );
+ if( mod->concerns_Block() )  // an abstract Modification
+  return( false );            // none of my business
+ 
+ auto MCFB = dynamic_cast< MCFBlock * >( R3B );
  if( ! MCFB )
   throw( std::invalid_argument( "R3B is not a MCFBlock" ) );
  if( r3bc != nullptr )
@@ -1451,14 +1473,6 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
  ModParam iPA = make_par( std::min( ModParam( eNoBlck ) ,
 				    par2mod( issueAMod ) ) ,
 			  par2chnl( issueAMod ) );
-
- const auto tmod = std::dynamic_pointer_cast<GroupModification>( mod );
- if( tmod ) {  // if the channels are the default ones, open new ones
-  if( ! par2chnl( issuePMod ) )
-   iPM = make_par( par2concern( issuePMod ) , MCFB->open_channel() );
-  if( ! par2chnl( issueAMod ) )
-   iPA = make_par( par2concern( issueAMod ) , MCFB->open_channel() );
-  }
 
  /* Use a Lambda to define a "guts" of the method that can be called
     recursively without having to pass "local globals". Note the trick of
@@ -1480,13 +1494,13 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
   
   // GroupModification - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   {
-   const auto tmod = std::dynamic_pointer_cast<GroupModification>( mod );
+   const auto tmod = std::dynamic_pointer_cast< GroupModification >( mod );
    if( tmod ) {
     MCFB->nest_channel( par2chnl( iPM ) );  // nest the channel for PM
     MCFB->nest_channel( par2chnl( iPA ) );  // nest the channel for PA
 
     bool ok = true;
-    for( const auto & submod : tmod->v_sub_Modifications )
+    for( const auto & submod : tmod->sub_Modifications() )
      if( ! guts_of_mfM( submod ) )
       ok = false;
 
@@ -1503,7 +1517,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
      loaded. But if a Modification has been issued they are no longer empty
      (a Modification changin nothing from the "empty" state is not issued). */
   {
-   const auto tmod = std::dynamic_pointer_cast<MCFBlockRngdMod>( mod );
+   const auto tmod = std::dynamic_pointer_cast< MCFBlockRngdMod >( mod );
    if( tmod ) {
     switch( tmod->type() ) {
      case( MCFBlockMod::eChgCost ):
@@ -1602,7 +1616,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
   // MCFBlockSbstMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   {
-   const auto tmod = std::dynamic_pointer_cast<MCFBlockSbstMod>( mod );
+   const auto tmod = std::dynamic_pointer_cast< MCFBlockSbstMod >( mod );
    /* Note that tmod->f_nms need be copied, since the chg_*() methods
     * *in principle* "consume" the names vector. This is actually not true
     * if MCFB will *not* issue a physical modification, which one may
@@ -1683,7 +1697,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
   // NBModification- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   {
-   const auto tmod = std::dynamic_pointer_cast<NBModification>( mod );
+   const auto tmod = std::dynamic_pointer_cast< NBModification >( mod );
    if( tmod ) {
     // this is the "nuclear option": the MCFBlock has been re-loaded
     // one should check that the Block is this MCFBlock, but it cannot
@@ -1704,13 +1718,29 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
       // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  // finally, call the "guts of"- - - - - - - - - - - - - - - - - - - - - - - -
+ // this is done differently if mod is a GroupModification, since at the root
+ // a channel has to be opened while further down it has to be nested
 
- bool ok = guts_of_mfM( mod );  // now the actual call
+ bool ok = true;  // final return value
 
- if( tmod ) {  // now close the opened channels, if any
+ const auto tmod = std::dynamic_pointer_cast< GroupModification >( mod );
+ if( tmod ) {                     // this is a GroupModification
+  // if the channels are the default ones, open new ones
+  if( ! par2chnl( issuePMod ) )
+   iPM = make_par( par2concern( issuePMod ) , MCFB->open_channel() );
+  if( ! par2chnl( issueAMod ) )
+   iPA = make_par( par2concern( issueAMod ) , MCFB->open_channel() );
+
+  for( const auto & submod : tmod->sub_Modifications() )  // for each sub-Mod
+   if( ! guts_of_mfM( submod ) )                          // make the call
+    ok = false;
+
+  // now close the opened channels, if any
   if( iPM != issuePMod ) MCFB->close_channel( par2chnl( iPM ) );
   if( iPA != issueAMod ) MCFB->close_channel( par2chnl( iPA ) );
   }
+ else                             // any other Modification
+  ok = guts_of_mfM( mod );        // just make the call
 
  return( ok );
 
@@ -1720,8 +1750,8 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
 bool MCFBlock::map_back_Modification( Block *R3B , sp_Mod mod ,
 				      Configuration *r3bc ,
-				      c_ModParam issuePMod ,
-				      c_ModParam issueAMod )
+				      ModParam issuePMod ,
+				      ModParam issueAMod )
 {
  /* Fantastically dirty trick: because the two objects are copies, mapping
     back a Modification to this from R3B is the same as mapping forward a
@@ -3641,20 +3671,19 @@ void MCFBlock::compute_conditional_bounds( void )
 
 /*--------------------------------------------------------------------------*/
 
-ModParam MCFBlock::make_amod_param( c_ModParam issueAMod , c_Index num )
+ModParam MCFBlock::make_amod_param( ModParam issueAMod , Index num )
 {
  if( issue_mod( issueAMod ) ) {
   ChnlName chnl = par2chnl( issueAMod );
   if( num > 1 ) {            // more than one Modification have to be issued
-    if( chnl )               // and a channel is provided
+    if( chnl )               // and a channel is already provided
      nest_channel( chnl );   // nest the channel
-    else                     // sent to default channel
-     chnl = open_channel( nullptr , eNoBlck );  /* open a new channel:
-                                                 * this creates a
-     * GroupModification, which is flagged as "eNoBlck" because it is
-     * the "abstract Modification" corresponding to a "physical Modification"
-     * already issued and therefore it must not generate any other
-     * "physical Modification" */
+    else                     // it was being sent to default channel
+     chnl = open_channel();  /* open a new channel: note that the
+			      * GroupModification will automatically be a
+     * "physical Modification" (i.e., concerns_Block() == false) since such
+     * are all the Modification there inside: in fact, all the inner
+     * Modification will be issued with the return value, which i eNoBlck */
    }
 
   return( make_par( eNoBlck , chnl ) );
@@ -3665,8 +3694,8 @@ ModParam MCFBlock::make_amod_param( c_ModParam issueAMod , c_Index num )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::unmake_amod_param( c_ModParam oldiAM , c_ModParam newiAM ,
-				  c_Index num )
+void MCFBlock::unmake_amod_param( ModParam oldiAM , ModParam newiAM ,
+				  Index num )
 {
  if( newiAM == eNoMod )
   return;

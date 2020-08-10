@@ -339,11 +339,10 @@ public:
   * Like load( std::istream & ), if there is any Solver attached to this
   * MCFBlock then a NBModification (the "nuclear option") is issued. */
 
- void load( c_Index n , c_Index m , c_Subset & pEn , c_Subset & pSn ,
+ void load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
 	    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
 	    c_Vec_FNumber & pB = {} ,
-	    c_Index dn = 0 , c_Index dm = 0 ,
-	    c_Index mdn = 0 , c_Index mdm = 0 );
+	    Index dn = 0 , Index dm = 0 , Index mdn = 0 , Index mdm = 0 );
 
 /*--------------------------------------------------------------------------*/
  /// extends Block::deserialize( netCDF::NcGroup )
@@ -1157,8 +1156,8 @@ public:
 
  bool map_forward_Modification( Block *R3B , sp_Mod mod ,
 				Configuration *r3bc = nullptr ,
-				c_ModParam issuePMod = eNoBlck ,
-				c_ModParam issueAMod = eModBlck ) override;
+				ModParam issuePMod = eNoBlck ,
+				ModParam issueAMod = eModBlck ) override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
@@ -1169,8 +1168,8 @@ public:
 
  bool map_back_Modification( Block *R3B , sp_Mod mod ,
 			     Configuration *r3bc = nullptr ,
-			     c_ModParam issuePMod = eNoBlck ,
-			     c_ModParam issueAMod = eModBlck ) override;
+			     ModParam issuePMod = eNoBlck ,
+			     ModParam issueAMod = eModBlck ) override;
 
 /**@} ----------------------------------------------------------------------*/
 /*----------------------- Methods for handling Solution --------------------*/
@@ -2151,9 +2150,9 @@ public:
 
  void compute_conditional_bounds( void );
 
- ModParam make_amod_param( c_ModParam issueAMod , c_Index num );
+ ModParam make_amod_param( ModParam issueAMod , Index num );
 
- void unmake_amod_param( c_ModParam oldiAM , c_ModParam newiAM , c_Index num );
+ void unmake_amod_param( ModParam oldiAM , ModParam newiAM , Index num );
 
 /*--------------------------------------------------------------------------*/
 
