@@ -1174,6 +1174,8 @@ int main( int argc , char **argv )
  // destroy objects and vectors - - - - - - - - - - - - - - - - - - - - - - - 
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+ mMCFB->set_SolverConfig();  // reset all Solver attached to mMCFB
+ sMCFB->set_SolverConfig();  // reset all Solver attached to sMCFB
  delete dMCFB;
  delete oMCFB;
  delete mcf;
