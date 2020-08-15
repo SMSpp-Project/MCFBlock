@@ -30,7 +30,7 @@
 /*--------------------------------------------------------------------------*/
 
 #ifndef NDEBUG
- #define CHECK_DS 1
+ #define CHECK_DS 0
  /* Perform long and costly checks on the data structures representing the
   * astract and the physical representations agree. */
 #else
@@ -1727,17 +1727,19 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
  if( tmod ) {                     // this is a GroupModification
   // if the channels are the default ones, open new ones
   if( ! par2chnl( issuePMod ) )
-   iPM = make_par( par2concern( issuePMod ) , MCFB->open_channel() );
+   iPM = make_par( par2mod( issuePMod ) , MCFB->open_channel() );
   if( ! par2chnl( issueAMod ) )
-   iPA = make_par( par2concern( issueAMod ) , MCFB->open_channel() );
+   iPA = make_par( par2mod( issueAMod ) , MCFB->open_channel() );
 
   for( const auto & submod : tmod->sub_Modifications() )  // for each sub-Mod
    if( ! guts_of_mfM( submod ) )                          // make the call
     ok = false;
 
   // now close the opened channels, if any
-  if( iPM != issuePMod ) MCFB->close_channel( par2chnl( iPM ) );
-  if( iPA != issueAMod ) MCFB->close_channel( par2chnl( iPA ) );
+  if( ! par2chnl( issuePMod ) )
+   MCFB->close_channel( par2chnl( iPM ) );
+  if( ! par2chnl( issueAMod ) )
+   MCFB->close_channel( par2chnl( iPA ) );
   }
  else                             // any other Modification
   ok = guts_of_mfM( mod );        // just make the call
