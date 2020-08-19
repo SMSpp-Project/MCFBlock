@@ -1184,7 +1184,8 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
 
-Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base )
+Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base  ,
+				Block * father )
 {
  if( r3bc != nullptr )
   throw( std::invalid_argument( "non-nullptr R3B Configuration" ) );
@@ -1196,7 +1197,7 @@ Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base )
    throw( std::invalid_argument( "base is not a MCFBlock" ) );
   }
  else
-  MCFB = new MCFBlock();
+  MCFB = new MCFBlock( father );
 
  MCFB->load( get_NNodes() , get_NArcs() , EN , SN , U , C , B ,
 	     get_NNodes() - get_NStaticNodes() ,
