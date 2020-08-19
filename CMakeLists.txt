@@ -12,7 +12,6 @@ project(MCFBlock VERSION 0.2.0 LANGUAGES CXX)
 # ----- Settings ------------------------------------------------------------ #
 include(CTest)
 
-# ----- Settings ------------------------------------------------------------ #
 # MCF Solver
 set(MCF_SOLVER "relax" CACHE STRING "MCF Solver")
 set_property(CACHE MCF_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
@@ -31,7 +30,7 @@ elseif (MCF_SOLVER STREQUAL "sptree")
     add_compile_definitions(HAVE_SPTRE)
 endif ()
 
-# Check for representation issues
+# Debug checks and printouts
 if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     add_compile_definitions(NDEBUG)
 endif ()
