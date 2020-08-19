@@ -1449,7 +1449,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
 
 /*--------------------------------------------------------------------------*/
 
-bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
+bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
 					 Configuration *r3bc ,
 					 ModParam issuePMod ,
 					 ModParam issueAMod )
@@ -1480,8 +1480,8 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
     which allows recursive calls. Note the need to explicitly capture
     "this" to use fields/methods of the class. */
 
- std::function< bool( sp_Mod )> guts_of_mfM;
- guts_of_mfM = [ this , & guts_of_mfM , & MCFB , & iPM , & iPA ]( sp_Mod mod
+ std::function< bool( c_p_Mod )> guts_of_mfM;
+ guts_of_mfM = [ this , & guts_of_mfM , & MCFB , & iPM , & iPA ]( c_p_Mod mod
 								  ) {
   // process Modification- - - - - - - - - - - - - - - - - - - - - - - - - - -
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1494,14 +1494,14 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
   
   // GroupModification - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   {
-   const auto tmod = std::dynamic_pointer_cast< GroupModification >( mod );
+   const auto tmod = dynamic_cast< GroupModification * const >( mod );
    if( tmod ) {
     MCFB->nest_channel( par2chnl( iPM ) );  // nest the channel for PM
     MCFB->nest_channel( par2chnl( iPA ) );  // nest the channel for PA
 
     bool ok = true;
     for( const auto & submod : tmod->sub_Modifications() )
-     if( ! guts_of_mfM( submod ) )
+     if( ! guts_of_mfM( submod.get() ) )
       ok = false;
 
     MCFB->un_nest_channel( par2chnl( iPM ) );  // un-nest the channel for PM
@@ -1517,7 +1517,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
      loaded. But if a Modification has been issued they are no longer empty
      (a Modification changin nothing from the "empty" state is not issued). */
   {
-   const auto tmod = std::dynamic_pointer_cast< MCFBlockRngdMod >( mod );
+   const auto tmod = dynamic_cast< MCFBlockRngdMod * const >( mod );
    if( tmod ) {
     switch( tmod->type() ) {
      case( MCFBlockMod::eChgCost ):
@@ -1616,7 +1616,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
   // MCFBlockSbstMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   {
-   const auto tmod = std::dynamic_pointer_cast< MCFBlockSbstMod >( mod );
+   const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod );
    /* Note that tmod->f_nms need be copied, since the chg_*() methods
     * *in principle* "consume" the names vector. This is actually not true
     * if MCFB will *not* issue a physical modification, which one may
@@ -1697,7 +1697,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
   // NBModification- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   {
-   const auto tmod = std::dynamic_pointer_cast< NBModification >( mod );
+   const auto tmod = dynamic_cast< NBModification * const >( mod );
    if( tmod ) {
     // this is the "nuclear option": the MCFBlock has been re-loaded
     // one should check that the Block is this MCFBlock, but it cannot
@@ -1723,7 +1723,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
  bool ok = true;  // final return value
 
- const auto tmod = std::dynamic_pointer_cast< GroupModification >( mod );
+ const auto tmod = dynamic_cast< GroupModification * const >( mod );
  if( tmod ) {                     // this is a GroupModification
   // if the channels are the default ones, open new ones
   if( ! par2chnl( issuePMod ) )
@@ -1732,7 +1732,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
    iPA = make_par( par2mod( issueAMod ) , MCFB->open_channel() );
 
   for( const auto & submod : tmod->sub_Modifications() )  // for each sub-Mod
-   if( ! guts_of_mfM( submod ) )                          // make the call
+   if( ! guts_of_mfM( submod.get() ) )                    // make the call
     ok = false;
 
   // now close the opened channels, if any
@@ -1750,7 +1750,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , sp_Mod mod ,
 
 /*--------------------------------------------------------------------------*/
 
-bool MCFBlock::map_back_Modification( Block *R3B , sp_Mod mod ,
+bool MCFBlock::map_back_Modification( Block *R3B , c_p_Mod mod ,
 				      Configuration *r3bc ,
 				      ModParam issuePMod ,
 				      ModParam issueAMod )

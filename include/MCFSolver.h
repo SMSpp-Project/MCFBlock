@@ -740,6 +740,7 @@ template< class MCFC >
 void MCFSolver< MCFC >::process_outstanding_Modification( void )
 {
  // no-frills loop: do them in order, with no attempt at optimizing
+
  for( auto mod = front() ; mod ; mod = front() ) {
   /* Use a Lambda to define a "guts" of the method that can be called
      recursively. Note the trick of defining the std::function object and
@@ -748,8 +749,8 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
   auto MCFB = static_cast< MCFBlock * >( f_Block );
 
-  std::function< void( sp_Mod )> guts_of_poM;
-  guts_of_poM = [ this , & guts_of_poM , MCFB ]( sp_Mod mod ) {
+  std::function< void( c_p_Mod )> guts_of_poM;
+  guts_of_poM = [ this , & guts_of_poM , MCFB ]( c_p_Mod mod ) {
    // process Modification - - - - - - - - - - - - - - - - - - - - - - - - - -
    //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    /* This requires to patiently sift through the possible Modification types
@@ -758,10 +759,10 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
    // GroupModification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
    {
-    const auto tmod = std::dynamic_pointer_cast< GroupModification >( mod );
+    const auto tmod = dynamic_cast< GroupModification * const >( mod );
     if( tmod ) {
      for( const auto & submod : tmod->sub_Modifications() )
-      guts_of_poM( submod );
+      guts_of_poM( submod.get() );
 
      return;
      }
@@ -774,7 +775,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
       (a Modification changin nothing from the "empty" state is not issued).
       */
    {
-    const auto tmod = std::dynamic_pointer_cast< MCFBlockRngdMod >( mod );
+    const auto tmod = dynamic_cast< MCFBlockRngdMod * const >( mod );
     if( tmod ) {
      switch( tmod->type() ) {
       case( MCFBlockMod::eChgCost ):
@@ -834,7 +835,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
    // MCFBlockSbstMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    {
-    const auto tmod = std::dynamic_pointer_cast< MCFBlockSbstMod >( mod );
+    const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod );
     if( tmod ) {
      switch( tmod->type() ) {
       case( MCFBlockMod::eOpenArc ):
@@ -899,7 +900,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
   // finally, call the "guts of" - - - - - - - - - - - - - - - - - - - - - - -
 
-  guts_of_poM( mod );  // now the actual call
+  guts_of_poM( mod.get() );  // now the actual call
 
   pop_front();   // now the Modification is processed: remove it
   

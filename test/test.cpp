@@ -573,9 +573,10 @@ int main( int argc , char **argv )
   //!! attach a FakeSolver to the modified one to syphoon off Modification
   //!!  mMCFB->register_Solver( Solver::new_Solver( "FakeSolver" ) );
 
-  // attach an UpdateSolver to the modified
+  // attach an UpdateSolver to the modified: if the modified is the original
+  // then map_forward, otherwise (i.e., it is the copy) map_back
   mMCFB->register_Solver(
-                     new UpdateSolver( sMCFB , nullptr , mMCFB == oMCFB ) );
+	      new UpdateSolver( sMCFB , nullptr , mMCFB != oMCFB ? 1 : 0 ) );
   }
  else                        // just use one MCFBlock
   sMCFB = mMCFB = oMCFB;
