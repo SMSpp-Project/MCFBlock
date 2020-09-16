@@ -1172,13 +1172,18 @@ int main( int argc , char **argv )
  else
   cout << RED( Shit happened!! ) << endl;
 
- // destroy objects and vectors - - - - - - - - - - - - - - - - - - - - - - - 
+ // destroy objects - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- mMCFB->set_SolverConfig();  // reset all Solver attached to mMCFB
- sMCFB->set_SolverConfig();  // reset all Solver attached to sMCFB
+ // unregister (and delete) all Solvers attached to the MCFBlocks
+ mMCFB->unregister_Solvers();
+ sMCFB->unregister_Solvers();
+
+ // delete the MCFBlocks
  delete dMCFB;
  delete oMCFB;
+
+ // delete the :MCFClass object
  delete mcf;
 
  // terminate - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
