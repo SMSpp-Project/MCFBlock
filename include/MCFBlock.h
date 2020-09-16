@@ -2147,7 +2147,7 @@ public:
 
  void guts_of_destructor( void );
 
- void guts_of_add_Modification( sp_Mod mod , ChnlName chnl );
+ void guts_of_add_Modification( p_Mod mod , ChnlName chnl );
 
  void compute_conditional_bounds( void );
 

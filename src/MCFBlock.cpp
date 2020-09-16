@@ -2061,7 +2061,7 @@ void MCFBlock::add_Modification( sp_Mod mod , ChnlName chnl )
 
  if( mod->concerns_Block() ) {
   mod->concerns_Block( false );
-  guts_of_add_Modification( mod , chnl );
+  guts_of_add_Modification( mod.get() , chnl );
   }
 
  Block::add_Modification( mod , chnl );
@@ -3477,7 +3477,7 @@ void MCFBlock::guts_of_destructor( void )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::guts_of_add_Modification( sp_Mod mod , ChnlName chnl )
+void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
 {
  // process abstract Modification - - - - - - - - - - - - - - - - - - - - - -
  /* This requires to patiently sift through the possible Modification types
@@ -3500,7 +3500,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod , ChnlName chnl )
 
  // C05FunctionModLinRngd - - - - - - - - - - - - - - - - - - - - - - - - - -
  {
-  const auto tmod = std::dynamic_pointer_cast<C05FunctionModLinRngd>( mod );
+  const auto tmod = dynamic_cast< C05FunctionModLinRngd * >( mod );
   if( tmod ) {
    if( ! ( AR & HasObj ) )
     throw( std::invalid_argument( "Modification to non-constructed Objective"
@@ -3534,14 +3534,14 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod , ChnlName chnl )
 
  // C05FunctionModLinSbst - - - - - - - - - - - - - - - - - - - - - - - - - -
  {
-  const auto tmod = std::dynamic_pointer_cast<C05FunctionModLinSbst>( mod );
+  const auto tmod = dynamic_cast< C05FunctionModLinSbst * >( mod );
   if( tmod ) {
    if( ! ( AR & HasObj ) )
     throw( std::invalid_argument( "Modification to non-constructed Objective"
 				  ) );
 
    auto lfo = static_cast<LinearFunction * const>( tmod->function() );
-   if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
+   if( static_cast< LinearFunction * const >( c.get_function() ) != lfo )
     throw( std::invalid_argument( "Modification to non-Objective" ) );
 
    // note: in the following we can assume that the Subset in tmod is
@@ -3562,14 +3562,14 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod , ChnlName chnl )
 
  // RowConstraintMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  {
-  const auto tmod = std::dynamic_pointer_cast<RowConstraintMod>( mod );
+  const auto tmod = dynamic_cast< RowConstraintMod * >( mod );
   if( tmod ) {
    if( ! ( AR & HasFlw ) )
     throw( std::invalid_argument(
 			     "Modification to non-constructed Constraint" ) );
 
    if( tmod->type() == RowConstraintMod::eChgRHS ) {
-    auto cp = dynamic_cast<LB0Constraint * const>( tmod->constraint() );
+    auto cp = dynamic_cast< LB0Constraint * const >( tmod->constraint() );
     if( ! cp )
      throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
@@ -3594,7 +3594,7 @@ void MCFBlock::guts_of_add_Modification( sp_Mod mod , ChnlName chnl )
 
  // VariableMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  {
-  const auto tmod = std::dynamic_pointer_cast<VariableMod>( mod );
+  const auto tmod = dynamic_cast< VariableMod * >( mod );
   if( tmod ) {
    auto xi = dynamic_cast<ColVariable * const>( tmod->variable() );
    if( ! xi )
