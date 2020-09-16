@@ -236,6 +236,9 @@ public:
     throw( std::invalid_argument(
 		         "MCFSolver:set_Block: block must be a MCFBlock" ) );
 
+   if( ! MCFB->read_lock() )
+    throw( std::logic_error( "cannot acquire read_lock on MCFBlock" ) );
+
    // load the new MCFBlock into the :MCFClass object
    MCFC::LoadNet( MCFB->get_MaxNNodes() , MCFB->get_MaxNArcs() ,
 		  MCFB->get_NNodes() , MCFB->get_NArcs() ,
@@ -251,6 +254,9 @@ public:
    //       has to be disabled for now; maybe later on someone will take
    //       care to make this work (or maybe not).
    // MCFC::PreProcess();
+
+   // once done, read_unlock the MCFBlock
+   MCFB->read_unlock();
 
    // TODO: maybe log it
    }
@@ -292,8 +298,18 @@ public:
    kUnEval , Solver::kOK , kStopTime , kInfeasible , Solver::kUnbounded ,
    Solver::kError };
 
-  // first, process any outstanding Modification
+  if( ! f_Block )           // there is no [MCFBlock] to solve
+   return( kBlockLocked );  // return error 
+
+  bool owned = f_Block->is_owned_by( f_id );       // check if already locked
+  if( ( ! owned ) && ( ! f_Block->read_lock() ) )  // if not try to read_lock
+   return( kBlockLocked );                         // return error on failure
+  
+  // while [read_]locked, process any outstanding Modification
   process_outstanding_Modification();
+
+  if( ! owned )             // if the [MCF]Block was actually read_locked
+   f_Block->read_unlock();  // read_unlock it
 
   // then (try to) solve the MCF
   this->MCFC::SolveMCF();
@@ -724,9 +740,8 @@ template< class MCFC >
 void MCFSolver< MCFC >::process_outstanding_Modification( void )
 {
  // no-frills loop: do them in order, with no attempt at optimizing
- while( ! v_mod.empty() ) {
-  auto mod = v_mod.front();  // pick (a reference to) the first Modification
 
+ for( auto mod = front() ; mod ; mod = front() ) {
   /* Use a Lambda to define a "guts" of the method that can be called
      recursively. Note the trick of defining the std::function object and
      "passing" it to the lambda, which allows recursive calls. Note the need
@@ -734,8 +749,8 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
   auto MCFB = static_cast< MCFBlock * >( f_Block );
 
-  std::function< void( sp_Mod )> guts_of_poM;
-  guts_of_poM = [ this , & guts_of_poM , MCFB ]( sp_Mod mod ) {
+  std::function< void( c_p_Mod )> guts_of_poM;
+  guts_of_poM = [ this , & guts_of_poM , MCFB ]( c_p_Mod mod ) {
    // process Modification - - - - - - - - - - - - - - - - - - - - - - - - - -
    //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    /* This requires to patiently sift through the possible Modification types
@@ -744,10 +759,10 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
    // GroupModification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
    {
-    const auto tmod = std::dynamic_pointer_cast<GroupModification>( mod );
+    const auto tmod = dynamic_cast< GroupModification * const >( mod );
     if( tmod ) {
-     for( const auto & submod : tmod->v_sub_Modifications )
-      guts_of_poM( submod );
+     for( const auto & submod : tmod->sub_Modifications() )
+      guts_of_poM( submod.get() );
 
      return;
      }
@@ -760,7 +775,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
       (a Modification changin nothing from the "empty" state is not issued).
       */
    {
-    const auto tmod = std::dynamic_pointer_cast<MCFBlockRngdMod>( mod );
+    const auto tmod = dynamic_cast< MCFBlockRngdMod * const >( mod );
     if( tmod ) {
      switch( tmod->type() ) {
       case( MCFBlockMod::eChgCost ):
@@ -820,7 +835,7 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
 
    // MCFBlockSbstMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    {
-    const auto tmod = std::dynamic_pointer_cast<MCFBlockSbstMod>( mod );
+    const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod );
     if( tmod ) {
      switch( tmod->type() ) {
       case( MCFBlockMod::eOpenArc ):
@@ -877,18 +892,17 @@ void MCFSolver< MCFC >::process_outstanding_Modification( void )
      }
     }
 
-   // IMPORTANT NOTE: any remaining Modification is plainly ignored. It must
-   // be an "abstract" Modification, which this Solver does not need to look
-   // at
+   // any remaining Modification is plainly ignored, since it must be an
+   // "abstract" Modification, which this Solver does not need to look at
 
    };  // end( guts_of_poM ) - - - - - - - - - - - - - - - - - - - - - - - - -
        //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   // finally, call the "guts of" - - - - - - - - - - - - - - - - - - - - - - -
 
-  guts_of_poM( mod );  // now the actual call
+  guts_of_poM( mod.get() );  // now the actual call
 
-  v_mod.pop_front();   // now the Modification is processed: remove it
+  pop_front();   // now the Modification is processed: remove it
   
   }  // end( while( there are Modification ) )
  }  // end( MCFSolver::process_outstanding_Modification )

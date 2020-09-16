@@ -7,12 +7,11 @@
 #                             Universita' di Pisa                             #
 # --------------------------------------------------------------------------- #
 cmake_minimum_required(VERSION 3.8...3.15)
-project(MCFBlock VERSION 0.2.0 LANGUAGES CXX)
+project(MCFBlock VERSION 0.3.0 LANGUAGES CXX)
 
 # ----- Settings ------------------------------------------------------------ #
 include(CTest)
 
-# ----- Settings ------------------------------------------------------------ #
 # MCF Solver
 set(MCF_SOLVER "relax" CACHE STRING "MCF Solver")
 set_property(CACHE MCF_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
@@ -29,6 +28,11 @@ elseif (MCF_SOLVER STREQUAL "mfsmx")
 elseif (MCF_SOLVER STREQUAL "sptree")
     message(STATUS "Using Shortest Path Tree solver")
     add_compile_definitions(HAVE_SPTRE)
+endif ()
+
+# Debug checks and printouts
+if (NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    add_compile_definitions(NDEBUG)
 endif ()
 
 # ----- Requirements -------------------------------------------------------- #

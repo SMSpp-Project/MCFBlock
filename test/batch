@@ -1,6 +1,7 @@
 #/bin/bash
 
 what=data/N3-5-5-2-2.nc4
+#wchg=35
 
 for mode in 0 1 2 12 13 14 20 29 30
 do
@@ -8,7 +9,7 @@ for (( seed=0 ; seed<20 ; seed++ ))
 do
 
 printf "$mode-$seed: "
-./test $what $seed $mode
+./test $what $seed $mode $wchg
 
 done
 done

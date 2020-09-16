@@ -339,11 +339,10 @@ public:
   * Like load( std::istream & ), if there is any Solver attached to this
   * MCFBlock then a NBModification (the "nuclear option") is issued. */
 
- void load( c_Index n , c_Index m , c_Subset & pEn , c_Subset & pSn ,
+ void load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
 	    c_Vec_FNumber & pU = {} , c_Vec_CNumber & pC = {} ,
 	    c_Vec_FNumber & pB = {} ,
-	    c_Index dn = 0 , c_Index dm = 0 ,
-	    c_Index mdn = 0 , c_Index mdm = 0 );
+	    Index dn = 0 , Index dm = 0 , Index mdn = 0 , Index mdm = 0 );
 
 /*--------------------------------------------------------------------------*/
  /// extends Block::deserialize( netCDF::NcGroup )
@@ -1035,11 +1034,12 @@ public:
  /** Gets an R3 Block of the MCFBlock. The list of currently supported R3
   * Block is:
   *
-  * - r3bc == nullptr: the copy (an MCFBlock identical to the current one).
-  *
+  * - r3bc == nullptr: the copy (an MCFBlock identical to this)
   */
 
- Block * get_R3_Block( Configuration *r3bc = nullptr ) override;
+ Block * get_R3_Block( Configuration *r3bc = nullptr ,
+		       Block * base = nullptr , Block * father = nullptr )
+  override;
 
 /*--------------------------------------------------------------------------*/
  /// maps back the solution from a copy MCFBlock to the current one
@@ -1134,6 +1134,19 @@ public:
   *
   * Any other Modification is ignored (and false is returned).
   *
+  *     IMPORTANT NOTE: MCFBlockRngdMod ALLOW TO ADD/DELETE ARCS IN THE
+  *     PROBLEM, WHICH ALSO CHANGES THE "NAMES" OF EXISTING ARCS. MCFBlock
+  *     IMPLEMENTS map_forward_Modification() IN A WAY THAT IS ONLY
+  *     GUARANTEED TO BE CORRECT IF:
+  *
+  *     = EITHER THE SET OF ARCS IS NEVER CHANGED;
+  *
+  *     = OR THE Modification ARE MAPPED IMMEDIATELY AFTER THEY ARE ISSUED.
+  *
+  * This is because otherwise MCFBlock should have to understand whether the
+  * set of arc "names" in the Modification is still correct and do something
+  * in case it is not, which is too complex to do at the moment.
+  *
   * Note that for GroupModification, true is returned only if all the
   * inner Modification of the GroupModification return true.
   *
@@ -1142,10 +1155,10 @@ public:
   * reason for it to issue "abstract" Modification with concerns_Block() ==
   * true. */
 
- bool map_forward_Modification( Block *R3B , sp_Mod mod ,
+ bool map_forward_Modification( Block *R3B , c_p_Mod mod ,
 				Configuration *r3bc = nullptr ,
-				c_ModParam issuePMod = eNoBlck ,
-				c_ModParam issueAMod = eModBlck ) override;
+				ModParam issuePMod = eNoBlck ,
+				ModParam issueAMod = eModBlck ) override;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /** No specific Configuration is required, hence expected, for MCFBlock.
@@ -1154,10 +1167,10 @@ public:
   * map_forward_Modification() in reverse, so see the comments to the latter
   * method. */
 
- bool map_back_Modification( Block *R3B , sp_Mod mod ,
+ bool map_back_Modification( Block *R3B , c_p_Mod mod ,
 			     Configuration *r3bc = nullptr ,
-			     c_ModParam issuePMod = eNoBlck ,
-			     c_ModParam issueAMod = eModBlck ) override;
+			     ModParam issuePMod = eNoBlck ,
+			     ModParam issueAMod = eModBlck ) override;
 
 /**@} ----------------------------------------------------------------------*/
 /*----------------------- Methods for handling Solution --------------------*/
@@ -1835,6 +1848,9 @@ public:
   *     to the two flow conservation constraints of its starting and ending
   *     node;
   *
+  *   = one OneVarConstraintMod with type RowConstraintMod::eChgRHS for
+  *      modifying the flow bound;
+  *
   *   = if the "name" of the arc is == get_NArcs() (before the call):
   *
   *     * a BlockModAdd< ColVariable > corresponding to the addition of a
@@ -1850,9 +1866,6 @@ public:
   *   = if, instead, the "name" of the arc is < get_NArcs() (before the call):
   *
   *     * one C05FunctionModLin for modifying the cost coefficients;
-  *
-  *     * one OneVarConstraintMod with type RowConstraintMod::eChgRHS for
-  *       modifying the flow bound;
   *
   *     * one VariableMod making the flow variable "free";
   *       
@@ -2134,14 +2147,21 @@ public:
 
  void guts_of_destructor( void );
 
- void guts_of_add_Modification( sp_Mod mod , ChnlName chnl );
+ void guts_of_add_Modification( p_Mod mod , ChnlName chnl );
 
  void compute_conditional_bounds( void );
 
- inline ModParam make_amod_param( c_ModParam issueAMod , c_Index num );
+ ModParam make_amod_param( ModParam issueAMod , Index num );
 
- inline void unmake_amod_param( c_ModParam oldiAM , c_ModParam newiAM ,
-				c_Index num );
+ void unmake_amod_param( ModParam oldiAM , ModParam newiAM , Index num );
+
+/*--------------------------------------------------------------------------*/
+
+#ifndef NDEBUG
+
+ void CheckAbsVSPhys( void );
+ 
+#endif
 
 /*--------------------------------------------------------------------------*/
 /*---------------------------- PRIVATE FIELDS ------------------------------*/
