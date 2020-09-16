@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2020-09-16
+
 ### Added
 
 - Support for MCFCplex class.
+- Support for new configuration framework.
 
 ## [0.2.0] - 2020-03-06
 
@@ -35,7 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.2.0...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.3.0...develop
+[0.3.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.2.0...0.3.0
 [0.2.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.1.2...0.2.0
 [0.1.2]: https://gitlab.com/smspp/mcfblock/-/compare/0.1.1...0.1.2
 [0.1.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.1.0...0.1.1
