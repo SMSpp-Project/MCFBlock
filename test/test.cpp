@@ -1148,7 +1148,7 @@ int main( int argc , char **argv )
     }
    }
 
-  // since all changes are doe, unlock mMCFB
+  // since all changes are done, unlock mMCFB
   if( ! owned )
    mMCFB->unlock( mcf );
 
