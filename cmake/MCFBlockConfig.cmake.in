@@ -21,6 +21,9 @@ include(CMakeFindDependencyMacro)
 find_dependency(SMSpp REQUIRED)
 find_dependency(MCFClass REQUIRED)
 
+# ----- Options ------------------------------------------------------------- #
+set(MCF_SOLVER "@MCF_SOLVER@")
+
 # ----- Import target ------------------------------------------------------- #
 if (NOT TARGET SMS++::MCFBlock)
     include("${MCFBlock_CMAKE_DIR}/MCFBlockTargets.cmake")

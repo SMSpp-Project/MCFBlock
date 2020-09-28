@@ -13,10 +13,8 @@ project(MCFBlock VERSION 0.3.1 LANGUAGES CXX)
 include(CTest)
 
 # MCF Solver
-set(MCF_SOLVER "relax" CACHE STRING "MCF Solver")
+set(MCF_SOLVER "cplex" CACHE STRING "MCF Solver")
 set_property(CACHE MCF_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
-
-set(MCF_SOLVER "cplex") # FIXME: Dirty workaround
 
 if (MCF_SOLVER STREQUAL "relax")
     message(STATUS "Using RelaxIV solver")
