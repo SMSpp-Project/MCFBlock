@@ -818,7 +818,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   if( HasStaticX() ) {
    if( UB.empty() ) {
     for( const auto & var : x )
-     if( ! var.is_feasible() )
+     if( ! var.is_feasible( feps ) )
       return( false );
     }
    else
@@ -831,7 +831,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   if( HasDynamicX() ) {
    if( dUB.empty() ) {
     for( const auto & var : dx )
-     if( ! var.is_feasible() )
+     if( ! var.is_feasible( feps ) )
       return( false );
     }
    else
