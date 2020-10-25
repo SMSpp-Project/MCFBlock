@@ -1,6 +1,9 @@
 # tester executable
 test/test
 
+# dmx2nc4 executable
+tools/dmx2nc4
+
 ### C/C++ template
 # Prerequisites
 *.d
