@@ -1,0 +1,20 @@
+/** @file
+ * Configuration header of the MCFBlock library.
+ *
+ * \author Niccolò Iardella \n
+ *         Operations Research Group \n
+ *         Dipartimento di Informatica \n
+ *         Universita' di Pisa \n
+ *
+ * \copyright &copy; Niccolò Iardella
+ */
+
+#ifndef __MCFBLOCK_CONFIG_H
+#define __MCFBLOCK_CONFIG_H
+
+#define MCFBlock_VERSION       "@MCFBlock_VERSION@"
+#define MCFBlock_VERSION_MAJOR "@MCFBlock_VERSION_MAJOR@"
+#define MCFBlock_VERSION_MINOR "@MCFBlock_VERSION_MINOR@"
+#define MCFBlock_VERSION_PATCH "@MCFBlock_VERSION_PATCH@"
+
+#endif

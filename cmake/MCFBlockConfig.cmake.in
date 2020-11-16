@@ -17,12 +17,12 @@
 get_filename_component(MCFBlock_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
+# ----- Settings ------------------------------------------------------------ #
+set(MCFBlock_SOLVER "@MCFBlock_SOLVER@")
+
 # ----- Requirements -------------------------------------------------------- #
 find_dependency(SMSpp)
 find_dependency(MCFClass)
-
-# ----- Options ------------------------------------------------------------- #
-set(MCF_SOLVER "@MCF_SOLVER@")
 
 # ----- Import target ------------------------------------------------------- #
 if (NOT TARGET SMS++::MCFBlock)
