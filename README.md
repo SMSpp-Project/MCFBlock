@@ -24,7 +24,7 @@ These instructions will let you build MCFBlock and MCFSolver on your system.
   requirements (depending on the actual :MCFClass solvers built).
 
 
-### Build and install with Cmake
+### Build and install with CMake
 
 Configure and build the library with:
 ```sh
@@ -34,13 +34,25 @@ cmake ..
 make
 ```
 
+The library has the same configuration options of
+[SMS++](https://gitlab.com/smspp/smspp/wikis/custom).
+Moreover, you can choose the solver with the variable `MCFBlock_SOLVER`.
+Available values are:
+
+| Value     | Solver             |
+| --------- | ------------------ |
+| `relax`   | RelaxIV            |
+| `cplex`   | CPLEX (default)    |
+| `mfsmx`   | Simplex            |
+| `sptree`  | Shortest Path Tree |
+
 Optionally, install the library in the system with:
 ```sh
 sudo make install
 ```
 
 
-### Usage with Cmake
+### Usage with CMake
 
 After the library is configured and built, you can use it in your CMake project with:
 ```cmake
@@ -49,10 +61,10 @@ target_link_libraries(<my_target> SMS++::MCFBlock)
 ```
 
 
-### Running the tests with Cmake
+### Running the tests with CMake
 
-A simple unit test will be built with the library. To disable it, configure
-the library with the option `-DBUILD_TESTING=OFF`.
+A simple unit test will be built with the library. To disable it,
+set the option `BUILD_TESTING` to `OFF`.
 
 The test takes an instance of a MCF in DIMACS or NC4 format. The MCF problem
 is then repeatedly solved with several changes in costs/capacities/deficits,
@@ -63,7 +75,7 @@ performed on the two solvers, and the results are compared.
 ### Build and install with makefiles
 
 Carefully hand-crafted makefiles have also been developed for those unwilling
-to use Cmake. General instructions are:
+to use CMake. General instructions are:
 
 - The arrangements of folders must be that envisioned by the
   [Umbrella SMS++ Project](https://gitlab.com/smspp/smspp-project)
@@ -163,4 +175,3 @@ This section is not ready yet.
 This code is provided free of charge under the [GNU Lesser General Public
 License version 3.0](https://opensource.org/licenses/lgpl-3.0.html) -
 see the [LICENSE](LICENSE) file for details.
-
