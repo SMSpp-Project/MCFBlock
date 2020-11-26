@@ -27,6 +27,7 @@ These instructions will let you build MCFBlock and MCFSolver on your system.
 ### Build and install with CMake
 
 Configure and build the library with:
+
 ```sh
 mkdir build
 cd build
@@ -47,6 +48,7 @@ Available values are:
 | `sptree`  | Shortest Path Tree |
 
 Optionally, install the library in the system with:
+
 ```sh
 sudo make install
 ```
@@ -54,7 +56,8 @@ sudo make install
 
 ### Usage with CMake
 
-After the library is configured and built, you can use it in your CMake project with:
+After the library is built, you can use it in your CMake project with:
+
 ```cmake
 find_package(MCFBlock)
 target_link_libraries(<my_target> SMS++::MCFBlock)
@@ -63,8 +66,8 @@ target_link_libraries(<my_target> SMS++::MCFBlock)
 
 ### Running the tests with CMake
 
-A simple unit test will be built with the library. To disable it,
-set the option `BUILD_TESTING` to `OFF`.
+A unit test will be built with the library.
+To disable it, set the option `BUILD_TESTING` to `OFF`.
 
 The test takes an instance of a MCF in DIMACS or NC4 format. The MCF problem
 is then repeatedly solved with several changes in costs/capacities/deficits,

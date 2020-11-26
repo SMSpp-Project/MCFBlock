@@ -1,7 +1,5 @@
-# tester executable
+### Makefile-generated binaries
 test/test
-
-# dmx2nc4 executable
 tools/dmx2nc4
 
 ### C/C++ template
