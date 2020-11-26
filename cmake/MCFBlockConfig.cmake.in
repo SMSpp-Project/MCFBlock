@@ -14,7 +14,7 @@
 #                         Dipartimento di Informatica                         #
 #                             Universita' di Pisa                             #
 # --------------------------------------------------------------------------- #
-get_filename_component(MCFBlock_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(@modName@_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
 # ----- Settings ------------------------------------------------------------ #
@@ -25,8 +25,8 @@ find_dependency(SMSpp)
 find_dependency(MCFClass)
 
 # ----- Import target ------------------------------------------------------- #
-if (NOT TARGET SMS++::MCFBlock)
-    include("${MCFBlock_CMAKE_DIR}/MCFBlockTargets.cmake")
-endif ()
+if (NOT TARGET @modNamespace@::@modName@)
+    include("${@modName@_CMAKE_DIR}/@modName@Targets.cmake")
+endif()
 
-set(MCFBlock_LIBRARIES SMS++::MCFBlock)
+set(@modName@_LIBRARIES @modNamespace@::@modName@)
