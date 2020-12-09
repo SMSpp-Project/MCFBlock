@@ -427,7 +427,7 @@ void MCFBlock::load( std::istream &input )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::deserialize( netCDF::NcGroup & group )
+void MCFBlock::deserialize( const netCDF::NcGroup & group )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
@@ -3889,7 +3889,7 @@ void MCFBlock::CheckAbsVSPhys( void )
 /*-------------------------- METHODS OF MCFSolution ------------------------*/
 /*--------------------------------------------------------------------------*/
 
-void MCFSolution::deserialize( netCDF::NcGroup & group )
+void MCFSolution::deserialize( const netCDF::NcGroup & group )
 {
  std::vector<size_t> start = { 0 };
 
