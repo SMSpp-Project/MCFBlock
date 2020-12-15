@@ -283,7 +283,7 @@ public:
   }
 
 /**@} ----------------------------------------------------------------------*/
-/*--------------------- METHODS FOR SOLVING THE MODEL ----------------------*/
+/*--------------------- METHODS FOR SOLVING THE Block ----------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Solving the MCF encoded by the current MCFBlock
  *  @{ */
@@ -292,7 +292,7 @@ public:
 
  int compute( bool changedvars = true ) override
  {
-  const static std::vector<int> MCFstatus_2_sol_type = {
+  const static std::vector< int > MCFstatus_2_sol_type = {
    kUnEval , Solver::kOK , kStopTime , kInfeasible , Solver::kUnbounded ,
    Solver::kError };
 
@@ -309,6 +309,9 @@ public:
   if( ! owned )             // if the [MCF]Block was actually read_locked
    f_Block->read_unlock();  // read_unlock it
 
+  // ensure the timer exists (or reset it)
+  this->MCFC::SetMCFTime();
+
   // then (try to) solve the MCF
   this->MCFC::SolveMCF();
 
@@ -323,6 +326,12 @@ public:
 /*--------------------------------------------------------------------------*/
 /** @name Accessing the found solutions (if any)
  *  @{ */
+
+ double get_elapsed_time( void ) const override {
+  return( this->MCFC::TimeMCF() );
+  }
+ 
+/*--------------------------------------------------------------------------*/
 
  OFValue get_lb( void ) override { return( this->MCFC::MCFGetDFO() ); }
 
@@ -542,41 +551,41 @@ public:
 
 /*--------------------------------------------------------------------------*/
  
- int get_dflt_int_par( const idx_type par ) const override {
+ int get_dflt_int_par( idx_type par ) const override {
   if( par == intLastParCDAS )
    return( MCFClass::kYes );
-  else
-   return( CDASolver::get_dflt_int_par( par ) );
+
+  return( CDASolver::get_dflt_int_par( par ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  
- double get_dflt_dbl_par( const idx_type par ) const override {
+ double get_dflt_dbl_par( idx_type par ) const override {
   return( CDASolver::get_dflt_dbl_par( par ) );
   }
 
 /*--------------------------------------------------------------------------*/
  
- int get_int_par( const idx_type par ) const override {
+ int get_int_par( idx_type par ) const override {
   if( Solver_2_MCFClass_int[ par ] >= 0 ) {
    int val;
    this->GetPar( Solver_2_MCFClass_int[ par ] , val );
    return( val );
    }
-  else
-   return( get_dflt_int_par( par ) );
+
+  return( get_dflt_int_par( par ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  
- double get_dbl_par( const idx_type par ) const override {
+ double get_dbl_par( idx_type par ) const override {
   if( Solver_2_MCFClass_dbl[ par ] >= 0 ) {
    double val;
    this->GetPar( Solver_2_MCFClass_dbl[ par ] , val );
    return( val );
    }
-  else
-   return( get_dflt_dbl_par( par ) );
+
+  return( get_dflt_dbl_par( par ) );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -596,7 +605,7 @@ public:
 
 /*--------------------------------------------------------------------------*/
 
- const std::string & int_par_idx2str( const idx_type idx ) const override {
+ const std::string & int_par_idx2str( idx_type idx ) const override {
   static const std::string my_name = "kReopt";
 
   if( idx == intLastParCDAS )
@@ -607,7 +616,7 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- const std::string & dbl_par_idx2str( const idx_type idx ) const override {
+ const std::string & dbl_par_idx2str( idx_type idx ) const override {
   return( CDASolver::dbl_par_idx2str( idx ) );
   }
 

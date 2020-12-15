@@ -421,7 +421,7 @@ public:
   * missing they are treated as being 0 (this happening for all four means
   * that the graph is "fully static" and cannot be changed). */
 
- void deserialize( netCDF::NcGroup & group ) override;
+ void deserialize( const netCDF::NcGroup & group ) override;
 
 /*--------------------------------------------------------------------------*/
  /// generate the abstract variables of the MCF
@@ -2457,11 +2457,11 @@ class MCFSolution : public Solution {
 
 /*---------------- CONSTRUCTING AND DESTRUCTING MCFSolution ----------------*/
 
- explicit MCFSolution() { }  /// constructor, it has nothing to do
+ explicit MCFSolution( void ) { }  /// constructor, it has nothing to do
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- void deserialize( netCDF::NcGroup & group ) override final;
+ void deserialize( const netCDF::NcGroup & group ) override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
