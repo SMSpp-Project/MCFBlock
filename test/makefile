@@ -19,7 +19,7 @@
 # module name
 # NAME can be main, test and dmx2nc4:, the corresponding .cpp is compiled
 # and the final executable named $(NAME) is constructed 
-NAME = test
+NAME = MCFBlock_test
 
 # basic directory
 DIR = ./
