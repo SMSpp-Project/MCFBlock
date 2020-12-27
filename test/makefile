@@ -36,9 +36,9 @@ DIR = ./
 MCFCS = -DHAVE_MFSMX
 
 # debug switches
-SW = -g -glldb -fno-inline -std=c++17 -ferror-limit=1 $(MCFCS)
+#SW = -g -glldb -fno-inline -std=c++17 -ferror-limit=1 $(MCFCS)
 # production switches
-#SW = -O3 -std=c++17 -DNDEBUG $(MCFCS)
+SW = -O3 -std=c++17 -DNDEBUG $(MCFCS)
 
 # compiler
 CC = clang++

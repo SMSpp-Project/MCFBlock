@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/local/bin/bash
 
 what=data/N3-5-5-2-2.nc4
 #wchg=35
