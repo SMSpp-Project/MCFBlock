@@ -19,7 +19,7 @@
 # module name
 # NAME can be main, test and dmx2nc4:, the corresponding .cpp is compiled
 # and the final executable named $(NAME) is constructed 
-NAME = MCFBlock_test
+NAME = test
 
 # basic directory
 DIR = ./
@@ -73,8 +73,8 @@ MOBJ =  $(MCFBkOBJ)
 # libreries
 MLIB =  $(MCFBkLIB)
 
-$(NAME): $(MOBJ) $(DIR)$(NAME).o
-	$(CC) -o $(NAME) $(DIR)$(NAME).o $(MOBJ) $(MLIB) $(SW)
+$(NAME): $(MOBJ) $(DIR)test.o
+	$(CC) -o $(DIR)$(NAME) $^ $(MLIB) $(SW)
 
 # dependencies: every .o from its .C + every recursively included .h- - - - -
 
@@ -86,7 +86,7 @@ MH =    $(MCFBkH)
 
 # compile command
 
-$(DIR)$(NAME).o: $(DIR)$(NAME).cpp $(MH)
+$(DIR)test.o: $(DIR)test.cpp $(MH)
 	$(CC) -c $*.cpp -o $@ $(MINC) $(SW)
 
 ############################ End of makefile #################################
