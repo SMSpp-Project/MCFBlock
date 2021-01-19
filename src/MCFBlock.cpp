@@ -284,6 +284,15 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
  if( anyone_there() )
   add_Modification( std::make_shared<NBModification>( this ) );
 
+ // the arc whose cost is infinite has to be closed,
+ // in addition the cost has to be set to 0 - - - - - - - - - - - - - - - - -
+
+ for( Index j = 0; j < C.size() ; j++ )
+  if( C[j] >= Inf<double>() ) {
+   close_arc(j,eNoMod);
+   C[j] = 0;
+   }
+
  }  // end( MCFBlock::load( memory ) )
 
 /*--------------------------------------------------------------------------*/
@@ -423,6 +432,15 @@ void MCFBlock::load( std::istream &input )
  if( anyone_there() )
   add_Modification( std::make_shared<NBModification>( this ) );
 
+ // the arc whose cost is infinite has to be closed,
+ // in addition the cost has to be set to 0 - - - - - - - - - - - - - - - - -
+
+ for( Index j = 0; j < C.size() ; j++ )
+  if( C[j] >= Inf<double>() ) {
+   close_arc(j,eNoMod);
+   C[j] = 0;
+   }
+
  }  // end( MCFBlock::load( istream ) )
 
 /*--------------------------------------------------------------------------*/
@@ -527,6 +545,15 @@ void MCFBlock::deserialize( const netCDF::NcGroup & group )
  // inside this the NBModification, the "nuclear option",  is issued
 
  Block::deserialize( group );
+
+ // the arc whose cost is infinite has to be closed,
+ // in addition the cost has to be set to 0 - - - - - - - - - - - - - - - - -
+
+ for( Index j = 0; j < C.size() ; j++ )
+  if( C[j] >= Inf<double>() ) {
+   close_arc(j,eNoMod);
+   C[j] = 0;
+   }
 
  }  // end( MCFBlock::deserialize )
 
