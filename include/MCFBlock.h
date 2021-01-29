@@ -707,7 +707,7 @@ public:
  inline Index p2i_x( Variable * const var ) const
  {
   auto i = p2i_x_s( var );
-  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
+  if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
    return( i );
 
   i = get_NStaticArcs();
@@ -747,7 +747,7 @@ public:
  inline Index p2i_ub( Constraint * const cns ) const
  {
   auto i = p2i_ub_s( cns );
-  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
+  if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
    return( i );
 
   i = get_NStaticArcs();
@@ -788,7 +788,7 @@ public:
  inline Index p2i_e( Constraint * const cns ) const
  {
   auto i = p2i_e_s( cns );
-  if( ( i >= 0 ) && ( i < get_NStaticNodes() ) )
+  if( ( i >= 0 ) && ( i < int( get_NStaticNodes() ) ) )
    return( i );
 
   i = get_NStaticNodes();
