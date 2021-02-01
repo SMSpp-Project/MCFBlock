@@ -14,7 +14,7 @@ else
 printf "[$what $seed $mode $wchg]: "
 fi
 
-./test $what $seed $mode $wchg
+./MCFBlock_test $what $seed $mode $wchg
 
 retVal=$?
 if [ $retVal -ne 0 ]; then
