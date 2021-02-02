@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added 
+
+- managed vectors in Configurations
+
+- added some preprocess
+
+### Fixed 
+
+- using proper eps in var.is_feasible 
+
 ## [0.3.1] - 2020-09-24
 
 ### Fixed
