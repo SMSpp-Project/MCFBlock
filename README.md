@@ -74,6 +74,9 @@ is then repeatedly solved with several changes in costs/capacities/deficits,
 arcs openings/closures and arcs additions/deletions. The same operations are
 performed on the two solvers, and the results are compared.
 
+The test can be run manually, using the provided batch file,
+or using `ctest` from the build directory.
+
 
 ### Build and install with makefiles
 
