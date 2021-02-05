@@ -284,6 +284,15 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
  if( anyone_there() )
   add_Modification( std::make_shared<NBModification>( this ) );
 
+ // the arc whose cost is infinite has to be closed,
+ // in addition the cost has to be set to 0 - - - - - - - - - - - - - - - - -
+
+ for( Index j = 0; j < C.size() ; j++ )
+  if( C[j] >= Inf<double>() ) {
+   close_arc(j,eNoMod);
+   C[j] = 0;
+   }
+
  }  // end( MCFBlock::load( memory ) )
 
 /*--------------------------------------------------------------------------*/
@@ -423,11 +432,20 @@ void MCFBlock::load( std::istream &input )
  if( anyone_there() )
   add_Modification( std::make_shared<NBModification>( this ) );
 
+ // the arc whose cost is infinite has to be closed,
+ // in addition the cost has to be set to 0 - - - - - - - - - - - - - - - - -
+
+ for( Index j = 0; j < C.size() ; j++ )
+  if( C[j] >= Inf<double>() ) {
+   close_arc(j,eNoMod);
+   C[j] = 0;
+   }
+
  }  // end( MCFBlock::load( istream ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::deserialize( netCDF::NcGroup & group )
+void MCFBlock::deserialize( const netCDF::NcGroup & group )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
@@ -527,6 +545,15 @@ void MCFBlock::deserialize( netCDF::NcGroup & group )
  // inside this the NBModification, the "nuclear option",  is issued
 
  Block::deserialize( group );
+
+ // the arc whose cost is infinite has to be closed,
+ // in addition the cost has to be set to 0 - - - - - - - - - - - - - - - - -
+
+ for( Index j = 0; j < C.size() ; j++ )
+  if( C[j] >= Inf<double>() ) {
+   close_arc(j,eNoMod);
+   C[j] = 0;
+   }
 
  }  // end( MCFBlock::deserialize )
 
@@ -818,7 +845,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   if( HasStaticX() ) {
    if( UB.empty() ) {
     for( const auto & var : x )
-     if( ! var.is_feasible() )
+     if( ! var.is_feasible( feps ) )
       return( false );
     }
    else
@@ -831,7 +858,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   if( HasDynamicX() ) {
    if( dUB.empty() ) {
     for( const auto & var : dx )
-     if( ! var.is_feasible() )
+     if( ! var.is_feasible( feps ) )
       return( false );
     }
    else
@@ -904,13 +931,12 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
    auto RCi = pi.second;
    for( Index j = 0 ; j < xi->get_num_active() ; ++j ) {
     ThinVarDepInterface * ci = xi->get_active( j );
-    auto rci = dynamic_cast<FRowConstraint *>( ci );
-    if( rci ) {
+    if( auto rci = dynamic_cast< FRowConstraint * >( ci ) ) {
      auto lrci = get_lfc( rci );
      RCi -= rci->get_dual() * lrci->get_coefficient( lrci->is_active( xi ) );
      }
     else {
-     auto bci = dynamic_cast<BoxConstraint *>( ci );
+     auto bci = dynamic_cast< BoxConstraint * >( ci );
      assert( bci );
      RCi -= bci->get_dual();
      }
@@ -1131,25 +1157,24 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
  CNumber ceps = 0;
  FNumber feps = 0;
  if( optc ) {
-  auto toptc =
-    dynamic_cast<SimpleConfiguration<std::pair<CNumber,FNumber> > *>( optc );
-
-  if( toptc ) {
+  if( auto toptc =
+      dynamic_cast< SimpleConfiguration< std::pair< CNumber , FNumber > > * >(
+								    optc ) ) {
    ceps = toptc->f_value.first;
    feps = toptc->f_value.second;
    }
   else {
-   auto ttoptc = dynamic_cast<SimpleConfiguration<CNumber> *>( optc );
+   auto ttoptc = dynamic_cast< SimpleConfiguration< CNumber > * >( optc );
 
    if( ( ! ttoptc ) && f_BlockConfig &&
        f_BlockConfig->f_is_optimal_Configuration )
-    ttoptc = dynamic_cast<SimpleConfiguration<CNumber> *>(
+    ttoptc = dynamic_cast< SimpleConfiguration< CNumber > * >(
                            f_BlockConfig->f_is_optimal_Configuration );
    if( ttoptc )
     ceps = ttoptc->f_value;
 
    if( f_BlockConfig && f_BlockConfig->f_is_feasible_Configuration ) {
-    auto fsbc = dynamic_cast<SimpleConfiguration<FNumber> *>(
+    auto fsbc = dynamic_cast< SimpleConfiguration< FNumber > * >(
                               f_BlockConfig->f_is_feasible_Configuration );
     if( fsbc )
      feps = fsbc->f_value;
@@ -1158,19 +1183,15 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
   }
  else
   if( f_BlockConfig ) {
-   if( f_BlockConfig->f_is_optimal_Configuration ) {
-    auto csbc = dynamic_cast<SimpleConfiguration<CNumber> *>(
-                              f_BlockConfig->f_is_optimal_Configuration );
-    if( csbc )
+   if( f_BlockConfig->f_is_optimal_Configuration )
+    if( auto csbc = dynamic_cast< SimpleConfiguration< CNumber > * >(
+                              f_BlockConfig->f_is_optimal_Configuration ) )
      ceps = csbc->f_value;
-    }
 
-   if( f_BlockConfig->f_is_feasible_Configuration ) {
-    auto fsbc = dynamic_cast<SimpleConfiguration<FNumber> *>(
-                              f_BlockConfig->f_is_feasible_Configuration );
-    if( fsbc )
+   if( f_BlockConfig->f_is_feasible_Configuration )
+    if( auto fsbc = dynamic_cast< SimpleConfiguration<FNumber > * >(
+                              f_BlockConfig->f_is_feasible_Configuration ) )
      feps = fsbc->f_value;
-    }
    }
 
  return( flow_feasible( feps , useabstract ) &&
@@ -1494,22 +1515,19 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
   //!! std::cout << *mod << std::endl;
   
   // GroupModification - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  {
-   const auto tmod = dynamic_cast< GroupModification * const >( mod );
-   if( tmod ) {
-    MCFB->nest_channel( par2chnl( iPM ) );  // nest the channel for PM
-    MCFB->nest_channel( par2chnl( iPA ) );  // nest the channel for PA
+  if( const auto tmod = dynamic_cast< GroupModification * const >( mod ) ) {
+   MCFB->nest_channel( par2chnl( iPM ) );  // nest the channel for PM
+   MCFB->nest_channel( par2chnl( iPA ) );  // nest the channel for PA
 
-    bool ok = true;
-    for( const auto & submod : tmod->sub_Modifications() )
-     if( ! guts_of_mfM( submod.get() ) )
-      ok = false;
+   bool ok = true;
+   for( const auto & submod : tmod->sub_Modifications() )
+    if( ! guts_of_mfM( submod.get() ) )
+     ok = false;
 
-    MCFB->un_nest_channel( par2chnl( iPM ) );  // un-nest the channel for PM
-    MCFB->un_nest_channel( par2chnl( iPA ) );  // un-nest the channel for PA
+   MCFB->un_nest_channel( par2chnl( iPM ) );  // un-nest the channel for PM
+   MCFB->un_nest_channel( par2chnl( iPA ) );  // un-nest the channel for PA
 
-    return( ok );
-    }
+   return( ok );
    }
 
   // MCFBlockRngdMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1517,200 +1535,189 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
      is because they can be empty only if they are so when the object is
      loaded. But if a Modification has been issued they are no longer empty
      (a Modification changin nothing from the "empty" state is not issued). */
-  {
-   const auto tmod = dynamic_cast< MCFBlockRngdMod * const >( mod );
-   if( tmod ) {
-    switch( tmod->type() ) {
-     case( MCFBlockMod::eChgCost ):
-      #ifndef NDEBUG
-       if( ( tmod->rng().second > get_NArcs() ) ||
-	   ( tmod->rng().second > MCFB->get_NArcs() ) )
-	throw( std::logic_error(
+
+  if( const auto tmod = dynamic_cast< MCFBlockRngdMod * const >( mod ) ) {
+   switch( tmod->type() ) {
+    case( MCFBlockMod::eChgCost ):
+     #ifndef NDEBUG
+      if( ( tmod->rng().second > get_NArcs() ) ||
+	  ( tmod->rng().second > MCFB->get_NArcs() ) )
+       throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFB->chg_cost( C[ tmod->rng().first ] , tmod->rng().first ,
+     #endif
+     if( tmod->rng().second == tmod->rng().first + 1 )
+      MCFB->chg_cost( C[ tmod->rng().first ] , tmod->rng().first ,
+		      iPM , iPA );
+     else
+      MCFB->chg_costs( C.begin() + tmod->rng().first , tmod->rng() ,
 		       iPM , iPA );
-      else
-       MCFB->chg_costs( C.begin() + tmod->rng().first , tmod->rng() ,
-			iPM , iPA );
-      break;
-     case( MCFBlockMod::eChgCaps ):
-      #ifndef NDEBUG
-       if( ( tmod->rng().second > get_NArcs() ) ||
-	   ( tmod->rng().second > MCFB->get_NArcs() ) )
-	throw( std::logic_error(
+     break;
+    case( MCFBlockMod::eChgCaps ):
+     #ifndef NDEBUG
+      if( ( tmod->rng().second > get_NArcs() ) ||
+	  ( tmod->rng().second > MCFB->get_NArcs() ) )
+       throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFB->chg_ucap( U[ tmod->rng().first ] , tmod->rng().first ,
+     #endif
+     if( tmod->rng().second == tmod->rng().first + 1 )
+      MCFB->chg_ucap( U[ tmod->rng().first ] , tmod->rng().first ,
+		      iPM , iPA );
+     else
+      MCFB->chg_ucaps( U.begin() + tmod->rng().first , tmod->rng() ,
 		       iPM , iPA );
-      else
-       MCFB->chg_ucaps( U.begin() + tmod->rng().first , tmod->rng() ,
-			iPM , iPA );
-      break;
-     case( MCFBlockMod::eChgDfct ):
-      #ifndef NDEBUG
-       if( ( tmod->rng().second > get_NNodes() ) ||
-	   ( tmod->rng().second > MCFB->get_NNodes() ) )
-	throw( std::logic_error(
+     break;
+    case( MCFBlockMod::eChgDfct ):
+     #ifndef NDEBUG
+      if( ( tmod->rng().second > get_NNodes() ) ||
+	  ( tmod->rng().second > MCFB->get_NNodes() ) )
+       throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFB->chg_dfct( B[ tmod->rng().first ] , tmod->rng().first ,
+     #endif
+     if( tmod->rng().second == tmod->rng().first + 1 )
+      MCFB->chg_dfct( B[ tmod->rng().first ] , tmod->rng().first ,
+		      iPM , iPA );
+     else
+      MCFB->chg_dfcts( B.begin() + tmod->rng().first , tmod->rng() ,
 		       iPM , iPA );
-      else
-       MCFB->chg_dfcts( B.begin() + tmod->rng().first , tmod->rng() ,
-			iPM , iPA );
-      break;
-     case( MCFBlockMod::eOpenArc ):
-      #ifndef NDEBUG
-       if( ( tmod->rng().second > get_NArcs() ) ||
-	   ( tmod->rng().second > MCFB->get_NArcs() ) )
-	throw( std::logic_error(
+     break;
+    case( MCFBlockMod::eOpenArc ):
+     #ifndef NDEBUG
+      if( ( tmod->rng().second > get_NArcs() ) ||
+	  ( tmod->rng().second > MCFB->get_NArcs() ) )
+       throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFB->open_arc( tmod->rng().first , iPM , iPA );
-      else
-       MCFB->open_arcs( tmod->rng() , iPM , iPA );
-      break;
-     case( MCFBlockMod::eCloseArc ):
-      #ifndef NDEBUG
-       if( ( tmod->rng().second > get_NArcs() ) ||
-	   ( tmod->rng().second > MCFB->get_NArcs() ) )
-	throw( std::logic_error(
+     #endif
+     if( tmod->rng().second == tmod->rng().first + 1 )
+      MCFB->open_arc( tmod->rng().first , iPM , iPA );
+     else
+      MCFB->open_arcs( tmod->rng() , iPM , iPA );
+     break;
+    case( MCFBlockMod::eCloseArc ):
+     #ifndef NDEBUG
+      if( ( tmod->rng().second > get_NArcs() ) ||
+	  ( tmod->rng().second > MCFB->get_NArcs() ) )
+       throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFB->close_arc( tmod->rng().first , iPM , iPA );
-      else
-       MCFB->close_arcs( tmod->rng() , iPM , iPA );
-      break;
-     case( MCFBlockMod::eAddArc ):
-      #ifndef NDEBUG
-       if( tmod->rng().first > get_NArcs() )
-	throw( std::logic_error(
+     #endif
+     if( tmod->rng().second == tmod->rng().first + 1 )
+      MCFB->close_arc( tmod->rng().first , iPM , iPA );
+     else
+      MCFB->close_arcs( tmod->rng() , iPM , iPA );
+     break;
+    case( MCFBlockMod::eAddArc ):
+     #ifndef NDEBUG
+      if( tmod->rng().first > get_NArcs() )
+       throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      if( MCFB->add_arc( get_SN( tmod->rng().first ) ,
-			 get_EN( tmod->rng().first ) ,
-			 get_C( tmod->rng().first ) ,
-			 get_U( tmod->rng().first ) , iPM , iPA )
-	  != tmod->rng().first )
-       throw( std::logic_error( "inconsistency between arc names" ) );       
-      break;
-     case( MCFBlockMod::eRmvArc ):
-      #ifndef NDEBUG
-       if( tmod->rng().first > MCFB->get_NArcs() )
-	throw( std::logic_error(
+     #endif
+     if( MCFB->add_arc( get_SN( tmod->rng().first ) ,
+			get_EN( tmod->rng().first ) ,
+			get_C( tmod->rng().first ) ,
+			get_U( tmod->rng().first ) , iPM , iPA )
+	 != tmod->rng().first )
+      throw( std::logic_error( "inconsistency between arc names" ) );       
+     break;
+    case( MCFBlockMod::eRmvArc ):
+     #ifndef NDEBUG
+      if( tmod->rng().first > MCFB->get_NArcs() )
+       throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      MCFB->remove_arc( tmod->rng().second - 1 , iPM , iPA );
-      break;
-     default:
-      throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
-     }
-    return( true );
+     #endif
+     MCFB->remove_arc( tmod->rng().second - 1 , iPM , iPA );
+     break;
+    default:
+     throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
     }
+   return( true );
    }
 
   // MCFBlockSbstMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  {
-   const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod );
-   /* Note that tmod->f_nms need be copied, since the chg_*() methods
-    * *in principle* "consume" the names vector. This is actually not true
-    * if MCFB will *not* issue a physical modification, which one may
-    * actually know beforehand, but it has to be done anyway because the
-    * MCFBlockSbstMod only provides read-only access to the vector. */
+  /* Note that tmod->f_nms need be copied, since the chg_*() methods
+   * *in principle* "consume" the names vector. This is actually not true
+   * if MCFB will *not* issue a physical modification, which one may
+   * actually know beforehand, but it has to be done anyway because the
+   * MCFBlockSbstMod only provides read-only access to the vector. */
 
-   if( tmod ) {
-    switch( tmod->type() ) {
-     case( MCFBlockMod::eChgCost ): {
-      #ifndef NDEBUG
-       if( ( tmod->nms().back() >= get_NArcs() ) ||
-	   ( tmod->nms().back() >= MCFB->get_NArcs() ) )
-	throw( std::logic_error(
+  if( const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod ) ) {
+   switch( tmod->type() ) {
+    case( MCFBlockMod::eChgCost ): {
+     #ifndef NDEBUG
+      if( ( tmod->nms().back() >= get_NArcs() ) ||
+	  ( tmod->nms().back() >= MCFB->get_NArcs() ) )
+       throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      Vec_CNumber NCost( tmod->nms().size() );
-      for( Index i = 0 ; i < NCost.size() ; i++ )
-       NCost[ i ] = C[ tmod->nms()[ i ] ];
+     #endif
+     Vec_CNumber NCost( tmod->nms().size() );
+     for( Index i = 0 ; i < NCost.size() ; i++ )
+      NCost[ i ] = C[ tmod->nms()[ i ] ];
 
-      MCFB->chg_costs( NCost.begin() , Subset( tmod->nms() ) , iPM , iPA );
-      break;
-      }
-     case( MCFBlockMod::eChgCaps ): {
-      #ifndef NDEBUG
-       if( ( tmod->nms().back() >= get_NArcs() ) ||
-	   ( tmod->nms().back() >= MCFB->get_NArcs() ) )
-	throw( std::logic_error(
-		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      Vec_FNumber NCap( tmod->nms().size() );
-      for( Index i = 0 ; i < NCap.size() ; i++ )
-       NCap[ i ] = U[ tmod->nms()[ i ] ];
-
-      MCFB->chg_ucaps( NCap.begin() , Subset( tmod->nms() ) , iPM , iPA );
-
-      break;
-      }
-     case( MCFBlockMod::eChgDfct ): {
-      #ifndef NDEBUG
-       if( ( tmod->nms().back() >= get_NNodes() ) ||
-	   ( tmod->nms().back() >= MCFB->get_NNodes() ) )
-	throw( std::logic_error(
-		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      Vec_FNumber NDfct( tmod->nms().size() );
-      for( Index i = 0 ; i < NDfct.size() ; i++ )
-       NDfct[ i ] = B[ tmod->nms()[ i ] ];
-
-      MCFB->chg_dfcts( NDfct.begin() , Subset( tmod->nms() ) , iPM , iPA );
-
-      break;
-      }
-     case( MCFBlockMod::eOpenArc ):
-      #ifndef NDEBUG
-       if( ( tmod->nms().back() >= get_NArcs() ) ||
-	   ( tmod->nms().back() >= MCFB->get_NArcs() ) )
-	throw( std::logic_error(
-		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      MCFB->open_arcs( Subset( tmod->nms() ) , iPM , iPA );
-      break;
-     case( MCFBlockMod::eCloseArc ):
-      #ifndef NDEBUG
-       if( ( tmod->nms().back() >= get_NArcs() ) ||
-	   ( tmod->nms().back() >= MCFB->get_NArcs() ) )
-	throw( std::logic_error(
-		     "map_forward_Modification:: incompatible MCFBlock" ) );
-      #endif
-      MCFB->close_arcs( Subset( tmod->nms() ) , iPM , iPA );
-      break;
-     default:
-      throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
+     MCFB->chg_costs( NCost.begin() , Subset( tmod->nms() ) , iPM , iPA );
+     break;
      }
+    case( MCFBlockMod::eChgCaps ): {
+     #ifndef NDEBUG
+      if( ( tmod->nms().back() >= get_NArcs() ) ||
+	  ( tmod->nms().back() >= MCFB->get_NArcs() ) )
+       throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+     #endif
+     Vec_FNumber NCap( tmod->nms().size() );
+     for( Index i = 0 ; i < NCap.size() ; i++ )
+      NCap[ i ] = U[ tmod->nms()[ i ] ];
 
-    return( true );
+     MCFB->chg_ucaps( NCap.begin() , Subset( tmod->nms() ) , iPM , iPA );
+     break;
+     }
+    case( MCFBlockMod::eChgDfct ): {
+     #ifndef NDEBUG
+      if( ( tmod->nms().back() >= get_NNodes() ) ||
+	  ( tmod->nms().back() >= MCFB->get_NNodes() ) )
+       throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+     #endif
+     Vec_FNumber NDfct( tmod->nms().size() );
+     for( Index i = 0 ; i < NDfct.size() ; i++ )
+      NDfct[ i ] = B[ tmod->nms()[ i ] ];
+
+     MCFB->chg_dfcts( NDfct.begin() , Subset( tmod->nms() ) , iPM , iPA );
+     break;
+     }
+    case( MCFBlockMod::eOpenArc ):
+     #ifndef NDEBUG
+      if( ( tmod->nms().back() >= get_NArcs() ) ||
+	  ( tmod->nms().back() >= MCFB->get_NArcs() ) )
+       throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+     #endif
+     MCFB->open_arcs( Subset( tmod->nms() ) , iPM , iPA );
+     break;
+    case( MCFBlockMod::eCloseArc ):
+     #ifndef NDEBUG
+      if( ( tmod->nms().back() >= get_NArcs() ) ||
+	  ( tmod->nms().back() >= MCFB->get_NArcs() ) )
+       throw( std::logic_error(
+		     "map_forward_Modification:: incompatible MCFBlock" ) );
+     #endif
+     MCFB->close_arcs( Subset( tmod->nms() ) , iPM , iPA );
+     break;
+    default:
+     throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
     }
+   return( true );
    }
 
   // NBModification- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  {
-   const auto tmod = dynamic_cast< NBModification * const >( mod );
-   if( tmod ) {
-    // this is the "nuclear option": the MCFBlock has been re-loaded
-    // one should check that the Block is this MCFBlock, but it cannot
-    // be otherwise, can it?
+  // this is the "nuclear option": the MCFBlock has been re-loaded
+  // one should check that the Block is this MCFBlock, but it cannot
+  // be otherwise, can it?
 
-    MCFB->load( get_NNodes() , get_NArcs() , EN , SN , U , C , B ,
-		get_NNodes() - get_NStaticNodes() ,
-		get_NArcs() - get_NStaticArcs() ,
-		get_MaxNNodes() - get_NStaticNodes() ,
-		get_MaxNArcs() - get_NStaticArcs() );
-    return( true );
-    }
+  if( const auto tmod = dynamic_cast< NBModification * const >( mod ) ) {
+   MCFB->load( get_NNodes() , get_NArcs() , EN , SN , U , C , B ,
+	       get_NNodes() - get_NStaticNodes() ,
+	       get_NArcs() - get_NStaticArcs() ,
+	       get_MaxNNodes() - get_NStaticNodes() ,
+	       get_MaxNArcs() - get_NStaticArcs() );
+   return( true );
    }
 
   return( false );
@@ -1724,8 +1731,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
 
  bool ok = true;  // final return value
 
- const auto tmod = dynamic_cast< GroupModification * const >( mod );
- if( tmod ) {                     // this is a GroupModification
+ if( const auto tmod = dynamic_cast< GroupModification * const >( mod ) ) {
   // if the channels are the default ones, open new ones
   if( ! par2chnl( issuePMod ) )
    iPM = make_par( par2mod( issuePMod ) , MCFB->open_channel() );
@@ -3499,118 +3505,107 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
   * This assumption drastically simplifies some of the logic here.*/
 
  // C05FunctionModLinRngd - - - - - - - - - - - - - - - - - - - - - - - - - -
- {
-  const auto tmod = dynamic_cast< C05FunctionModLinRngd * >( mod );
-  if( tmod ) {
-   if( ! ( AR & HasObj ) )
-    throw( std::invalid_argument( "Modification to non-constructed Objective"
-				  ) );
+ if( const auto tmod = dynamic_cast< C05FunctionModLinRngd * >( mod ) ) {
+  if( ! ( AR & HasObj ) )
+   throw( std::invalid_argument( "Modification to non-constructed Objective"
+				 ) );
 
-   auto lfo = static_cast<LinearFunction * const>( tmod->function() );
-   if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
-    throw( std::invalid_argument( "Modification to non-Objective" ) );
+  auto lfo = static_cast<LinearFunction * const>( tmod->function() );
+  if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
+   throw( std::invalid_argument( "Modification to non-Objective" ) );
 
-   // note: in the following we can assume that the Range in tmod is
-   //       precisely the one we have to use since no Variable can have
-   //       been added or deleted, which saves *a lot* of trouble
+  // note: in the following we can assume that the Range in tmod is
+  //       precisely the one we have to use since no Variable can have
+  //       been added or deleted, which saves *a lot* of trouble
 
-   if( tmod->range().second == tmod->range().first + 1 )
-    // changing one cost only
-    chg_cost( lfo->get_coefficient( tmod->range().first ) ,
-	      tmod->range().first , make_par( eNoBlck , chnl ) , eDryRun );
-   else {                            // changing many costs at once
-    Vec_CNumber NC( tmod->range().second - tmod->range().first );
-    auto NCit = NC.begin();
-    for( Index i = tmod->range().first ; i < tmod->range().second ; )
-     *(NCit++) = lfo->get_coefficient( i++ );
+  if( tmod->range().second == tmod->range().first + 1 )
+   // changing one cost only
+   chg_cost( lfo->get_coefficient( tmod->range().first ) ,
+	     tmod->range().first , make_par( eNoBlck , chnl ) , eDryRun );
+  else {                            // changing many costs at once
+   Vec_CNumber NC( tmod->range().second - tmod->range().first );
+   auto NCit = NC.begin();
+   for( Index i = tmod->range().first ; i < tmod->range().second ; )
+    *(NCit++) = lfo->get_coefficient( i++ );
 
-    chg_costs( NC.begin() , tmod->range() ,
-	       make_par( eNoBlck , chnl ) , eDryRun );
-    }
-
-   return;
+   chg_costs( NC.begin() , tmod->range() ,
+	      make_par( eNoBlck , chnl ) , eDryRun );
    }
+
+  return;
   }
 
  // C05FunctionModLinSbst - - - - - - - - - - - - - - - - - - - - - - - - - -
- {
-  const auto tmod = dynamic_cast< C05FunctionModLinSbst * >( mod );
-  if( tmod ) {
-   if( ! ( AR & HasObj ) )
-    throw( std::invalid_argument( "Modification to non-constructed Objective"
-				  ) );
+ if( const auto tmod = dynamic_cast< C05FunctionModLinSbst * >( mod ) ) {
+  if( ! ( AR & HasObj ) )
+   throw( std::invalid_argument( "Modification to non-constructed Objective"
+				 ) );
 
-   auto lfo = static_cast<LinearFunction * const>( tmod->function() );
-   if( static_cast< LinearFunction * const >( c.get_function() ) != lfo )
-    throw( std::invalid_argument( "Modification to non-Objective" ) );
+  auto lfo = static_cast<LinearFunction * const>( tmod->function() );
+  if( static_cast< LinearFunction * const >( c.get_function() ) != lfo )
+   throw( std::invalid_argument( "Modification to non-Objective" ) );
 
-   // note: in the following we can assume that the Subset in tmod is
-   //       precisely the one we have to use since no Variable can have
-   //       been added or deleted, which saves *a lot* of trouble
-   // note: chg_costs() owns subset, so a copy has to be made
+  // note: in the following we can assume that the Subset in tmod is
+  //       precisely the one we have to use since no Variable can have
+  //       been added or deleted, which saves *a lot* of trouble
+  // note: chg_costs() owns subset, so a copy has to be made
 
-   Vec_CNumber NC( tmod->subset().size() );
-   auto NCit = NC.begin();
-   for( auto i : tmod->subset() )
-    *(NCit++) = lfo->get_coefficient( i++ );
+  Vec_CNumber NC( tmod->subset().size() );
+  auto NCit = NC.begin();
+  for( auto i : tmod->subset() )
+   *(NCit++) = lfo->get_coefficient( i++ );
 
-   chg_costs( NC.begin() , Subset( tmod->subset() ) , true ,
-	      make_par( eNoBlck , chnl ) , eDryRun );
-   return;
-   }
+  chg_costs( NC.begin() , Subset( tmod->subset() ) , true ,
+	     make_par( eNoBlck , chnl ) , eDryRun );
+  return;
   }
 
+
  // RowConstraintMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- {
-  const auto tmod = dynamic_cast< RowConstraintMod * >( mod );
-  if( tmod ) {
-   if( ! ( AR & HasFlw ) )
-    throw( std::invalid_argument(
-			     "Modification to non-constructed Constraint" ) );
+ if( const auto tmod = dynamic_cast< RowConstraintMod * >( mod ) ) {
+  if( ! ( AR & HasFlw ) )
+   throw( std::invalid_argument(
+			    "Modification to non-constructed Constraint" ) );
 
-   if( tmod->type() == RowConstraintMod::eChgRHS ) {
-    auto cp = dynamic_cast< LB0Constraint * const >( tmod->constraint() );
-    if( ! cp )
-     throw( std::invalid_argument( "invalid Modification to Constraint" ) );
+  if( tmod->type() == RowConstraintMod::eChgRHS ) {
+   auto cp = dynamic_cast< LB0Constraint * const >( tmod->constraint() );
+   if( ! cp )
+    throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
-    chg_ucap( cp->get_rhs() , p2i_ub( cp ) ,
-	      make_par( eNoBlck , chnl ) , eDryRun );
-    return;
-    }
-
-   if( tmod->type() == RowConstraintMod::eChgBTS ) {
-    auto cp = static_cast<FRowConstraint * const>( tmod->constraint() );
-    if( ! cp )
-     throw( std::invalid_argument( "invalid Modification to Constraint" ) );
-
-    chg_dfct( cp->get_rhs() , p2i_e( cp ) ,
-	      make_par( eNoBlck , chnl ) , eDryRun );
-    return;
-    }
-
-   throw( std::invalid_argument( "illegal Modification to Constraint" ) );
+   chg_ucap( cp->get_rhs() , p2i_ub( cp ) ,
+	     make_par( eNoBlck , chnl ) , eDryRun );
+   return;
    }
+
+  if( tmod->type() == RowConstraintMod::eChgBTS ) {
+   auto cp = static_cast<FRowConstraint * const>( tmod->constraint() );
+   if( ! cp )
+    throw( std::invalid_argument( "invalid Modification to Constraint" ) );
+
+   chg_dfct( cp->get_rhs() , p2i_e( cp ) ,
+	     make_par( eNoBlck , chnl ) , eDryRun );
+   return;
+   }
+
+  throw( std::invalid_argument( "illegal Modification to Constraint" ) );
   }
 
  // VariableMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- {
-  const auto tmod = dynamic_cast< VariableMod * >( mod );
-  if( tmod ) {
-   auto xi = dynamic_cast<ColVariable * const>( tmod->variable() );
-   if( ! xi )
-    throw( std::logic_error( "Modification to wrong type of Variable" ) );
-   if( ( xi->get_type() != ColVariable::kNonNegative ) &&
-       ( xi->get_type() != ColVariable::kNatural ) )
-    throw( std::logic_error( "changing type of flow Variable not allowed" ) );
+ if( const auto tmod = dynamic_cast< VariableMod * >( mod ) ) {
+  auto xi = dynamic_cast<ColVariable * const>( tmod->variable() );
+  if( ! xi )
+   throw( std::logic_error( "Modification to wrong type of Variable" ) );
+  if( ( xi->get_type() != ColVariable::kNonNegative ) &&
+      ( xi->get_type() != ColVariable::kNatural ) )
+   throw( std::logic_error( "changing type of flow Variable not allowed" ) );
    
-   auto i = p2i_x( xi );
-   if( xi->is_fixed() )
-    close_arc( i , make_par( eNoBlck , chnl ) , eDryRun );
-   else
-    open_arc( i , make_par( eNoBlck , chnl ) , eDryRun );
+  auto i = p2i_x( xi );
+  if( xi->is_fixed() )
+   close_arc( i , make_par( eNoBlck , chnl ) , eDryRun );
+  else
+   open_arc( i , make_par( eNoBlck , chnl ) , eDryRun );
 
-   return;
-   }
+  return;
   }
 
  throw( std::invalid_argument( "unsupported Modification to MCFBlock" ) );
@@ -3921,7 +3916,7 @@ void MCFBlock::CheckAbsVSPhys( void )
 /*-------------------------- METHODS OF MCFSolution ------------------------*/
 /*--------------------------------------------------------------------------*/
 
-void MCFSolution::deserialize( netCDF::NcGroup & group )
+void MCFSolution::deserialize( const netCDF::NcGroup & group )
 {
  std::vector<size_t> start = { 0 };
 
@@ -3956,7 +3951,7 @@ void MCFSolution::deserialize( netCDF::NcGroup & group )
 
 void MCFSolution::read( const Block * const block )
 {
- auto MCFB = dynamic_cast<const MCFBlock *>( block );
+ auto MCFB = dynamic_cast< const MCFBlock * >( block );
  if( ! MCFB )
   throw( std::invalid_argument( "block is not a MCFBlock" ) );
 
@@ -3999,7 +3994,7 @@ void MCFSolution::read( const Block * const block )
 
 void MCFSolution::write( Block * const block ) 
 {
- auto MCFB = dynamic_cast<MCFBlock *>( block );
+ auto MCFB = dynamic_cast< MCFBlock * >( block );
  if( ! MCFB )
   throw( std::invalid_argument( "block is not a MCFBlock" ) );
 
@@ -4079,7 +4074,7 @@ void MCFSolution::serialize( netCDF::NcGroup & group )
 
  netCDF::NcDim nn = group.addDim( "NumNodes" ,  v_pi.size() );
  std::vector<size_t> countpn = { v_pi.size() };
-  ( group.addVar( "Potentials" , netCDF::NcDouble() , nn ) ).putVar(
+ ( group.addVar( "Potentials" , netCDF::NcDouble() , nn ) ).putVar(
 					     startp , countpn , v_pi.data() );
  
  }  // end( MCFSolution::serialize )
@@ -4106,7 +4101,7 @@ MCFSolution * MCFSolution::scale( double factor ) const
 
 void MCFSolution::sum( const Solution * solution , double multiplier )
 {
- auto MCFS = dynamic_cast<const MCFSolution *>( solution );
+ auto MCFS = dynamic_cast< const MCFSolution * >( solution );
  if( ! MCFS )
   throw( std::invalid_argument( "solution is not a MCFSolution" ) );
 

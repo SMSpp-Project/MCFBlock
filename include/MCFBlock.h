@@ -421,7 +421,7 @@ public:
   * missing they are treated as being 0 (this happening for all four means
   * that the graph is "fully static" and cannot be changed). */
 
- void deserialize( netCDF::NcGroup & group ) override;
+ void deserialize( const netCDF::NcGroup & group ) override;
 
 /*--------------------------------------------------------------------------*/
  /// generate the abstract variables of the MCF
@@ -707,7 +707,7 @@ public:
  inline Index p2i_x( Variable * const var ) const
  {
   auto i = p2i_x_s( var );
-  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
+  if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
    return( i );
 
   i = get_NStaticArcs();
@@ -747,7 +747,7 @@ public:
  inline Index p2i_ub( Constraint * const cns ) const
  {
   auto i = p2i_ub_s( cns );
-  if( ( i >= 0 ) && ( i < get_NStaticArcs() ) )
+  if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
    return( i );
 
   i = get_NStaticArcs();
@@ -788,7 +788,7 @@ public:
  inline Index p2i_e( Constraint * const cns ) const
  {
   auto i = p2i_e_s( cns );
-  if( ( i >= 0 ) && ( i < get_NStaticNodes() ) )
+  if( ( i >= 0 ) && ( i < int( get_NStaticNodes() ) ) )
    return( i );
 
   i = get_NStaticNodes();
@@ -2062,45 +2062,74 @@ public:
 
  static void static_initialization( void )
  {
-  register_method< MCFBlock >( "MCFBlock::chg_costs" , &MCFBlock::chg_costs ,
-			       MS_dbl_rngd::args() );
+  /*!!
+ * Not all C++ compilers enjoy the template wizardry behing the three-args
+ * version of register_method<> with the compact MS_*_*::args(), so we just
+ * use the slightly less compact one with the explicit argument and be done
+ * with it. !!*/
+  // register_method< MCFBlock >( "MCFBlock::chg_costs", &MCFBlock::chg_costs,
+  //                              MS_dbl_rngd::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::chg_costs", &MCFBlock::chg_costs,
+  //                              MS_dbl_sbst::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps,
+  //                              MS_dbl_rngd::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps,
+  //                              MS_dbl_sbst::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts,
+  //                              MS_dbl_rngd::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts,
+  //                              MS_dbl_sbst::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::close_arcs",
+  //                              &MCFBlock::close_arcs,
+  //                              MS_rngd::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::close_arcs",
+  //                              &MCFBlock::close_arcs,
+  //                              MS_sbst::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::open_arcs", &MCFBlock::open_arcs,
+  //                              MS_rngd::args() );
+  //
+  // register_method< MCFBlock >( "MCFBlock::open_arcs", &MCFBlock::open_arcs,
+  //                              MS_sbst::args() );
 
-  register_method< MCFBlock >( "MCFBlock::chg_costs" , &MCFBlock::chg_costs ,
-			       MS_dbl_sbst::args() );
 
-  register_method< MCFBlock >( "MCFBlock::chg_ucaps" , &MCFBlock::chg_ucaps ,
-			       MS_dbl_rngd::args() );
+  register_method< MCFBlock, MF_dbl_it, Range >(
+   "MCFBlock::chg_costs", &MCFBlock::chg_costs );
 
-  register_method< MCFBlock >( "MCFBlock::chg_ucaps" , &MCFBlock::chg_ucaps ,
-			       MS_dbl_sbst::args() );
+  register_method< MCFBlock, MF_dbl_it, Subset &&, const bool >(
+   "MCFBlock::chg_costs", &MCFBlock::chg_costs );
 
-  register_method< MCFBlock >( "MCFBlock::chg_dfcts" , &MCFBlock::chg_dfcts ,
-			       MS_dbl_rngd::args() );
+  register_method< MCFBlock, MF_dbl_it, Range >(
+   "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock >( "MCFBlock::chg_dfcts" , &MCFBlock::chg_dfcts ,
-			       MS_dbl_sbst::args() );
+  register_method< MCFBlock, MF_dbl_it, Subset &&, const bool >(
+   "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock >( "MCFBlock::close_arcs" ,
-			       &MCFBlock::close_arcs ,
-			       MS_rngd::args() );
+  register_method< MCFBlock, MF_dbl_it, Range >(
+   "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts );
 
-  register_method< MCFBlock >( "MCFBlock::close_arcs" ,
-			       &MCFBlock::close_arcs ,
-			       MS_sbst::args() );
+  register_method< MCFBlock, MF_dbl_it, Subset &&, const bool >(
+   "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts );
 
-  register_method< MCFBlock >( "MCFBlock::open_arcs" , &MCFBlock::open_arcs ,
-			       MS_rngd::args() );
+  register_method< MCFBlock, Range >(
+   "MCFBlock::close_arcs", &MCFBlock::close_arcs );
 
-  register_method< MCFBlock >( "MCFBlock::open_arcs" , &MCFBlock::open_arcs ,
-			       MS_sbst::args() );
+  register_method< MCFBlock, Subset &&, const bool >(
+   "MCFBlock::close_arcs", &MCFBlock::close_arcs );
 
-  /* explicit versions
-  register_method< MCFBlock , MF_dbl_it , Range >(
-			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
+  register_method< MCFBlock, Range >(
+   "MCFBlock::open_arcs", &MCFBlock::open_arcs );
 
-  register_method< MCFBlock , MF_dbl_it , Subset && , const bool >(
-			       "MCFBlock::chg_costs" , &MCFBlock::chg_costs );
-  */
+  register_method< MCFBlock, Subset &&, const bool >(
+   "MCFBlock::open_arcs", &MCFBlock::open_arcs );
+
   }
 
 /*--------------------------------------------------------------------------*/
@@ -2428,11 +2457,11 @@ class MCFSolution : public Solution {
 
 /*---------------- CONSTRUCTING AND DESTRUCTING MCFSolution ----------------*/
 
- explicit MCFSolution() { }  /// constructor, it has nothing to do
+ explicit MCFSolution( void ) { }  /// constructor, it has nothing to do
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- void deserialize( netCDF::NcGroup & group ) override final;
+ void deserialize( const netCDF::NcGroup & group ) override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
