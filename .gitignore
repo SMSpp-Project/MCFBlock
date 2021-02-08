@@ -1,5 +1,5 @@
 ### Makefile-generated binaries
-test/test
+test/MCFBlock_test
 tools/dmx2nc4
 
 ### C/C++ template
