@@ -194,6 +194,10 @@ static void copyidx( std::vector<T> & vec , c_Subset & nms ,
 
 SMSpp_insert_in_factory_cpp_1( MCFBlock );
 
+// register MCFSolution to the Solution factory
+
+SMSpp_insert_in_factory_cpp_0( MCFSolution );
+
 /*--------------------------------------------------------------------------*/
 /*--------------------------- METHODS OF MCFBlock --------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -4056,8 +4060,11 @@ void MCFSolution::write( Block * const block )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFSolution::serialize( netCDF::NcGroup & group )
+void MCFSolution::serialize( netCDF::NcGroup & group ) const
 {
+ // always call the method of the base class first
+ Solution::serialize( group );
+
  std::vector<size_t> startp = { 0 };
 
  if( ! v_x.empty() ) {

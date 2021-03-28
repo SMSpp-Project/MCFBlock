@@ -28,11 +28,16 @@
 /*--------------------------------------------------------------------------*/
 
 #include "Block.h"
-#include "Solution.h"
+
 #include "LinearFunction.h"
-#include "FRowConstraint.h"
+
 #include "FRealObjective.h"
+
+#include "FRowConstraint.h"
+
 #include "OneVarConstraint.h"
+
+#include "Solution.h"
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------- NAMESPACE ------------------------------------*/
@@ -70,7 +75,7 @@ namespace SMSpp_di_unipi_it
 /*------------------------------- CLASSES ----------------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @defgroup MCFBlock_CLASSES Classes in MCFBlock.h
-Vec_MCFBlock *  @{ */
+ *  @{ */
 
 /*--------------------------------------------------------------------------*/
 /*-------------------------- CLASS MCFBlock --------------------------------*/
@@ -2496,7 +2501,7 @@ class MCFSolution : public Solution {
   *   dimension NumNodes. The variable is optional, if it is not specified
   *   then the MCFSolution object does not contain any node potentials. */
  
- void serialize( netCDF::NcGroup & group )  override final;
+ void serialize( netCDF::NcGroup & group ) const override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
@@ -2526,6 +2531,10 @@ class MCFSolution : public Solution {
  MCFBlock::Vec_FNumber v_x;   ///< the arc flows
 
  MCFBlock::Vec_CNumber v_pi;  ///< the node potentials
+
+/*--------------------------------------------------------------------------*/
+
+ SMSpp_insert_in_factory_h;
 
 /*--------------------------------------------------------------------------*/
 

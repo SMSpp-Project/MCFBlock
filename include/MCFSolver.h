@@ -236,7 +236,8 @@ public:
     throw( std::invalid_argument(
 		         "MCFSolver:set_Block: block must be a MCFBlock" ) );
 
-   if( ! MCFB->read_lock() )
+   bool owned = MCFB->is_owned_by( f_id );
+   if( ( ! owned ) && ( ! MCFB->read_lock() ) )
     throw( std::logic_error( "cannot acquire read_lock on MCFBlock" ) );
 
    // load the new MCFBlock into the :MCFClass object
@@ -247,16 +248,17 @@ public:
 		  MCFB->get_B().empty() ? nullptr : MCFB->get_B().data() ,
 		  MCFB->get_SN().data() , MCFB->get_EN().data() );
    // TODO: PreProcess() changes the internal data of the MCFSolver using
-   //       information about how the data of the MCF is *now*. If the
-   //       data changes, some of the deductions (say, reducing the capacity
+   //       information about how the data of the MCF is *now*. If the data
+   //       changes, some of the deductions (say, reducing the capacity but
    //       of some arcs) may no longer be correct and they should be undone,
-   //       but there isn't any proper way to handle this. Thus, PreProcess()
-   //       has to be disabled for now; maybe later on someone will take
-   //       care to make this work (or maybe not).
+   //       there isn't any proper way to handle this. Thus, PreProcess() has
+   //       to be disabled for now; maybe later on someone will take care to
+   //       make this work (or maybe not).
    // MCFC::PreProcess();
 
-   // once done, read_unlock the MCFBlock
-   MCFB->read_unlock();
+   // once done, read_unlock the MCFBlock (if it was read-lock()-ed)
+   if( ! owned )
+    MCFB->read_unlock();
 
    // TODO: maybe log it
    }
