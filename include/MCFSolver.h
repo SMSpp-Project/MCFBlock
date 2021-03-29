@@ -46,6 +46,8 @@ namespace SMSpp_di_unipi_it
 {
  using namespace MCFClass_di_unipi_it;
 
+ class MCFSolverState;  // forward declaration of MCFSolverState
+
 /*--------------------------------------------------------------------------*/
 /*------------------------------- CLASSES ----------------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -373,9 +375,9 @@ public:
   * the same format as MCFBlock::get_Solution() and
   * MCFBlock::map[forward/back]_Modification(), the Configuration *solc can
   * be used to "partly" save it. In particular, if solc != nullptr, it is
-  * a SimpleConfiguration<int>, and solc->f_value == 2, then *nothing is done*,
-  * since the Configuration is meant to say "only save/map the dual solution".
-  * In all other cases, the flow solution is saved. */
+  * a SimpleConfiguration<int>, and solc->f_value == 2, then *nothing is
+  * done*, since the Configuration is meant to say "only save/map the dual
+  * solution". In all other cases, the flow solution is saved. */
 
  void get_var_solution( Configuration *solc = nullptr ) override
  {
@@ -400,9 +402,9 @@ public:
   * keep the same format as MCFBlock::get_Solution() and
   * MCFBlock::map[forward/back]_Modification(), the Configuration *solc can
   * be used to "partly" save it. In particular, if solc != nullptr, it is
-  * a SimpleConfiguration<int>, and solc->f_value == 1, then *nothing is done*,
-  * since the Configuration is meant to say "only save/map the primal solution".
-  * In all other cases, the flow solution is saved. */
+  * a SimpleConfiguration<int>, and solc->f_value == 1, then *nothing is
+  * done*, since the Configuration is meant to say "only save/map the primal
+  * solution". In all other cases, the flow solution is saved. */
 
  void get_dual_solution( Configuration *solc = nullptr ) override
  {
@@ -623,6 +625,22 @@ public:
   }
 
 /**@} ----------------------------------------------------------------------*/
+/*------------ METHODS FOR HANDLING THE State OF THE MCFSolver -------------*/
+/*--------------------------------------------------------------------------*/
+/** @name Handling the State of the MCFSolver
+ *  @{ */
+
+ State * get_State( void ) const override;
+
+/*--------------------------------------------------------------------------*/
+
+ void put_State( const State & state ) override;
+
+/*--------------------------------------------------------------------------*/
+
+ void put_State( State && state ) override;
+
+/**@} ----------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Changing the data of the model
@@ -677,6 +695,12 @@ public:
    v_mod.push_back( mod );
   }
 
+/*--------------------------------------------------------------------------*/
+/*-------------------------------- FRIENDS ---------------------------------*/
+/*--------------------------------------------------------------------------*/
+
+ friend class MCFSolverState;  // make MCFSolverState friend
+
 /**@} ----------------------------------------------------------------------*/
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -719,9 +743,107 @@ protected:
 
  };  // end( class MCFSolver )
 
+/*--------------------------------------------------------------------------*/
+/*------------------------- CLASS MCFSolverState ---------------------------*/
+/*--------------------------------------------------------------------------*/
+/// class to describe the "internal state" of a MCFSolver
+/** Derived class from State to describe the "internal state" of a MCFSolver,
+ *  i.e., a MCFClass::MCFState (*). Since MCFClass::MCFState does not allow
+ *  serialization, all that part does not work.  */
+
+class MCFSolverState : public State {
+
+/*----------------------- PUBLIC PART OF THE CLASS -------------------------*/
+
+ public:
+
+/*------------- CONSTRUCTING AND DESTRUCTING MCFSolverState ----------------*/
+
+ /// constructor, doing everything
+ /** Constructor of MCFSolverState: takes a pointer to a MCFSolver and
+  * immediately copies its "internal state". */
+
+ template< class MCFC >
+ MCFSolverState( MCFSolver< MCFC > * mcfs ) : State() {
+  f_state = mcfs->MCFGetState();
+  }
+
+/*--------------------------------------------------------------------------*/
+ /// de-serialize a MCFSolverState out of netCDF::NcGroup
+ /** Should de-serialize a MCFSolverState out of netCDF::NcGroup, but in
+  * fact it does not work. */
+
+ void deserialize( const netCDF::NcGroup & group ) override {
+  f_state = nullptr;
+  }
+
+/*--------------------------------------------------------------------------*/
+ /// destructor
+
+ virtual ~MCFSolverState() { delete f_state; }
+
+/*---------- METHODS DESCRIBING THE BEHAVIOR OF A MCFSolverState -----------*/
+
+ /// serialize a MCFSolverState into a netCDF::NcGroup
+ /** The method should serialize the MCFSolverState into the provided
+  * netCDF::NcGroup, so that it can later be read back by deserialize(), but
+  * in fact it does not work.*/
+
+ void serialize( netCDF::NcGroup & group ) const override {}
+
+/*-------------------------------- FRIENDS ---------------------------------*/
+
+ template< class MCFC >
+ friend class MCFSolver;  // make MCFSolver friend
+
+/*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
+
+ protected:
+
+/*-------------------------- PROTECTED METHODS -----------------------------*/
+
+ void print( std::ostream &output ) const override {
+  output << "MCFSolverState [" << this << "]";
+  }
+
+/*--------------------------- PROTECTED FIELDS -----------------------------*/
+
+ MCFClass::MCFStatePtr f_state;   ///< the (pointer to) MCFState
+
+/*--------------------------------------------------------------------------*/
+
+ };  // end( class( MCFSolverState ) )
+
 /**@} end( group( MCFSolver_CLASSES ) ) */
 /*--------------------------------------------------------------------------*/
 /*------------------- inline methods implementation ------------------------*/
+/*--------------------------------------------------------------------------*/
+
+template< class MCFC >
+State * MCFSolver< MCFC >::get_State( void ) const {
+ return( new MCFSolverState( const_cast< MCFSolver< MCFC > * >( this ) ) );
+ }
+
+/*--------------------------------------------------------------------------*/
+
+template< class MCFC >
+void MCFSolver< MCFC >::put_State( const State & state ) {
+ // if state is not a const MCFSolverState &, exception will be thrown
+ auto s = dynamic_cast< const MCFSolverState & >( state );
+
+ this->MCFPutState( s.f_state );
+ }
+
+/*--------------------------------------------------------------------------*/
+
+template< class MCFC >
+void MCFSolver< MCFC >::put_State( State && state ) {
+ // if state is not a MCFSolverState &&, exception will be thrown
+ auto s = dynamic_cast< MCFSolverState && >( state );
+
+ this->MCFPutState( s.f_state );
+ }
+
 /*--------------------------------------------------------------------------*/
 
 template< class MCFC >
