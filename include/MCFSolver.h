@@ -759,13 +759,20 @@ class MCFSolverState : public State {
 
 /*------------- CONSTRUCTING AND DESTRUCTING MCFSolverState ----------------*/
 
- /// constructor, doing everything
- /** Constructor of MCFSolverState: takes a pointer to a MCFSolver and
-  * immediately copies its "internal state". */
+ /// constructor, doing everything or nothing.
+ /** Constructor of MCFSolverState. If provided with a pointer to a MCFSolver
+  * it immediately copies its "internal state", which is the only way in which
+  * the MCFSolverState can be initialised out of an existing MCFSolver. If
+  * nullptr is passed (as by default), then an "empty" MCFSolverState is
+  * constructed that can only be filled by calling deserialize().
+  *
+  * Note: to avoid having to duplicate the SMSpp_insert_in_factory_cpp call
+  *       for every MCFClass, the pointer is directly that of a MCFClass,
+  *       since every MCFSolver derives from a :MCFClass and we only need
+  *       access to MCFGetState(). */
 
- template< class MCFC >
- MCFSolverState( MCFSolver< MCFC > * mcfs ) : State() {
-  f_state = mcfs->MCFGetState();
+ MCFSolverState( MCFClass * mcfc = nullptr ) : State() {
+  f_state = mcfc ? mcfc->MCFGetState() : nullptr;
   }
 
 /*--------------------------------------------------------------------------*/
@@ -809,6 +816,14 @@ class MCFSolverState : public State {
 /*--------------------------- PROTECTED FIELDS -----------------------------*/
 
  MCFClass::MCFStatePtr f_state;   ///< the (pointer to) MCFState
+
+/*---------------------- PRIVATE PART OF THE CLASS -------------------------*/
+
+ private:
+
+/*---------------------------- PRIVATE FIELDS ------------------------------*/
+
+ SMSpp_insert_in_factory_h;
 
 /*--------------------------------------------------------------------------*/
 
