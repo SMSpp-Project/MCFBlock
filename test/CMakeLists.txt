@@ -29,6 +29,12 @@ else ()
     endif ()
 endif ()
 
+# Introduced in 3.19 to handle arbitrary characters in test names
+# See: https://cmake.org/cmake/help/latest/policy/CMP0110.html
+if (POLICY CMP0110)
+    cmake_policy(SET CMP0110 NEW)
+endif()
+
 # ----- MCFBlock_test ------------------------------------------------------- #
 add_executable(MCFBlock_test test.cpp)
 target_link_libraries(MCFBlock_test PRIVATE SMS++::MCFBlock)
