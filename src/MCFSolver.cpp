@@ -109,6 +109,12 @@ using namespace SMSpp_di_unipi_it;
 #endif
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+// register MCFSolverState to the State factory
+
+SMSpp_insert_in_factory_cpp_0( MCFSolverState );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 // the various static maps
 
 /*--------------------------------------------------------------------------*/

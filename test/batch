@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#/usr/bin/env bash
 
 what=data/N3-5-5-2-2.nc4
 #wchg=35
