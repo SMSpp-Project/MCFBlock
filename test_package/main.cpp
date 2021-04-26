@@ -55,7 +55,7 @@ int main( int argc , char **argv )
  }
 
  // load the MCFBlock from the file
- auto MCFB = Block::new_Block( "MCFBlock" );
+ auto MCFB = dynamic_cast<MCFBlock *>( Block::new_Block( "MCFBlock" ) );
  ProbFile >> *MCFB;
  ProbFile.close();
 
@@ -84,7 +84,7 @@ int main( int argc , char **argv )
  }
 
  // serialize the MCFBlock (in a netCDF BlockFile)
- MCFB->serialize( argv[ 3 ] , eBlockFile );
+ MCFB->Block::serialize( argv[ 3 ] , eBlockFile );
 
  // for better or for worse, delete the MCFBlock;
  delete MCFB;
@@ -93,10 +93,10 @@ int main( int argc , char **argv )
   return( 0 );
 
  // de-serialize the MCFBlock from the same file
- MCFB = Block::deserialize( argv[ 3 ] );
+ MCFB = dynamic_cast<MCFBlock *>(Block::deserialize( argv[ 3 ] ));
 
  // now re-serialize it on a different netCDF BlockFile
- MCFB->serialize( argv[ 4 ] , eBlockFile );
+ MCFB->Block::serialize( argv[ 4 ] , eBlockFile );
 
  // delete it for good
  delete MCFB;
@@ -108,4 +108,3 @@ int main( int argc , char **argv )
 /*--------------------------------------------------------------------------*/
 /*------------------------- End File main.cpp ------------------------------*/
 /*--------------------------------------------------------------------------*/
-

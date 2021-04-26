@@ -14,21 +14,7 @@
 #                             Universita' di Pisa                             #
 # --------------------------------------------------------------------------- #
 
-# Since we are using the block factory, objects from linked libraries
-# may wrongly appear unused, and by default the linker does not include them,
-# so we have to force the linking.
-if (BUILD_SHARED_LIBS)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        add_link_options("-Wl,--no-as-needed")
-    endif ()
-else ()
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-        add_link_options("-Wl,-all_load")
-    else ()
-        add_link_options("-Wl,--whole-archive,--allow-multiple-definition")
-    endif ()
-endif ()
-
+# ----- Policies ------------------------------------------------------------ #
 # Introduced in 3.19 to handle arbitrary characters in test names
 # See: https://cmake.org/cmake/help/latest/policy/CMP0110.html
 if (POLICY CMP0110)
@@ -43,7 +29,7 @@ target_link_libraries(MCFBlock_test PRIVATE SMS++::MCFBlock)
 # This method was preferred because it allows to keep track
 # of the single tests via the CTest application and also
 # avoids copying all the auxiliary files.
-set(what "data/N3-5-5-2-2.nc4")
+set(what "data/N3-0-0-0-0.nc4")
 foreach (mode 0 1 2 12 13 14 20 29 30)
     foreach (seed RANGE 0 19)
         add_test(NAME "MCFBlock_test/[${what},${seed},${mode}]"

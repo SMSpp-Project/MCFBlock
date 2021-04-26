@@ -44,7 +44,7 @@ include(CTest)
 # This will set an user-settable cache variable.
 # The value of the variable is propagated to consuming libraries via the
 # *Config.cmake file.
-set(${modName}_SOLVER "cplex" CACHE STRING "Solver used by ${modName}.")
+set(${modName}_SOLVER "relax" CACHE STRING "Solver used by ${modName}.")
 set_property(CACHE ${modName}_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
 
 if (${modName}_SOLVER STREQUAL "relax")
