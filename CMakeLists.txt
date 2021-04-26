@@ -62,8 +62,12 @@ elseif (${modName}_SOLVER STREQUAL "sptree")
 endif ()
 
 # ----- Requirements -------------------------------------------------------- #
-find_package(SMSpp REQUIRED)
-find_package(MCFClass REQUIRED)
+# If it's not being called by the umbrella, we need to
+# look for the system-installed libraries.
+if (NOT hasParent)
+    find_package(SMSpp REQUIRED)
+    find_package(MCFClass REQUIRED)
+endif()
 
 if (${modName}_SOLVER STREQUAL "cplex" AND NOT MCFClass_USE_CPLEX)
     message(FATAL_ERROR "${modName} solver is \"CPLEX\" but MCFCplex was not built")
@@ -195,16 +199,17 @@ if (CMAKE_EXPORT_PACKAGE_REGISTRY)
            FILE ${CMAKE_CURRENT_BINARY_DIR}/${modTargets}.cmake
            NAMESPACE ${modNamespace}::)
 
-    # Add the binary directory to RPATH, so executables that use
-    # dynamic loading will look into it.
-    if (hasParent)
-        set(SMSPP_BUILD_RPATH
-            "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}"
-            PARENT_SCOPE)
-    endif ()
-
     # Export the package in user's package registry
     export(PACKAGE ${modName})
+endif()
+
+# ----- Add the build tree to RPATH------------------------------------------ #
+# Add the binary directory to RPATH, so executables that use
+# dynamic loading will look into it.
+if (hasParent)
+    set(SMSPP_BUILD_RPATH
+        "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}"
+        PARENT_SCOPE)
 endif ()
 
 # ----- Packaging support --------------------------------------------------- #
