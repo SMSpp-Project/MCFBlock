@@ -782,12 +782,9 @@ void MCFBlock::generate_objective( Configuration *objc )
 
 bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
 {
- if( useabstract ) {
-  // do it using the abstract representation- - - - - - - - - - - - - - - - -
+ if( useabstract &&  ( AR & HasFlw ) ) {
+  // do it using the abstract representation, if possible - - - - - - - - - -
 
-  if( ! ( AR & HasFlw ) )
-   throw( std::logic_error( "Constraint required for flow_feasible( , true )"
-			    ) );
   // static part
   for( const auto & cnst : E )
    if( cnst.rel_viol() > feps )
@@ -838,12 +835,8 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
 
 bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
 {
- if( useabstract ) {
-  // do it using the abstract representation- - - - - - - - - - - - - - - - -
-
-  if( ( ! ( AR & ( HasFlw | HasVar ) ) ) )
-   throw( std::logic_error(
-	 "abstract representation not there in bound_feasible( , true )" ) );
+ if( useabstract && ( AR & ( HasFlw | HasVar ) ) ) {
+  // do it using the abstract representation, if possible - - - - - - - - - -
 
   // static part
   if( HasStaticX() ) {
