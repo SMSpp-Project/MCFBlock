@@ -786,14 +786,22 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
   // do it using the abstract representation, if possible - - - - - - - - - -
 
   // static part
-  for( const auto & cnst : E )
+  for( auto & cnst : E ) {
+   if( auto ret = cnst.compute() ;
+       ( ret <= FRowConstraint::kUnEval ) || ( ret > FRowConstraint::kOK ) )
+    return( false );    
    if( cnst.rel_viol() > feps )
     return( false );
+   }
 
   // dynamic part
-  for( const auto & cnst : dE )
+  for( auto & cnst : dE ) {
+   if( auto ret = cnst.compute() ;
+       ( ret <= FRowConstraint::kUnEval ) || ( ret > FRowConstraint::kOK ) )
+    return( false );    
    if( cnst.rel_viol() > feps )
     return( false );
+   }
   }
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
