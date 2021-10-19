@@ -46,7 +46,7 @@ libMCFClDIR = $(MCFBkSDR)../MCFClass/
 include $(libMCFClDIR)lib/makefile-inc
 
 # include the makefile requiring all external modules in input
-include $(MCFBkSDR)/makefile
+include $(MCFBkSDR)makefile
 
 # macroes to be exported- - - - - - - - - - - - - - - - - - - - - - - - - - -
 

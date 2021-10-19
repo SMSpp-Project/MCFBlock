@@ -44,7 +44,7 @@
 
 MCFBkOBJ = $(MCFBkSDR)obj/MCFBlock.o $(MCFBkSDR)obj/MCFSolver.o
 
-MCFBkINC = -I$(MCFBkSDR)/include
+MCFBkINC = -I$(MCFBkSDR)include
 
 MCFBkH   = $(MCFBkSDR)include/MCFBlock.h $(MCFBkSDR)include/MCFSolver.h
 
