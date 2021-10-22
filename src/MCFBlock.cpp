@@ -4118,7 +4118,7 @@ void MCFSolution::sum( const Solution * solution , double multiplier )
    throw( std::invalid_argument( "incompatible flow size" ) );
 
   for( MCFBlock::Index i = 0 ; i < v_x.size() ; ++i )
-   v_x[ i ] = MCFS->v_x[ i ] * multiplier;
+   v_x[ i ] += MCFS->v_x[ i ] * multiplier;
   }
 
  if( ! v_pi.empty() ) {
@@ -4126,7 +4126,7 @@ void MCFSolution::sum( const Solution * solution , double multiplier )
    throw( std::invalid_argument( "incompatible potential size" ) );
 
   for( MCFBlock::Index i = 0 ; i < v_pi.size() ; ++i )
-   v_pi[ i ] = MCFS->v_pi[ i ] * multiplier;
+   v_pi[ i ] += MCFS->v_pi[ i ] * multiplier;
   }
  }  // end( MCFSolution::sum )
 
