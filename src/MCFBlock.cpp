@@ -4,10 +4,6 @@
 /** @file
  * Implementation of the MCFBlock class.
  *
- * \version 1.30
- *
- * \date 15 - 07 - 2020
- *
  * \author Antonio Frangioni \n
  *         Operations Research Group \n
  *         Dipartimento di Informatica \n
@@ -2165,7 +2161,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 					      MCFBlockMod::eChgCost , rng ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2177,7 +2173,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
-			  const bool ordered  ,
+			  bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( nms.empty() )  // nothing to change
@@ -2258,7 +2254,7 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
    C[ arc ] = NCost;
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 			   MCFBlockMod::eChgCost , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2332,7 +2328,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 				              MCFBlockMod::eChgCaps , rng ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2344,7 +2340,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
-			  const bool ordered  ,
+			  bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( U.empty() ) {
@@ -2450,7 +2446,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
   if( ! ordered )
    std::sort( nms.begin() , nms.end() );
 
-  auto mod = std::make_shared<MCFBlockSbstMod>( this ,
+  auto mod = std::make_shared< MCFBlockSbstMod >( this ,
                                   MCFBlockMod::eChgCaps , std::move( nms ) );
 
   Block::add_Modification( mod , Observer::par2chnl( issueMod ) );
@@ -2497,7 +2493,7 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 			   MCFBlockMod::eChgCaps , Range( arc , arc + 1 )  ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2564,7 +2560,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 				              MCFBlockMod::eChgDfct , rng ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2576,7 +2572,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
-			  const bool ordered ,
+			  bool ordered ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( B.empty() ) {
@@ -2675,7 +2671,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
   if( ! ordered )
    std::sort( nms.begin() , nms.end() );
 
-  Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockSbstMod >( this ,
                                  MCFBlockMod::eChgDfct , std::move( nms ) ) ,
 			   Observer::par2chnl( issueMod ) );
   }
@@ -2714,7 +2710,7 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
   }
  
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 			   MCFBlockMod::eChgDfct , Range( nde , nde + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2780,7 +2776,7 @@ void MCFBlock::close_arcs( Range rng ,
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 				             MCFBlockMod::eCloseArc , rng ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2791,7 +2787,7 @@ void MCFBlock::close_arcs( Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::close_arcs( Subset && nms , const bool ordered  ,
+void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
 			   c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( nms.empty() )
@@ -2859,7 +2855,7 @@ void MCFBlock::close_arcs( Subset && nms , const bool ordered  ,
  f_cond_lower = NAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockSbstMod >( this ,
                                  MCFBlockMod::eCloseArc , std::move( nms ) ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2897,7 +2893,7 @@ void MCFBlock::close_arc( c_Index arc ,
  f_cond_lower = NAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 			   MCFBlockMod::eCloseArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2959,7 +2955,7 @@ void MCFBlock::open_arcs( Range rng ,
  // TODO: if some changes are "fake", restrict the range
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 				             MCFBlockMod::eOpenArc , rng ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -2970,7 +2966,7 @@ void MCFBlock::open_arcs( Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::open_arcs( Subset && nms , const bool ordered  ,
+void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
 			  c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( nms.empty() )
@@ -3036,7 +3032,7 @@ void MCFBlock::open_arcs( Subset && nms , const bool ordered  ,
  // TODO: eliminate from nms the "fake" changes
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockSbstMod >( this ,
                                   MCFBlockMod::eOpenArc , std::move( nms ) ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -3072,7 +3068,7 @@ void MCFBlock::open_arc( c_Index arc ,
  f_cond_lower = NAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 			   MCFBlockMod::eOpenArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -3202,7 +3198,7 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
  f_cond_lower = NAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 			    MCFBlockMod::eAddArc , Range( arc , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -3215,8 +3211,8 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
-		                         c_ModParam issueAMod )
+void MCFBlock::remove_arc( c_Index arc ,
+			   c_ModParam issueMod , c_ModParam issueAMod )
 {
  if( ( arc < get_NStaticArcs() ) || ( arc >= get_NArcs() ) )
   throw( std::invalid_argument( "invalid arc name" ) );
@@ -3331,7 +3327,7 @@ void MCFBlock::remove_arc( c_Index arc , c_ModParam issueMod ,
  f_cond_lower = NAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockRngdMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockRngdMod >( this ,
 				     MCFBlockMod::eRmvArc ,
 				     Range( arc - rmvdarcs + 1 , arc + 1 ) ) ,
 			   Observer::par2chnl( issueMod ) );

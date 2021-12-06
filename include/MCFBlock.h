@@ -1558,7 +1558,7 @@ public:
   * the "physical" one is a MCFBlockSbstMod). */
 
  void chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
-		 const bool ordered = false , c_ModParam issueMod = eNoBlck ,
+		 bool ordered = false , c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -1620,7 +1620,7 @@ public:
   * the "physical" one is a MCFBlockSbstMod). */
 
  void chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
-		 const bool ordered = false ,
+		 bool ordered = false ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1680,7 +1680,7 @@ public:
   * the "physical" one is a MCFBlockSbstMod). */
 
  void chg_dfcts( c_Vec_FNumber_it NDfct , Subset && nms ,
-		 const bool ordered = false ,
+		 bool ordered = false ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -1739,7 +1739,7 @@ public:
   * See close_arcs( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void close_arcs( Subset && nms , const bool ordered = false ,
+ void close_arcs( Subset && nms , bool ordered = false ,
 		  c_ModParam issueMod = eNoBlck ,
 		  c_ModParam issueAMod = eNoBlck );
 
@@ -1801,7 +1801,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void open_arcs( Subset && nms , const bool ordered = false ,
+ void open_arcs( Subset && nms , bool ordered = false ,
 		 c_ModParam issueMod = eNoBlck ,
 		 c_ModParam issueAMod = eNoBlck );
 
@@ -2100,31 +2100,31 @@ public:
   register_method< MCFBlock, MF_dbl_it, Range >(
    "MCFBlock::chg_costs", &MCFBlock::chg_costs );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, const bool >(
+  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
    "MCFBlock::chg_costs", &MCFBlock::chg_costs );
 
   register_method< MCFBlock, MF_dbl_it, Range >(
    "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, const bool >(
+  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
    "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps );
 
   register_method< MCFBlock, MF_dbl_it, Range >(
    "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, const bool >(
+  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
    "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts );
 
   register_method< MCFBlock, Range >(
    "MCFBlock::close_arcs", &MCFBlock::close_arcs );
 
-  register_method< MCFBlock, Subset &&, const bool >(
+  register_method< MCFBlock, Subset &&, bool >(
    "MCFBlock::close_arcs", &MCFBlock::close_arcs );
 
   register_method< MCFBlock, Range >(
    "MCFBlock::open_arcs", &MCFBlock::open_arcs );
 
-  register_method< MCFBlock, Subset &&, const bool >(
+  register_method< MCFBlock, Subset &&, bool >(
    "MCFBlock::open_arcs", &MCFBlock::open_arcs );
 
   }
