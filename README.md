@@ -36,7 +36,7 @@ make
 ```
 
 The library has the same configuration options of
-[SMS++](https://gitlab.com/smspp/smspp/wikis/custom).
+[SMS++](https://gitlab.com/smspp/smspp-project/-/wikis/Customize-the-configuration).
 Moreover, you can choose the solver with the variable `MCFBlock_SOLVER`.
 Available values are:
 

@@ -85,28 +85,34 @@ using namespace SMSpp_di_unipi_it;
 // register the various MCFSolver< * > to the Solver factory
 
 #ifdef HAVE_CSCL2
- SMSpp_insert_in_factory_cpp_0_t( MCFSolver<CS2> );
+ SMSpp_insert_in_factory_cpp_0_t( MCFSolver< CS2 > );
 #endif
 
 #ifdef HAVE_CPLEX
- SMSpp_insert_in_factory_cpp_0_t( MCFSolver<MCFCplex> );
+ SMSpp_insert_in_factory_cpp_0_t( MCFSolver< MCFCplex > );
 #endif
 
 #ifdef HAVE_MFSMX
- SMSpp_insert_in_factory_cpp_0_t( MCFSolver<MCFSimplex> );
+ SMSpp_insert_in_factory_cpp_0_t( MCFSolver< MCFSimplex > );
 #endif
 
 #ifdef HAVE_MFZIB
- SMSpp_insert_in_factory_cpp_0_t( MCFSolver<MCFZIB> );
+ SMSpp_insert_in_factory_cpp_0_t( MCFSolver< MCFZIB > );
 #endif
 
 #ifdef HAVE_RELAX
- SMSpp_insert_in_factory_cpp_0_t( MCFSolver<RelaxIV> );
+ SMSpp_insert_in_factory_cpp_0_t( MCFSolver< RelaxIV > );
 #endif
 
 #ifdef HAVE_SPTRE
- SMSpp_insert_in_factory_cpp_0_t( MCFSolver<SPTree> );
+ SMSpp_insert_in_factory_cpp_0_t( MCFSolver< SPTree > );
 #endif
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+// register MCFSolverState to the State factory
+
+SMSpp_insert_in_factory_cpp_0( MCFSolverState );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 // the various static maps

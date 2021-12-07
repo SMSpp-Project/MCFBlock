@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2021-12-07
+
+Minor point release to avoid the master branch to become too stale:
+
+- changed useabstract to hint from order
+
+- fixed flaw in flow_feasible()
+
+- fixed an issue in MCFSolution + minor changes
+
 ## [0.4.0] - 2021-02-05
 
 ### Added 
@@ -56,7 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.0...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.1...develop
+[0.4.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.0...0.4.1
 [0.4.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.3.1...0.4.0
 [0.3.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.3.0...0.3.1
 [0.3.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.2.0...0.3.0

@@ -21,12 +21,14 @@ include(CMakeFindDependencyMacro)
 set(MCFBlock_SOLVER "@MCFBlock_SOLVER@")
 
 # ----- Requirements -------------------------------------------------------- #
-find_dependency(SMSpp)
+find_dependency(SMS++)
 find_dependency(MCFClass)
 
 # ----- Import target ------------------------------------------------------- #
 if (NOT TARGET @modNamespace@::@modName@)
     include("${@modName@_CMAKE_DIR}/@modName@Targets.cmake")
-endif()
+endif ()
 
 set(@modName@_LIBRARIES @modNamespace@::@modName@)
+
+# --------------------------------------------------------------------------- #
