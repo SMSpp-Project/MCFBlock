@@ -1551,7 +1551,7 @@ public:
   * *( NCost + i ) becomes the new cost of arc nms[ i ] for all 0 <= i <
   * NCost.size(), (which means that nms.size() == NCost.size()). The
   * parameter ordered tells if the nms vector is ordered for increasing
-  * index of the arc. As the the && tells, nms is "consumed" by the method,
+  * index of the arc. As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * See chg_costs( range ) for Modification issued (except that, of course,
@@ -1609,7 +1609,7 @@ public:
   * *( NCap + i ) becomes the new capacity of arc nms[ i ] for all 0 <= i <
   * NCap.size() (which means that nms.size() == NCap.size()). The parameter
   * ordered tells if the nms vector is ordered for increasing index of the
-  * arc. As the the && tells, nms is "consumed" by the method, typically
+  * arc. As the && tells, nms is "consumed" by the method, typically
   * being shipped to an appropriate MCFBlockSbstMod object.
   *
   * Note that, according to the Configuration of the static Constraint, the
@@ -1673,7 +1673,7 @@ public:
   * parameter ordered tells if the nms vector is ordered for increasing index
   * of the node. Note that "node names" here go from 0 to get_NNodes() - 1,
   * despite the fact that get_SN() and get_EN() report node "names" between
-  * 1 and get_NNodes(). As the the && tells, nms is "consumed" by the method,
+  * 1 and get_NNodes(). As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * See chg_dfcts( range ) for Modification issued (except that, of course,
@@ -1733,7 +1733,7 @@ public:
   * nothing.
   *
   * The parameter ordered tells if the nms vector is ordered for increasing 
-  * index of the arc. As the the && tells, nms is "consumed" by the method,
+  * index of the arc. As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * See close_arcs( range ) for Modification issued (except that, of course,
@@ -1785,7 +1785,7 @@ public:
   * (which is what all arcs are when the problem is created) does nothing.
   *
   * The parameter ordered tells if the nms vector is ordered for increasing 
-  * index of the arc. As the the && tells, nms is "consumed" by the method,
+  * index of the arc. As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * Note that closing multiple arcs can issue as many Modification as there
