@@ -11,12 +11,7 @@
  * template over the underlying :MCFClass object, which implies that most of
  * the code is in the header file.
  *
- * \version 1.12
- *
- * \date 27 - 02 - 2020
- *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
@@ -155,7 +150,7 @@ public:
 
 // typedef double OFValue;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*----------------- CONSTRUCTING AND DESTRUCTING MCFSolver -----------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Constructing and destructing MCFSolver
@@ -175,7 +170,7 @@ public:
 
  virtual ~MCFSolver() { }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------------------- OTHER INITIALIZATIONS -------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Other initializations
@@ -274,19 +269,19 @@ public:
 
 /*--------------------------------------------------------------------------*/
 
- void set_par( const idx_type par , const int value ) override {
+ void set_par( idx_type par , int value ) override {
   if( Solver_2_MCFClass_int[ par ] >= 0 )
    this->MCFC::SetPar( Solver_2_MCFClass_int[ par ] , value );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- void set_par( const idx_type par , const double value ) override {
+ void set_par( idx_type par , double value ) override {
   if( Solver_2_MCFClass_dbl[ par ] >= 0 )
    this->MCFC::SetPar( Solver_2_MCFClass_dbl[ par ] , value );
   }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*--------------------- METHODS FOR SOLVING THE Block ----------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Solving the MCF encoded by the current MCFBlock
@@ -325,7 +320,7 @@ public:
   return( MCFstatus_2_sol_type[ this->MCFC::MCFGetStatus() + 1 ] );
   }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*---------------------- METHODS FOR READING RESULTS -----------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Accessing the found solutions (if any)
@@ -379,7 +374,7 @@ public:
   * done*, since the Configuration is meant to say "only save/map the dual
   * solution". In all other cases, the flow solution is saved. */
 
- void get_var_solution( Configuration *solc = nullptr ) override
+ void get_var_solution( Configuration * solc = nullptr ) override
  {
   if( ! f_Block )  // no [MCF]Block to write to
    return;         // cowardly and silently return
@@ -406,7 +401,7 @@ public:
   * done*, since the Configuration is meant to say "only save/map the primal
   * solution". In all other cases, the flow solution is saved. */
 
- void get_dual_solution( Configuration *solc = nullptr ) override
+ void get_dual_solution( Configuration * solc = nullptr ) override
  {
   if( ! f_Block )  // no [MCF]Block to write to
    return;         // cowardly and silently return
@@ -459,7 +454,7 @@ public:
   *
   * Or, rather, THIS SHOULD BE DONE, BUT THE METHOD IS NOT IMPLEMENTED yet. */
 
- void get_var_direction( Configuration *dirc = nullptr ) override
+ void get_var_direction( Configuration * dirc = nullptr ) override
  {
   auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( dirc );
   if( tsolc && ( tsolc->f_value == 2 ) )
@@ -487,7 +482,7 @@ public:
   *
   * Or, rather, THIS SHOULD BE DONE, BUT THE METHOD IS NOT IMPLEMENTED yet. */
 
- void get_dual_direction( Configuration *dirc = nullptr ) override
+ void get_dual_direction( Configuration * dirc = nullptr ) override
  {
   auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( dirc );
   if( tsolc && ( tsolc->f_value == 1 ) )
@@ -506,7 +501,7 @@ public:
 
  virtual bool new_dual_direction( void ) override{ return( false ); }
 */
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------- METHODS FOR READING THE DATA OF THE Solver ----------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -624,7 +619,7 @@ public:
   return( CDASolver::dbl_par_idx2str( idx ) );
   }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------ METHODS FOR HANDLING THE State OF THE MCFSolver -------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Handling the State of the MCFSolver
@@ -640,7 +635,7 @@ public:
 
  void put_State( State && state ) override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Changing the data of the model
@@ -701,7 +696,7 @@ public:
 
  friend class MCFSolverState;  // make MCFSolverState friend
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -829,7 +824,7 @@ class MCFSolverState : public State {
 
  };  // end( class( MCFSolverState ) )
 
-/**@} end( group( MCFSolver_CLASSES ) ) */
+/** @} end( group( MCFSolver_CLASSES ) ) */
 /*--------------------------------------------------------------------------*/
 /*------------------- inline methods implementation ------------------------*/
 /*--------------------------------------------------------------------------*/

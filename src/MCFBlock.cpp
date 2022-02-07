@@ -760,7 +760,6 @@ void MCFBlock::generate_objective( Configuration *objc )
  // ensure no Modification is issued: this may happen in case a MCFBlock
  // is re-loaded, so that set_objective( c ) had already been called
  c.set_function( new LinearFunction( std::move( p ) , 0 ) , eNoMod );
- c.set_Block( this );
 
  set_objective( & c , eNoMod );
 

@@ -4,12 +4,7 @@
 /** @file
  * Implementation of the MCFSolver class.
  *
- * \version 1.00
- *
- * \date 15 - 05 - 2019
- *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
@@ -18,9 +13,7 @@
 /*--------------------------------------------------------------------------*/
 /*---------------------------- IMPLEMENTATION ------------------------------*/
 /*--------------------------------------------------------------------------*/
-
-/*--------------------------------------------------------------------------*/
-/*------------------------------ DEFINES -----------------------------------*/
+/*------------------------------- MACROS -----------------------------------*/
 /*--------------------------------------------------------------------------*/
 /* If any of the following macros is defined, then the corresponding
  * :MCFClass solver is included and the corresponding version of
@@ -41,7 +34,6 @@
  * - HAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
  *                   most MCF instances, except those with SPT structure.
  */
-
 /*--------------------------------------------------------------------------*/
 /*------------------------------ INCLUDES ----------------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -224,15 +216,15 @@ Solver::idx_type MCFSolver<MCFSimplex>::int_par_str2idx(
  return( CDASolver::dbl_par_str2idx( name ) );
  }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
-/*
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 template<>
 Solver::idx_type MCFSolver<MCFSimplex>::dbl_par_str2idx(
 					    const std::string & name ) const
 {
  }
- */
-/*--------------------------------------------------------------------------*/
+
+----------------------------------------------------------------------------*/
 
 template<>
 const std::string & MCFSolver<MCFSimplex>::int_par_idx2str(
@@ -246,8 +238,8 @@ const std::string & MCFSolver<MCFSimplex>::int_par_idx2str(
 	                       : CDASolver::int_par_idx2str( idx ) );
  }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
-/*
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 template<>
 const std::string & MCFSolver<MCFSimplex>::dbl_par_idx2str(
 						   const idx_type idx ) const
@@ -306,14 +298,14 @@ Solver::idx_type MCFSolver<RelaxIV>::get_num_int_par( void ) const
  return( CDASolver::get_num_int_par() + 2 );
  }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
-/*
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 template<>
 Solver::idx_type MCFSolver<RelaxIV>::get_num_dbl_par( void ) const
 {
  }
- */
-/*--------------------------------------------------------------------------*/
+
+----------------------------------------------------------------------------*/
 
 template<>
 int MCFSolver<RelaxIV>::get_dflt_int_par( const idx_type par ) const
@@ -325,14 +317,14 @@ int MCFSolver<RelaxIV>::get_dflt_int_par( const idx_type par ) const
 	                       : CDASolver::get_dflt_int_par( par ) );
  }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
-/*
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 template<>
 double MCFSolver<RelaxIV>::get_dflt_dbl_par( const idx_type par ) const
 {
  }
- */
-/*--------------------------------------------------------------------------*/
+
+----------------------------------------------------------------------------*/
 
 template<>
 Solver::idx_type MCFSolver<RelaxIV>::int_par_str2idx(
@@ -346,15 +338,15 @@ Solver::idx_type MCFSolver<RelaxIV>::int_par_str2idx(
  return( CDASolver::dbl_par_str2idx( name ) );
  }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
-/*
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 template<>
 Solver::idx_type MCFSolver<RelaxIV>::dbl_par_str2idx(
 					    const std::string & name ) const
 {
  }
- */
-/*--------------------------------------------------------------------------*/
+
+----------------------------------------------------------------------------*/
 
 template<>
 const std::string & MCFSolver<RelaxIV>::int_par_idx2str(
@@ -367,8 +359,8 @@ const std::string & MCFSolver<RelaxIV>::int_par_idx2str(
 	                       : CDASolver::int_par_idx2str( idx ) );
  }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
-/*
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 template<>
 const std::string & MCFSolver<RelaxIV>::dbl_par_idx2str(
 						   const idx_type idx ) const
@@ -420,13 +412,12 @@ Solver::idx_type MCFSolver< MCFCplex >::get_num_int_par() const {
  return ( CDASolver::get_num_int_par() + 2 );
 }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// template<>
-// Solver::idx_type MCFSolver< MCFCplex >::get_num_dbl_par() const {
-// }
+ template<> Solver::idx_type MCFSolver< MCFCplex >::get_num_dbl_par() const {
+  }
 
-/*--------------------------------------------------------------------------*/
+----------------------------------------------------------------------------*/
 
 template<>
 int MCFSolver< MCFCplex >::get_dflt_int_par( const idx_type par ) const {
@@ -438,13 +429,13 @@ int MCFSolver< MCFCplex >::get_dflt_int_par( const idx_type par ) const {
           CDASolver::get_dflt_int_par( par ) );
 }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// template<>
-// double MCFSolver< MCFCplex >::get_dflt_dbl_par( const idx_type par ) const {
-// }
+ template<>
+ double MCFSolver< MCFCplex >::get_dflt_dbl_par( const idx_type par ) const {
+  }
 
-/*--------------------------------------------------------------------------*/
+----------------------------------------------------------------------------*/
 
 template<>
 Solver::idx_type MCFSolver< MCFCplex >::int_par_str2idx(
@@ -457,14 +448,13 @@ Solver::idx_type MCFSolver< MCFCplex >::int_par_str2idx(
  return ( CDASolver::dbl_par_str2idx( name ) );
 }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// template<>
-// Solver::idx_type
-// MCFSolver< MCFCplex >::dbl_par_str2idx( const std::string & name ) const {
-// }
+ template<>
+ Solver::idx_type MCFSolver< MCFCplex >::dbl_par_str2idx(
+  const std::string & name ) const { }
 
-/*--------------------------------------------------------------------------*/
+----------------------------------------------------------------------------*/
 
 template<>
 const std::string & MCFSolver< MCFCplex >::int_par_idx2str(
@@ -477,12 +467,13 @@ const std::string & MCFSolver< MCFCplex >::int_par_idx2str(
           CDASolver::int_par_idx2str( idx ) );
 }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// template<>
-// const std::string &
-// MCFSolver< MCFCplex >::dbl_par_idx2str( const idx_type idx ) const {
-// }
+ template<>
+ const std::string &
+ MCFSolver< MCFCplex >::dbl_par_idx2str( const idx_type idx ) const {
+  }
+*/
 
 #endif
 

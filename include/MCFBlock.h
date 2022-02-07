@@ -5,12 +5,7 @@
  * Header file for the *concrete* class MCFBlock, which implements the Block
  * concept [see Block.h] for (linear) Min-Cost Flow problems.
  *
- * \version 1.30
- *
- * \date 27 - 09 - 2019
- *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
@@ -251,7 +246,7 @@ public:
  typedef std::vector<FONumber> Vec_FONumber;   ///< a vector of FONumber
  typedef const Vec_FONumber c_Vec_FONumber;    ///< a const vector of FONumber
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------------------------- FRIENDS ----------------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -280,7 +275,7 @@ public:
 
  virtual ~MCFBlock() { guts_of_destructor(); }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------------------- OTHER INITIALIZATIONS -------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Other initializations
@@ -570,7 +565,7 @@ public:
 
  void generate_objective( Configuration *objc = nullptr ) override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------- Methods for reading the data of the MCFBlock --------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for reading the data of the MCFBlock
@@ -637,68 +632,68 @@ public:
 /*--------------------------------------------------------------------------*/
  /// get the number of nodes
 
- inline Index get_NNodes( void ) const { return( NNodes ); }
+ Index get_NNodes( void ) const { return( NNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of arcs
 
- inline Index get_NArcs( void ) const { return( NArcs ); }
+ Index get_NArcs( void ) const { return( NArcs ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the maximum number of nodes
 
- inline Index get_MaxNNodes( void ) const { return( MaxNNodes ); }
+ Index get_MaxNNodes( void ) const { return( MaxNNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the maximum number of arcs
 
- inline Index get_MaxNArcs( void ) const { return( SN.size() ); }
+ Index get_MaxNArcs( void ) const { return( SN.size() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static nodes
 
- inline Index get_NStaticNodes( void ) const { return( NStaticNodes ); }
+ Index get_NStaticNodes( void ) const { return( NStaticNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static arcs
 
- inline Index get_NStaticArcs( void ) const { return( NStaticArcs ); }
+ Index get_NStaticArcs( void ) const { return( NStaticArcs ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are static nodes (= possibly flow constraints)
 
- inline bool HasStaticE( void ) const { return( get_NStaticNodes() ); }
+ bool HasStaticE( void ) const { return( get_NStaticNodes() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are dynamic nodes (= possibly flow constraints)
 
- inline bool HasDynamicE( void ) const {
+ bool HasDynamicE( void ) const {
   return( get_NNodes() > get_NStaticNodes() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there may ever be dynamic nodes (= flow constraints)
 
- inline bool MayHaveDynE( void ) const {
+ bool MayHaveDynE( void ) const {
   return( get_MaxNNodes() > get_NStaticNodes() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are static arcs (= flow variables if constructed)
 
- inline bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
+ bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are dynamic arcs (= flow variables if constructed)
 
- inline bool HasDynamicX( void ) const {
+ bool HasDynamicX( void ) const {
   return( get_NArcs() > get_NStaticArcs() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there may ever be dynamic arcs  (= flow variables)
 
- inline bool MayHaveDynX( void ) const {
+  bool MayHaveDynX( void ) const {
   return( get_MaxNArcs() > get_NStaticArcs() );
   }
 
@@ -709,7 +704,7 @@ public:
   * index of the corresponding arc. Throws exception if the pointer is not to
   * a [Col]Variable of the MCFBlock. */
 
- inline Index p2i_x( Variable * const var ) const
+ Index p2i_x( const Variable * var ) const
  {
   auto i = p2i_x_s( var );
   if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
@@ -717,7 +712,7 @@ public:
 
   i = get_NStaticArcs();
   for( auto dxi = dx.begin() ; dxi != dx.end() ; ++i , ++dxi )
-   if( &(*dxi) == static_cast< ColVariable * >( var ) )
+   if( &(*dxi) == static_cast< const ColVariable * >( var ) )
     return( i );
 
   throw( std::invalid_argument( "invalid arc pointer" ) );
@@ -730,13 +725,13 @@ public:
   * variable (a ColVariable *). This ASSUMES THE Variable ARE CONSTRUCTED IN
   * THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE. */
 
- inline ColVariable * i2p_x( c_Index i ) const
+ ColVariable * i2p_x( Index i ) const
  {
   if( i >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
   if( i < get_NStaticArcs() )
-   return( const_cast< ColVariable * >( &x[ i ] ) );
+   return( const_cast< ColVariable * >( & x[ i ] ) );
   else
    return( const_cast< ColVariable * >(
 		   &( *std::next( dx.begin() , i - get_NStaticArcs() ) ) ) );
@@ -749,7 +744,7 @@ public:
   * index of the corresponding arc. Throws exception if the pointer is not to
   * a [LB0]Constraint of the MCFBlock. */
 
- inline Index p2i_ub( Constraint * const cns ) const
+ Index p2i_ub( const Constraint * cns ) const
  {
   auto i = p2i_ub_s( cns );
   if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
@@ -757,7 +752,7 @@ public:
 
   i = get_NStaticArcs();
   for( auto dubi = dUB.begin() ; dubi != dUB.end() ; ++i , ++dubi )
-   if( &(*dubi) == static_cast< LB0Constraint * >( cns ) )
+   if( &(*dubi) == static_cast< const LB0Constraint * >( cns ) )
     return( i );
 
   throw( std::invalid_argument( "invalid ub constraint pointer" ) );
@@ -771,13 +766,13 @@ public:
   * CONSTRUCTED IN THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE.
   */
 
- inline LB0Constraint * i2p_ub( c_Index i ) const
+ LB0Constraint * i2p_ub( Index i ) const
  {
   if( i >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
   if( i < get_NStaticArcs() )
-   return( const_cast< LB0Constraint * >( &UB[ i ] ) );
+   return( const_cast< LB0Constraint * >( & UB[ i ] ) );
   else
    return( const_cast< LB0Constraint * >(
 		  &( *std::next( dUB.begin() , i - get_NStaticArcs() ) ) ) );
@@ -790,7 +785,7 @@ public:
   * the index of the corresponding arc. Throws exception if the pointer is
   * not to a [FRow]Constraint of the MCFBlock. */
 
- inline Index p2i_e( Constraint * const cns ) const
+ Index p2i_e( const Constraint * cns ) const
  {
   auto i = p2i_e_s( cns );
   if( ( i >= 0 ) && ( i < int( get_NStaticNodes() ) ) )
@@ -798,7 +793,7 @@ public:
 
   i = get_NStaticNodes();
   for( auto dei = dE.begin() ; dei != dE.end() ; ++i , ++dei )
-   if( &(*dei) == static_cast< FRowConstraint * >( cns ) )
+   if( &(*dei) == static_cast< const FRowConstraint * >( cns ) )
     return( i );
 
   throw( std::invalid_argument( "invalid flow constraint pointer" ) );
@@ -808,14 +803,14 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the arc is closed
 
- inline bool is_closed( c_Index arc ) const {
+ bool is_closed( Index arc ) const {
   return( i2p_x( arc )->is_fixed() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the arc is deleted
 
- inline bool is_deleted( c_Index arc ) const {
+ bool is_deleted( Index arc ) const {
   return( SN[ arc ] >= Inf<Index>() );
   }
 
@@ -826,7 +821,7 @@ public:
   * CONSTRUCTED IN THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE.
   */
 
- inline FRowConstraint * i2p_e( c_Index i ) const
+ FRowConstraint * i2p_e( Index i ) const
  {
   if( i >= get_NNodes() )
    throw( std::invalid_argument( "invalid arc name" ) );
@@ -841,22 +836,22 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
 
- inline c_Subset & get_SN( void ) const { return( SN ); }
+ c_Subset & get_SN( void ) const { return( SN ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the starting node of arc i (0 <= i < get_NArcs())
 
- inline Index get_SN( c_Index i ) const { return( SN[ i ] ); }
+ Index get_SN( Index i ) const { return( SN[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of ending nodes
 
- inline  c_Subset & get_EN( void ) const { return( EN ); }
+ c_Subset & get_EN( void ) const { return( EN ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the ending node of arc i (0 <= i < get_NArcs())
 
- inline Index get_EN( c_Index i ) const { return( EN[ i ] ); }
+ Index get_EN( Index i ) const { return( EN[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc costs
@@ -864,7 +859,7 @@ public:
   * returned vector can either be of size get_MaxNArcs() or of size 0, in
   * which case all arc costs are assumed to be 0. */
 
- inline c_Vec_CNumber & get_C( void ) const { return( C ); }
+ c_Vec_CNumber & get_C( void ) const { return( C ); }
 
  /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the cost of arc i (0 <= i < get_NArcs())
@@ -877,14 +872,13 @@ public:
   * the returned vector can either be of size get_MaxNArcs() or of size 0, in
   * which case all arc upper bounds are assumed to be +Inf. */
 
- inline c_Vec_FNumber & get_U( void ) const { return( U ); }
+ c_Vec_FNumber & get_U( void ) const { return( U ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the upper bound of arc i (0 <= i < get_NArcs())
 
- inline FNumber get_U( c_Index i ) const { return( U.empty() ?
-						   Inf<FNumber>() : U[ i ]
-						   ); }
+ FNumber get_U( Index i ) const { return( U.empty() ?
+					  Inf<FNumber>() : U[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of node deficits
@@ -894,7 +888,7 @@ public:
   * position i (0 <= i < get_NNodes()) in this vector correspond to the node
   * whose name is i + 1 as returned from get_SN() and get_EN(). */
 
- inline c_Vec_FNumber & get_B( void ) const { return( B ); }
+ c_Vec_FNumber & get_B( void ) const { return( B ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the upper deficit of node i (0 <= i < get_NNodes())
@@ -902,9 +896,9 @@ public:
   * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
   * "names" between 1 and get_NNodes(). */
 
- inline FNumber get_B( c_Index i ) const { return( B.empty() ? 0 : B[ i ] ); }
+ FNumber get_B( Index i ) const { return( B.empty() ? 0 : B[ i ] ); }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*--------------------- Methods for checking the Block ---------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for checking the Block
@@ -914,8 +908,8 @@ public:
  /** Returns true if the solution encoded in the current value of the flow
   * (x) Variable of the MCFBlock is approximately feasible w.r.t. the flow
   * conservation constraints only. This clearly requires the Variable of the
-  * MCFBlock to have been defined, i.e., that generate_abstract_variables() has
-  * been called prior to this method. The parameter feps is the relative
+  * MCFBlock to have been defined, i.e., that generate_abstract_variables()
+  * has been called prior to this method. The parameter feps is the relative
   * accuracy defining "approximately". The parameter "useabstract" has the
   * same meaning as in is_feasible() and is_optimal(). */
 
@@ -1021,7 +1015,7 @@ public:
  bool is_optimal( bool useabstract = false  , Configuration *optc = nullptr )
   override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for R3 Blocks
@@ -1169,7 +1163,7 @@ public:
 			     ModParam issuePMod = eNoBlck ,
 			     ModParam issueAMod = eModBlck ) override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*----------------------- Methods for handling Solution --------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for handling Solution
@@ -1267,7 +1261,6 @@ public:
   * 1 and get_NNodes(). Also, note that
   *
   *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
-
 
  void get_pi( Vec_CNumber & PSol , c_Subset & nms );
 
@@ -1402,7 +1395,7 @@ public:
 
  }  // end( MCFBlock::set_rc( one ) )
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------------- Methods for handling Modification -------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for handling Modification
@@ -1466,7 +1459,7 @@ public:
 
  void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------ METHODS FOR LOADING, PRINTING & SAVING THE MCFBlock ---------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for loading, printing & saving the MCFBlock
@@ -1479,7 +1472,7 @@ public:
 
  void serialize( netCDF::NcGroup & group ) const override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Changing the data of the MCF instabnce
@@ -1931,7 +1924,7 @@ public:
  void remove_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
 		                c_ModParam issueAMod = eNoBlck );
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -1990,7 +1983,7 @@ public:
 
  void load( std::istream &input ) override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -2126,31 +2119,26 @@ public:
 
   register_method< MCFBlock, Subset &&, bool >(
    "MCFBlock::open_arcs", &MCFBlock::open_arcs );
-
   }
 
 /*--------------------------------------------------------------------------*/
 
- inline int p2i_x_s( Variable * const var ) const
- {
+ int p2i_x_s( const Variable * var ) const {
   return( std::distance( x.data() ,
 			 static_cast< const ColVariable * >( var ) ) );
   }
 
- inline int p2i_ub_s( Constraint * const cns ) const
- {
+ int p2i_ub_s( const Constraint * cns ) const {
   return( std::distance( UB.data() ,
 			 static_cast< const LB0Constraint * >( cns ) ) );
   }
 
- inline int p2i_e_s( Constraint * const cns ) const
- {
+ int p2i_e_s( const Constraint * cns ) const {
   return( std::distance( E.data() ,
 			 static_cast< const FRowConstraint * >( cns ) ) );
   }
 
- inline LinearFunction * get_lfo( void )
- {
+ LinearFunction * get_lfo( void ) {
   #ifdef NDEBUG
    return( static_cast<LinearFunction *>( c.get_function() ) );
   #else
@@ -2160,12 +2148,12 @@ public:
   #endif
   }
 
- inline LinearFunction * get_lfc( FRowConstraint * cnsti )
+ LinearFunction * get_lfc( FRowConstraint * cnsti )
  {
   #ifdef NDEBUG
-   return( static_cast<LinearFunction *>( cnsti->get_function() ) );
+   return( static_cast< LinearFunction * >( cnsti->get_function() ) );
   #else
-   auto lfc = dynamic_cast<LinearFunction *>( cnsti->get_function() );
+   auto lfc = dynamic_cast< LinearFunction * >( cnsti->get_function() );
    assert( lfc );
    return( lfc );
   #endif
@@ -2193,7 +2181,7 @@ public:
 /*---------------------------- PRIVATE FIELDS ------------------------------*/
 /*--------------------------------------------------------------------------*/
 
- SMSpp_insert_in_factory_h;        // insert MCFBlock in the Block factory
+ SMSpp_insert_in_factory_h;  // insert MCFBlock in the Block factory
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
