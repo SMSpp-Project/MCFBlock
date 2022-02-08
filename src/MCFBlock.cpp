@@ -2120,7 +2120,7 @@ void MCFBlock::serialize( netCDF::NcGroup & group ) const
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+			  ModParam issueMod , ModParam issueAMod )
 {
  rng.second = std::min( rng.second , get_NArcs() );
  if( rng.second <= rng.first )  // nothing to change
@@ -2173,7 +2173,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 
 void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
 			  bool ordered  ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+			  ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )  // nothing to change
   return;           // cowardly (and silently) return
@@ -2226,8 +2226,8 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc , 
-			 c_ModParam issueMod , c_ModParam issueAMod )
+void MCFBlock::chg_cost( CNumber NCost , Index arc , 
+			 ModParam issueMod , ModParam issueAMod )
 {
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
@@ -2265,7 +2265,7 @@ void MCFBlock::chg_cost( c_CNumber NCost , c_Index arc ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+			  ModParam issueMod , ModParam issueAMod )
 {
  rng.second = std::min( rng.second , get_NArcs() );
  if( rng.second <= rng.first )  // nothing to change
@@ -2295,7 +2295,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
-  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   Index i = rng.first;
 
@@ -2340,7 +2340,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
 
 void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
 			  bool ordered  ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+			  ModParam issueMod , ModParam issueAMod )
 {
  if( U.empty() ) {
   if( std::all_of( NCap , NCap + nms.size() ,
@@ -2365,7 +2365,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
-  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   if( HasDynamicX() )
    if( ordered ) {
@@ -2459,8 +2459,8 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
-			 c_ModParam issueMod , c_ModParam issueAMod )
+void MCFBlock::chg_ucap( FNumber NCap , Index arc ,
+			 ModParam issueMod , ModParam issueAMod )
 {
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
@@ -2504,7 +2504,7 @@ void MCFBlock::chg_ucap( c_FNumber NCap , c_Index arc ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+			  ModParam issueMod , ModParam issueAMod )
 {
  rng.second = std::min( rng.second , get_NNodes() );
  if( rng.second <= rng.first )  // nothing to change
@@ -2527,7 +2527,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   Index i = rng.first;
 
@@ -2572,7 +2572,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
 
 void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
 			  bool ordered ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+			  ModParam issueMod , ModParam issueAMod )
 {
  if( B.empty() ) {
   if( std::all_of( NDfct , NDfct + nms.size() ,
@@ -2590,7 +2590,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   if( HasDynamicE() )
    if( ordered ) {
@@ -2683,8 +2683,8 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
-			 c_ModParam issueMod , c_ModParam issueAMod )
+void MCFBlock::chg_dfct( FNumber NDfct , Index nde ,
+			 ModParam issueMod , ModParam issueAMod )
 {
  if( nde >= get_NNodes() )
   throw( std::invalid_argument( "invalid node name" ) );
@@ -2721,7 +2721,7 @@ void MCFBlock::chg_dfct( c_CNumber NDfct , c_Index nde ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::close_arcs( Range rng ,
-			   c_ModParam issueMod , c_ModParam issueAMod )
+			   ModParam issueMod , ModParam issueAMod )
 {
  rng.second = std::min( rng.second , get_NArcs() );
  if( rng.second <= rng.first )  // nothing to change
@@ -2751,7 +2751,7 @@ void MCFBlock::close_arcs( Range rng ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   // static part
   for( i = rng.first ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
@@ -2787,7 +2787,7 @@ void MCFBlock::close_arcs( Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
-			   c_ModParam issueMod , c_ModParam issueAMod )
+			   ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )
   return;
@@ -2827,7 +2827,7 @@ void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   // static part
   for( nit = nms.begin() ; ( nit != nms.end() ) &&
@@ -2865,8 +2865,8 @@ void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::close_arc( c_Index arc ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+void MCFBlock::close_arc( Index arc ,
+			  ModParam issueMod , ModParam issueAMod )
 {
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
@@ -2904,7 +2904,7 @@ void MCFBlock::close_arc( c_Index arc ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::open_arcs( Range rng ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+			  ModParam issueMod , ModParam issueAMod )
 {
  rng.second = std::min( rng.second , get_NArcs() );
  if( rng.second <= rng.first )  // nothing to change
@@ -2934,7 +2934,7 @@ void MCFBlock::open_arcs( Range rng ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   // static part
   for( i = rng.first ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
@@ -2966,7 +2966,7 @@ void MCFBlock::open_arcs( Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
-			  c_ModParam issueMod , c_ModParam issueAMod )
+			  ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )
   return;
@@ -3006,7 +3006,7 @@ void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  c_ModParam ampar = make_amod_param( issueAMod , ndiff );
+  ModParam ampar = make_amod_param( issueAMod , ndiff );
 
   // static part
   for( nit = nms.begin() ; ( nit != nms.end() ) &&
@@ -3042,8 +3042,8 @@ void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::open_arc( c_Index arc ,
-			 c_ModParam issueMod , c_ModParam issueAMod )
+void MCFBlock::open_arc( Index arc ,
+			 ModParam issueMod , ModParam issueAMod )
 {
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
@@ -3078,10 +3078,9 @@ void MCFBlock::open_arc( c_Index arc ,
 
 /*--------------------------------------------------------------------------*/
 
-MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
-				   c_CNumber cst , c_FNumber cap ,
-				   c_ModParam issueMod ,
-				   c_ModParam issueAMod )
+MCFBlock::Index MCFBlock::add_arc( Index sn , Index en ,
+				   CNumber cst , FNumber cap ,
+				   ModParam issueMod , ModParam issueAMod )
 {
  if( ( sn < 1 ) || ( sn > get_NNodes() ) )
   throw( std::invalid_argument( "invalid starting node name" ) );
@@ -3125,9 +3124,8 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
  // always present
 
  if( not_dry_run( issueAMod ) ) {
-
-  c_ModParam ampar = make_amod_param( issueAMod ,
-				      AR & ( HasFlw | HasObj ) ? 4 : 1 );
+  ModParam ampar = make_amod_param( issueAMod ,
+				    AR & ( HasFlw | HasObj ) ? 4 : 1 );
   ColVariable * nx;
   LB0Constraint * nUB;
   if( arc == get_NArcs() ) {
@@ -3210,8 +3208,8 @@ MCFBlock::Index MCFBlock::add_arc( c_Index sn , c_Index en ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::remove_arc( c_Index arc ,
-			   c_ModParam issueMod , c_ModParam issueAMod )
+void MCFBlock::remove_arc( Index arc ,
+			   ModParam issueMod , ModParam issueAMod )
 {
  if( ( arc < get_NStaticArcs() ) || ( arc >= get_NArcs() ) )
   throw( std::invalid_argument( "invalid arc name" ) );
@@ -3236,7 +3234,7 @@ void MCFBlock::remove_arc( c_Index arc ,
  // always present
 
  if( not_dry_run( issueAMod ) ) {
-  c_ModParam ampar = make_amod_param( issueAMod ,
+  ModParam ampar = make_amod_param( issueAMod ,
 				      AR & ( HasFlw | HasObj ) ? 4 : 1 );
   if( arc == get_NArcs() - 1 ) {
    // removing the last arc (and possibly more)

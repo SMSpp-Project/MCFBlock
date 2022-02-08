@@ -1535,8 +1535,8 @@ public:
 
  void chg_costs( c_Vec_CNumber_it NCost ,
 		 Range rng = Range( 0 , Inf<Index>() ) ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+		 ModParam issueMod = eNoBlck ,
+		 ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// change the costs of an arbitrary subset of arcs
@@ -1550,9 +1550,9 @@ public:
   * See chg_costs( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
-		 bool ordered = false , c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_costs( c_Vec_CNumber_it NCost ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// changes the cost of the given arc
@@ -1561,9 +1561,8 @@ public:
   * Note that this can issue only one Modification of each type; the
   * "physical" one is a MCFBlockRngdMod with rng = [ arc ). */
 
- void chg_cost( c_CNumber NCost , c_Index arc ,
-		c_ModParam issueMod = eNoBlck ,
-		c_ModParam issueAMod = eNoBlck );
+ void chg_cost( CNumber NCost , Index arc ,
+		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// change the capacities of a contiguous interval of arcs
@@ -1593,8 +1592,7 @@ public:
 
  void chg_ucaps( c_Vec_FNumber_it NCap ,
 		 Range rng = Range( 0 , Inf<Index>() ) ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// change the capacities of an arbitrary subset of arcs
@@ -1612,10 +1610,9 @@ public:
   * See chg_ucaps( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
-		 bool ordered = false ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_ucaps( c_Vec_FNumber_it NCap ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// change the capacity of the given arc
@@ -1627,9 +1624,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with rng = [ arc ). */
 
- void chg_ucap( c_FNumber NCap , c_Index arc ,
-		c_ModParam issueMod = eNoBlck ,
-		c_ModParam issueAMod = eNoBlck );
+ void chg_ucap( FNumber NCap , Index arc ,
+		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// change the deficits of a contiguous interval of nodes
@@ -1655,8 +1651,7 @@ public:
 
  void chg_dfcts( c_Vec_FNumber_it NDfct ,
 		 Range rng = Range( 0 , Inf<Index>() ) ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// change the deficits of an arbitrary subset of nodes
@@ -1672,10 +1667,9 @@ public:
   * See chg_dfcts( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void chg_dfcts( c_Vec_FNumber_it NDfct , Subset && nms ,
-		 bool ordered = false ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_dfcts( c_Vec_FNumber_it NDfct ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// changes the deficit of the given node
@@ -1687,9 +1681,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with rng = [ arc ). */
 
- void chg_dfct( c_FNumber NDfct , c_Index nde ,
-		c_ModParam issueMod = eNoBlck ,
-		c_ModParam issueAMod = eNoBlck );
+ void chg_dfct( FNumber NDfct , Index nde ,
+		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// closes a contiguous interval of arcs
@@ -1713,8 +1706,8 @@ public:
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
  void close_arcs( Range rng = Range( 0 , Inf<Index>() ) ,
-		  c_ModParam issueMod = eNoBlck ,
-		  c_ModParam issueAMod = eNoBlck );
+		  ModParam issueMod = eNoBlck ,
+		  ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// closes an arbitrary subset of arcs
@@ -1733,8 +1726,8 @@ public:
   * the "physical" one is a MCFBlockSbstMod). */
 
  void close_arcs( Subset && nms , bool ordered = false ,
-		  c_ModParam issueMod = eNoBlck ,
-		  c_ModParam issueAMod = eNoBlck );
+		  ModParam issueMod = eNoBlck ,
+		  ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// closes the given arc
@@ -1746,8 +1739,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with rng = [ arc ). */
 
- void close_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
-		               c_ModParam issueAMod = eNoBlck );
+ void close_arc( Index arc , ModParam issueMod = eNoBlck ,
+		             ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
 /// re-opens a contiguous interval of arcs
@@ -1768,8 +1761,8 @@ public:
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
  void open_arcs( Range rng = Range( 0 , Inf<Index>() ) ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+		 ModParam issueMod = eNoBlck ,
+		 ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// re-opens an arbitrary subset of arcs
@@ -1795,8 +1788,8 @@ public:
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
  void open_arcs( Subset && nms , bool ordered = false ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+		 ModParam issueMod = eNoBlck ,
+		 ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// re-opens the given arc
@@ -1807,8 +1800,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with rng = [ arc ). */
 
- void open_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
-		              c_ModParam issueAMod = eNoBlck );
+ void open_arc( Index arc , ModParam issueMod = eNoBlck ,
+		            ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// add a new arc
@@ -1862,10 +1855,9 @@ public:
   *  Of course, all the "abstract" Modification are only issued if the
   *  corresponding part of the "abstract" representation is constructed. */
  
- Index add_arc( c_Index sn , c_Index en , c_CNumber cst = 0 ,
-		c_FNumber cap = Inf<FNumber>() ,
-		c_ModParam issueMod = eNoBlck ,
-		c_ModParam issueAMod = eNoBlck );
+ Index add_arc( Index sn , Index en , CNumber cst = 0 ,
+		FNumber cap = Inf<FNumber>() ,
+		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// removes an existing arc
@@ -1921,8 +1913,8 @@ public:
   *  Of course, all the "abstract" Modification are only issued if the
   *  corresponding part of the "abstract" representation is constructed. */
 
- void remove_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
-		                c_ModParam issueAMod = eNoBlck );
+ void remove_arc( Index arc , ModParam issueMod = eNoBlck ,
+		              ModParam issueAMod = eNoBlck );
 
 /** @} ---------------------------------------------------------------------*/
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
