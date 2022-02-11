@@ -1171,24 +1171,25 @@ public:
 
  /// returns a MCFSolution representing the current solution of this MCFBlock
  /** Returns a MCFSolution representing the current solution status of this
-  * MCFBlock.The parameter solc decides which part of the solution is saved:
+  * MCFBlock. What kind of solution is saved depends on the integer value ws,
+  * obtained as follows:
   *
-  * - if solc != nullptr and it is a SimpleConfiguration<int>, then it
-  *   depends on solc->f_value:
+  * - if solc != nullptr and it is a SimpleConfiguration< int >, then
+  *   ws == solc->f_value:
+  *
+  * - if solc == nullptr, f_BlockConfig != nullptr,
+  *   f_BlockConfig->f_solution_Configuration != nullptr and it
+  *   is a SimpleConfiguration< int >, ws is its f_value
+  *
+  * - otherwise ws is 0.
+  *
+  * The encoding of ws is:
   *
   *   = 1 means "only map the primal solution"
   *
   *   = 2 means "only map the dual solution"
   *
   *   = everything else (e.g., 0) means "map everything";
-  *
-  * - if solc == nullptr, f_BlockConfig != nullptr,
-  *   f_BlockConfig->f_solution_Configuration != nullptr and it
-  *   is a SimpleConfiguration<int>, then it depends on its f_value as in
-  *   the previous case;
-  *
-  * - otherwise, everything (both the primal and the dual solution) is
-  *   mapped.
   *
   * The same format applies verbatim to the case of primal or dual unbounded
   * rays (negative-cost unbounded cycles and cuts, respectively), although
@@ -1197,7 +1198,7 @@ public:
   *
   * Note that MCFBlock may not contain some or all of the required solution,
   * if the corresponding Variable/Constraint have not been constructed yet:
-  * this throws an exception, unless emptys = true, in which case thew
+  * this throws an exception, unless emptys = true, in which case the
   * MCFSolution object is only prepped for getting a solution, but it is not
   * really getting one now.
   *
@@ -2399,6 +2400,12 @@ class MCFBlockSbstMod : public MCFBlockMod
  * potentials. This may not be appropriate in all cases, as one may want to
  * deal with unfeasible dual solutions; if this will ever be the case, the
  * MCFSolution class will have to be changed accordingly.
+ *
+ * Note that the vectors are (in principle, both) optional: a MCFSolution
+ * may have them empty, according to how it is created by a call to
+ * MCFBlock::get_Solution(). If a vector is empty it is never read() or
+ * write()-n from/to the MCFBlock. There is no support for changing this
+ * during the life of the MCFSolution.
  *
  * It is useful to remark that some special cases of MCF would actually have
  * "special" solutions ("less general" ones in the parlance of Solution). In

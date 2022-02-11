@@ -1782,12 +1782,10 @@ bool MCFBlock::map_back_Modification( Block *R3B , c_p_Mod mod ,
 Solution * MCFBlock::get_Solution( Configuration *solc , bool emptys )
 {
  int wsol = 0;
- auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
+ if( ( ! solc ) && f_BlockConfig )
+  solc = f_BlockConfig->f_solution_Configuration;
 
- if( ( ! tsolc ) && f_BlockConfig && f_BlockConfig->f_solution_Configuration )
-  tsolc = dynamic_cast<SimpleConfiguration<int> *>(
-                                    f_BlockConfig->f_solution_Configuration );
- if( tsolc )
+ if( auto tsolc = dynamic_cast< SimpleConfiguration< int > * >( solc ) )
   wsol = tsolc->f_value;
 
  auto *sol = new MCFSolution();
@@ -3916,8 +3914,6 @@ void MCFBlock::CheckAbsVSPhys( void )
 
 void MCFSolution::deserialize( const netCDF::NcGroup & group )
 {
- std::vector<size_t> start = { 0 };
-
  netCDF::NcDim na = group.getDim( "NumArcs" );
  if( na.isNull() )
   v_x.clear();
@@ -3955,37 +3951,40 @@ void MCFSolution::read( const Block * const block )
 
  // read flows- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- if( v_x.size() < MCFB->get_NArcs() )
-  v_x.resize( MCFB->get_NArcs() );
+ if( ! v_x.empty() ) {
+  if( v_x.size() < MCFB->get_NArcs() )
+   v_x.resize( MCFB->get_NArcs() );
 
- auto vxi = v_x.begin();
+  auto vxi = v_x.begin();
 
- // static part
- for( auto & xi : MCFB->x )
-  *(vxi++) = xi.get_value();
+  // static part
+  for( auto & xi : MCFB->x )
+   *(vxi++) = xi.get_value();
 
- // dynamic part
- for( auto & xi : MCFB->dx )
-  *(vxi++) = xi.get_value();
+  // dynamic part
+  for( auto & xi : MCFB->dx )
+   *(vxi++) = xi.get_value();
+  }
 
  // read potentials - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  if( MCFB->E.empty() && MCFB->dE.empty() )  // no potentials available
   return;
 
- if( v_pi.size() < MCFB->get_NNodes() )
-  v_pi.resize( MCFB->get_NNodes() );
+ if( ! v_pi.empty() ) {
+  if( v_pi.size() < MCFB->get_NNodes() )
+   v_pi.resize( MCFB->get_NNodes() );
 
- auto vpii = v_pi.begin();
+  auto vpii = v_pi.begin();
  
- // static part
- for( auto & ei : MCFB->E )
-  *(vpii++) = ei.get_dual();
+  // static part
+  for( auto & ei : MCFB->E )
+   *(vpii++) = ei.get_dual();
 
- // dynamic part
- for( auto & ei : MCFB->dE )
-  *(vpii++) = ei.get_dual();
-
+  // dynamic part
+  for( auto & ei : MCFB->dE )
+   *(vpii++) = ei.get_dual();
+  }
  }  // end( MCFSolution::read )
 
 /*--------------------------------------------------------------------------*/
