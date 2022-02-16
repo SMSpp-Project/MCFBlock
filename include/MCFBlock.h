@@ -1185,11 +1185,11 @@ public:
   *
   * The encoding of ws is:
   *
-  *   = 1 means "only map the primal solution"
+  *   = 1 means "only save the primal solution"
   *
-  *   = 2 means "only map the dual solution"
+  *   = 2 means "only save the dual solution"
   *
-  *   = everything else (e.g., 0) means "map everything";
+  *   = everything else (e.g., 0) means "save everything";
   *
   * The same format applies verbatim to the case of primal or dual unbounded
   * rays (negative-cost unbounded cycles and cuts, respectively), although
@@ -1213,26 +1213,28 @@ public:
 
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the flow solution
- /** Method to get the flow solution; upon return, FSol[ i ] contains the
-  * current value of the flow solution for the i-th arc in \p rng. Note that
-  * if the right extreme of the range is >= get_NArcs() it is ignored.  */
+ /** Method to get the flow solution; upon return, the current value of the
+  * flow solution for the i-th arc in \p rng is written in *( FSol + i ).
+  * Note that if the right extreme of the range is >= get_NArcs() it is
+  * ignored. */
 
- void get_x( Vec_FNumber & FSol , Range rng = Range( 0 , Inf<Index>() ) );
+ void get_x( Vec_FNumber_it FSol , Range rng = Range( 0 , Inf<Index>() ) )
+  const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the flow solution for an arbitrary subset of arcs
- /** Method to get the flow solution; upon return, FSol[ i ] contains the
-  * current value of the flow solution for arc nms[ i ] for all 0 <= i < 
-  * nms.size(). Note that
+ /** Method to get the flow solution; upon return, the current value of the
+  * flow solution for arc nms[ i ] for all 0 <= i <  nms.size() is written
+  * in *( FSol + i ). Note that
   *
   *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
 
- void get_x( Vec_FNumber & FSol , c_Subset & nms );
+ void get_x( Vec_FNumber_it FSol , c_Subset & nms ) const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the flow solution of the given arc
 
- FNumber get_x( c_Index arc ) {
+ FNumber get_x( Index arc ) const {
   if( arc >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -1244,34 +1246,35 @@ public:
 
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the potential solution
- /** Method to get the potential solution; upon return, PSol[ i ] contains the
-  * current value of the potential solution for the i-th node in \p rng. Note
-  * that if the right extreme of the range is >= get_NNodes() it is ignored.
-  * Note that "node names" here go from 0 to get_NNodes() - 1, despite the
-  * fact that get_SN() and get_EN() report node "names" between 1 and
-  * get_NNodes(). */
+ /** Method to get the potential solution; upon return, the current value of
+  * the potential solution for the i-th node in \p rng is written into
+  * *( PSol + i ). Note that if the right extreme of the range is >=
+  * get_NNodes() it is ignored. Note that "node names" here go from 0 to
+  * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
+  * "names" between 1 and get_NNodes(). */
 
- void get_pi( Vec_CNumber & PSol , Range rng = Range( 0 , Inf<Index>() ) );
+ void get_pi( Vec_CNumber_it PSol , Range rng = Range( 0 , Inf<Index>() ) )
+  const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the flow potential for an arbitrary subset of nodes
- /** Method to get the potential solution; upon return, PSol[ i ] contains the
-  * current value of the potential solution for node nms[ i ] for all 0 <= i
-  * < nms.size(). Note that "node names" here go from 0 to get_NNodes() - 1,
-  * despite the fact that get_SN() and get_EN() report node "names" between
-  * 1 and get_NNodes(). Also, note that
+ /** Method to get the potential solution; upon return, the current value of
+  * the potential solution for node nms[ i ] for all 0 <= i < nms.size() is
+  * written into *( PSol + i ). Note that "node names" here go from 0 to
+  * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
+  * "names" between 1 and get_NNodes(). Also, note that
   *
   *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
 
- void get_pi( Vec_CNumber & PSol , c_Subset & nms );
+ void get_pi( Vec_CNumber_it PSol , c_Subset & nms ) const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the potential solution of the given node
  /** Method to get the potential solution of the given node; note that "node
   * names" here go from 0 to get_NNodes() - 1, despite the fact that get_SN()
   * and get_EN() report node "names" between 1 and get_NNodes(). */
 
- CNumber get_pi( c_Index nde ) {
+ CNumber get_pi( Index nde ) const {
   if( nde >= get_NNodes() )
    throw( std::invalid_argument( "invalid node name" ) );
 
@@ -1286,29 +1289,30 @@ public:
 
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the reduced costs
- /** Method to get the reduced costs; upon return, RC[ i ] contains the
-  * current value of the reduced cost for the i-th arc in \p rng. Note that
-  * if the right extreme of the range is >= get_NArcs() it is ignored. */
+ /** Method to get the reduced costs; upon return, the current value of the
+  * reduced cost for the i-th arc in \p rng is written into *( RC + i ). Note
+  * that if the right extreme of the range is >= get_NArcs() it is ignored. */
 
- void get_rc( Vec_CNumber & RC , Range rng = Range( 0 , Inf<Index>() ) );
+ void get_rc( Vec_CNumber_it RC , Range rng = Range( 0 , Inf<Index>() ) )
+  const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the reduced costs for an arbitrary subset of arcs
- /** Method to get the reduced costs; upon return, RC[ i ] contains the
-  * current value of the reduced costs for arc nms[ i ] for all 0 <= i < 
-  * nms.size(). Note that
+ /** Method to get the reduced costs; upon return, the current value of the
+  * reduced costs for arc nms[ i ] for all 0 <= i < nms.size() is written
+  * into *( RC + i ). Note that
   *
   *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
 
- void get_rc( Vec_CNumber & RC , c_Subset & nms );
+ void get_rc( Vec_CNumber_it RC , c_Subset & nms ) const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the reduced costs of the given arc
 
- CNumber get_rc( c_Index arc ) {
+ CNumber get_rc( Index arc ) const {
   if( E.empty() && dE.empty() )
    throw( std::logic_error( "reduced costs unavailable if Constraint aren't"
-			   ) );
+			    ) );
   if( arc >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -1324,16 +1328,16 @@ public:
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the flow solution
  /** Method to set the flow solution; the values found in the c_Vec_FNumber
-  * between fstrt (included) and fstop (excluded) are copied into the value of
-  * the flow variable x[ strt + i ]. This is typically used by a Solver. */
+  * starting from fstrt are copied into the value of the flow variable
+  * x[ i ] for i in Rng, in the same order. */
 
- void set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
-	     c_Index strt = 0 );
+ void set_x( c_Vec_FNumber_it fstrt ,
+	     Range rng = Range( 0 , Inf< Index >() ) );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the flow solution of the given arc
 
- void set_x( c_Index arc , c_FNumber FSol ) {
+ void set_x( Index arc , FNumber FSol ) {
   if( arc >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -1350,13 +1354,13 @@ public:
   * into the potential of node (dual multiplier of the flow balance
   * constraint) strt + i. This is typically used by a Solver. */
 
- void set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
-	      c_Index strt = 0 );
+ void set_pi( c_Vec_CNumber_it pstrt ,
+	      Range rng = Range( 0 , Inf< Index >() ) );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the potential solution of the given node
 
- void set_pi( CNumber PSol , c_Index nde ) {
+ void set_pi( CNumber PSol , Index nde ) {
   if( ! ( AR & HasFlw ) )  // nowhere to put the value
    return;                 // cowardly (and silently) return
 
@@ -1376,13 +1380,13 @@ public:
   * into the reduced cost of arc (dual value of the bound constraint) strt +
   * i. This is typically used by a Solver. */
 
- void set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
-	      c_Index strt = 0 );
+ void set_rc( c_Vec_CNumber_it rcstrt ,
+	      Range rng = Range( 0 , Inf< Index >() ) );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the reduced cost of the given arc
 
- void set_rc( c_CNumber RC , c_Index arc ) {
+ void set_rc( CNumber RC , Index arc ) {
  if( ! ( AR & HasBnd ) )  // nowhere to put the value in
   return;                 // cowardly (and silently) return
 
@@ -1412,7 +1416,8 @@ public:
   return( AR ? true : Block::anyone_there() );
   }
 
-/*--------------------------------------------------------------------------*/ /// adding a new Modification to the MCFBlock
+/*--------------------------------------------------------------------------*/
+ /// adding a new Modification to the MCFBlock
  /** Method for handling Modification.
   *
   * The version of MCFBlock has to intercept any "abstract Modification" that
@@ -1539,7 +1544,7 @@ public:
 		 ModParam issueMod = eNoBlck ,
 		 ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the costs of an arbitrary subset of arcs
  /** Method to change the costs of an arbitrary subset of arc. That is,
   * *( NCost + i ) becomes the new cost of arc nms[ i ] for all 0 <= i <
@@ -1555,7 +1560,7 @@ public:
 		 Subset && nms , bool ordered = false ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// changes the cost of the given arc
  /** Changes the cost of the given arc.
   *
@@ -1595,7 +1600,7 @@ public:
 		 Range rng = Range( 0 , Inf<Index>() ) ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the capacities of an arbitrary subset of arcs
  /** Method to change the capacities of an arbitrary subset of arc. That is,
   * *( NCap + i ) becomes the new capacity of arc nms[ i ] for all 0 <= i <
@@ -1615,7 +1620,7 @@ public:
 		 Subset && nms , bool ordered = false ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the capacity of the given arc
  /** Method to change the capacity of a given arc: NCap becomes the new
   * capacity of arc arc. Note that, according to the Configuration of the
@@ -1654,7 +1659,7 @@ public:
 		 Range rng = Range( 0 , Inf<Index>() ) ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the deficits of an arbitrary subset of nodes
  /** Method to change the deficits of an arbitrary subset of nodes. That is,
   * *( NDfct + i ) becomes the new deficit of node nms[ i ] for all 0 <= i <
@@ -1672,7 +1677,7 @@ public:
 		 Subset && nms , bool ordered = false ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// changes the deficit of the given node
  /** Method to change the deficit of a given node: NDfct becomes the new
   * deficit of node nde. Note that "node names" here go from 0 to
@@ -1710,7 +1715,7 @@ public:
 		  ModParam issueMod = eNoBlck ,
 		  ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// closes an arbitrary subset of arcs
  /** Method to close an arbitrary subset of arc, i.e., all those whose names
   * are found in the array nms. The flow on the arcs is fixed to 0 but the
@@ -1730,7 +1735,7 @@ public:
 		  ModParam issueMod = eNoBlck ,
 		  ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// closes the given arc
  /** Method to "close" the given arc: the flow on arc is fixed to 0. The arc
   * is not removed from the problem, and its capacity and cost are not
@@ -1765,7 +1770,7 @@ public:
 		 ModParam issueMod = eNoBlck ,
 		 ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// re-opens an arbitrary subset of arcs
  /** Method to "open" an arbitrary subset of closed arc, i.e., all those
   * whose names are found in the array nms. Opening an already open arc
@@ -1792,7 +1797,7 @@ public:
 		 ModParam issueMod = eNoBlck ,
 		 ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// re-opens the given arc
  /** Method to "open" the given closed arc, i.e., allow the flow on arc to
   * vary. Opening an already open arc (which is what all arcs are when the

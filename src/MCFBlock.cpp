@@ -954,9 +954,9 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
   // do it using the physical representation- - - - - - - - - - - - - - - - -
 
   Vec_CNumber RC;
-  get_rc( RC );
+  get_rc( RC.begin() );
   Vec_CNumber Pi;
-  get_pi( Pi );
+  get_pi( Pi.begin() );
 
   for( Index i = 0 ; i < get_NArcs() ; ++i ) {
    if( is_deleted( i ) )
@@ -986,7 +986,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 					bool useabstract )
 {
  Vec_CNumber RC;
- get_rc( RC );
+ get_rc( RC.begin() );
 
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
@@ -1779,7 +1779,7 @@ bool MCFBlock::map_back_Modification( Block *R3B , c_p_Mod mod ,
 /*----------------------- Methods for handling Solution --------------------*/
 /*--------------------------------------------------------------------------*/
 
-Solution * MCFBlock::get_Solution( Configuration *solc , bool emptys )
+Solution * MCFBlock::get_Solution( Configuration * solc , bool emptys )
 {
  int wsol = 0;
  if( ( ! solc ) && f_BlockConfig )
@@ -1805,32 +1805,30 @@ Solution * MCFBlock::get_Solution( Configuration *solc , bool emptys )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_x( Vec_FNumber & FSol , Range rng )
+void MCFBlock::get_x( Vec_FNumber_it FSol , Range rng ) const
 {
- auto FSi = FSol.begin();
  for( ; rng.first < std::min( rng.second , get_NStaticArcs() ) ; )
-  *(FSi++) = x[ rng.first++ ].get_value();
+  *(FSol++) = x[ rng.first++ ].get_value();
 
  if( HasDynamicX() ) {
   auto dxi = dx.begin();
   for( ; rng.first++ < std::min( rng.second , get_NArcs() ) ; )
-   *(FSi++) = (*(dxi++)).get_value();
+   *(FSol++) = (*(dxi++)).get_value();
   }
- }  // end( MCFBlock::get_x( interval ) )
+ }  // end( MCFBlock::get_x( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_x( Vec_FNumber & FSol , c_Subset & nms )
+void MCFBlock::get_x( Vec_FNumber_it FSol , c_Subset & nms ) const
 {
  if( ! ( AR & HasVar ) )
   throw( std::logic_error( "flow Variable not available" ) );
 
- auto FSi = FSol.begin();
  auto nmsi = nms.begin();
 
  if( HasDynamicX() ) {
   while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticArcs() ) )
-   *(FSi++) = x[ *(nmsi++) ].get_value();
+   *(FSol++) = x[ *(nmsi++) ].get_value();
 
   if( nmsi == nms.end() )
    return;
@@ -1838,49 +1836,47 @@ void MCFBlock::get_x( Vec_FNumber & FSol , c_Subset & nms )
   auto i = get_NStaticArcs();
   for( auto dxi = dx.begin() ; nmsi != nms.end() ; ++dxi )
    if( *nmsi == i++ ) {
-    *(FSi++) = (*dxi).get_value();
+    *(FSol++) = (*dxi).get_value();
     nmsi++;
     }
   }
  else
   while( nmsi != nms.end() ) 
-   *(FSi++) = x[ *(nmsi++) ].get_value();
+   *(FSol++) = x[ *(nmsi++) ].get_value();
 
  }  // end( MCFBlock::get_x( subset ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_pi( Vec_CNumber & PSol , Range rng )
+void MCFBlock::get_pi( Vec_CNumber_it PSol , Range rng ) const
 {
  if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
- auto PSi = PSol.begin();
  Index i = rng.first;
  for( ; i < std::min( rng.second , get_NStaticNodes() ) ; )
-  *(PSi++) = E[ i++ ].get_dual();
+  *(PSol++) = E[ i++ ].get_dual();
 
  if( HasDynamicE() ) {
   auto dei = std::next( dE.begin() , rng.first >= get_NStaticNodes() ?
 			             i - get_NStaticNodes() : 0 );
-   for( ; i++ < std::min( rng.second , get_NNodes() ) ; )
-   *(PSi++) = (*(dei++)).get_dual();
+  for( ; i++ < std::min( rng.second , get_NNodes() ) ; )
+   *(PSol++) = (*(dei++)).get_dual();
   }
- }  // end( MCFBlock::get_pi( interval ) )
+ }  // end( MCFBlock::get_pi( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_pi( Vec_CNumber & PSol , c_Subset & nms )
+void MCFBlock::get_pi( Vec_CNumber_it PSol , c_Subset & nms ) const
 {
  if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
- auto PSi = PSol.begin();
  auto nmsi = nms.begin();
 
  if( HasDynamicE() ) {
   while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticNodes() ) )
-   *(PSi++) = E[ *(nmsi++) ].get_dual();
+   *(PSol++) = E[ *(nmsi++) ].get_dual();
 
   if( nmsi == nms.end() )
    return;
@@ -1888,61 +1884,58 @@ void MCFBlock::get_pi( Vec_CNumber & PSol , c_Subset & nms )
   auto i = get_NStaticNodes();
   for( auto dei = dE.begin() ; nmsi != nms.end() ; ++dei )
    if( *nmsi == i++ ) {
-    *(PSi++) = (*dei).get_dual();
+    *(PSol++) = (*dei).get_dual();
     nmsi++;
     }
   }
  else
   while( nmsi != nms.end() )
-   *(PSi++) = E[ *(nmsi++) ].get_dual();
+   *(PSol++) = E[ *(nmsi++) ].get_dual();
 
  }  // end( MCFBlock::get_pi( subset ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_rc( Vec_CNumber & RC , Range rng )
+void MCFBlock::get_rc( Vec_CNumber_it RC , Range rng ) const
 {
  if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
 	 );
-
- auto RCi = RC.begin();
 
  if( AR & HasBnd ) {
   Index i = rng.first;
   if( HasStaticX() )
    for( ; i < std::min( rng.second , get_NStaticArcs() ) ; )
-    *(RCi++) = UB[ i++ ].get_dual();
+    *(RC++) = UB[ i++ ].get_dual();
 
   if( HasDynamicX() ) {
    auto dubi = std::next( dUB.begin() , rng.first >= get_NStaticArcs() ?
 			                i - get_NStaticArcs() : 0 );
    for( ; i++ < std::min( rng.second , get_NArcs() ) ; )
-    *(RCi++) = (*(dubi++)).get_dual();
+    *(RC++) = (*(dubi++)).get_dual();
    }
   }
  else
   for( ; rng.first < std::min( rng.second , get_NArcs() ) ; ++rng.first )
-   *(RCi++) = get_C( rng.first ) + get_pi( SN[ rng.first ] - 1 )
-                                 - get_pi( EN[ rng.first ] - 1 );
+   *(RC++) = get_C( rng.first ) + get_pi( SN[ rng.first ] - 1 )
+                                - get_pi( EN[ rng.first ] - 1 );
 
- }  // end( MCFBlock::get_rc( interval ) )
+ }  // end( MCFBlock::get_rc( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::get_rc( Vec_CNumber & RC , c_Subset & nms )
+void MCFBlock::get_rc( Vec_CNumber_it RC , c_Subset & nms ) const
 {
  if( ! ( AR & HasFlw ) )
   throw( std::logic_error( "reduced costs unavailable if Constraint aren't" )
 	 );
 
- auto RCi = RC.begin();
  auto nmsi = nms.begin();
 
  if( AR & HasBnd ) {
   if( HasDynamicX() ) {
    while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticArcs() ) )
-     *(RCi++) = UB[ *(nmsi++) ].get_dual();
+     *(RC++) = UB[ *(nmsi++) ].get_dual();
 
    if( nmsi == nms.end() )
     return;
@@ -1950,107 +1943,101 @@ void MCFBlock::get_rc( Vec_CNumber & RC , c_Subset & nms )
    auto i = get_NStaticArcs();
    for( auto dubi = dUB.begin() ; nmsi != nms.end() ; ++dubi )
     if( *nmsi == i++ ) {
-     *(RCi++) = (*dubi).get_dual();
+     *(RC++) = (*dubi).get_dual();
      nmsi++;
      }
    }
   else
    while( nmsi != nms.end() ) 
-    *(RCi++) = UB[ *(nmsi++) ].get_dual();
+    *(RC++) = UB[ *(nmsi++) ].get_dual();
   }
  else
   for( ; nmsi != nms.end() ; ++nmsi ) 
-   *(RCi++) = get_C( *nmsi ) + get_pi( SN[ *nmsi ] - 1 )
-                             - get_pi( EN[ *nmsi ] - 1 );
+   *(RC++) = get_C( *nmsi ) + get_pi( SN[ *nmsi ] - 1 )
+                            - get_pi( EN[ *nmsi ] - 1 );
  
  }  // end( MCFBlock::get_rc( subset ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
-		      c_Index strt )
+void MCFBlock::set_x( c_Vec_FNumber_it fstrt , Range rng )
 {
  if( ! ( AR & HasVar ) )  // nowhere to put the value in
   return;                 // cowardly (and silently) return
 
- if( std::distance( fstrt , fstop ) + strt > get_NArcs() )
-  throw( std::invalid_argument( "too many values provided" ) );
+ if( rng.second > get_NArcs() )
+  rng.second = get_NArcs();
 
- Index i = strt;
+ Index i = rng.first;
 
  if( HasStaticX() )
-  for( auto xi = x.begin() + strt ;
-       ( fstrt != fstop ) && ( i < get_NStaticArcs() ) ; ++i )
+  for( auto xi = x.begin() + i ; i < get_NStaticArcs() ; ++i )
    (xi++)->set_value( *(fstrt++) );
 
- if( ( fstrt == fstop ) || ( ! HasDynamicX() ) )
+ if( ! HasDynamicX() )
   return;
 
  auto dxi = dx.begin();
  if( i > get_NStaticArcs() )
   dxi = std::next( dxi , i - get_NStaticArcs() );
 
- while( fstrt != fstop )
+ for( ; i < get_NArcs() ; ++i )
   (dxi++)->set_value( *(fstrt++) );
 
  }  // end( MCFBlock::set_x( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
-		       c_Index strt )
+void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , Range rng )
 {
  if( ! ( AR & HasFlw ) )  // nowhere to put the value in
   return;                 // cowardly (and silently) return
 
- if( std::distance( pstrt , pstop ) + strt > get_NNodes() )
-  throw( std::invalid_argument( "too many values provided" ) );
+ if( rng.second > get_NNodes() )
+  rng.second = get_NNodes();
 
- Index i = strt;
+ Index i = rng.first;
 
  if( HasStaticE() )
-  for( auto ei = E.begin() + strt ;
-       ( pstrt != pstop ) && ( i < get_NStaticArcs() ) ; ++i )
+  for( auto ei = E.begin() + i ; i < get_NStaticNodes() ; ++i )
    (ei++)->set_dual( *(pstrt++) );
 
- if( ( pstrt == pstop ) || ( ! HasDynamicE() ) )
+ if( ! HasDynamicE() )
   return;
 
  auto dei = dE.begin();
- if( i > get_NStaticArcs() )
-  dei = std::next( dei , i - get_NStaticArcs() );
+ if( i > get_NStaticNodes() )
+  dei = std::next( dei , i - get_NStaticNodes() );
 
- while( pstrt != pstop )
+ for( ; i < get_NNodes() ; ++i )
   (dei++)->set_dual( *(pstrt++) );
 
  }  // end( MCFBlock::set_pi( range ) )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
-		       c_Index strt )
+void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , Range rng )
 {
  if( ! ( AR & HasBnd ) )  // nowhere to put the value in
   return;                 // cowardly (and silently) return
 
- if( std::distance( rcstrt , rcstop ) + strt > get_NArcs() )
-  throw( std::invalid_argument( "too many values provided" ) );
+ if( rng.second > get_NArcs() )
+  rng.second = get_NArcs();
 
- Index i = strt;
+ Index i = rng.first;
 
  if( HasStaticX() )
-  for( auto ubi = UB.begin() + strt ;
-       ( rcstrt != rcstop ) && ( i < get_NStaticArcs() ) ; ++i )
+  for( auto ubi = UB.begin() + i ; i < get_NStaticArcs() ; ++i )
    (ubi++)->set_dual( *(rcstrt++) );
 
- if( ( rcstrt == rcstop ) || ( ! HasDynamicX() ) )
+ if( ! HasDynamicX() )
   return;
 
  auto dubi = dUB.begin();
  if( i > get_NStaticArcs() )
   dubi = std::next( dubi , i - get_NStaticArcs() );
 
- while( rcstrt != rcstop )
+ for(  ; i < get_NArcs() ; ++i )
   (dubi++)->set_dual( *(rcstrt++) );
 
  }  // end( MCFBlock::set_rc( range ) )
@@ -3943,31 +3930,21 @@ void MCFSolution::deserialize( const netCDF::NcGroup & group )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFSolution::read( const Block * const block )
+void MCFSolution::read( const Block * block )
 {
  auto MCFB = dynamic_cast< const MCFBlock * >( block );
  if( ! MCFB )
   throw( std::invalid_argument( "block is not a MCFBlock" ) );
 
  // read flows- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
  if( ! v_x.empty() ) {
   if( v_x.size() < MCFB->get_NArcs() )
    v_x.resize( MCFB->get_NArcs() );
 
-  auto vxi = v_x.begin();
-
-  // static part
-  for( auto & xi : MCFB->x )
-   *(vxi++) = xi.get_value();
-
-  // dynamic part
-  for( auto & xi : MCFB->dx )
-   *(vxi++) = xi.get_value();
+  MCFB->get_x( v_x.begin() );
   }
 
  // read potentials - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
  if( MCFB->E.empty() && MCFB->dE.empty() )  // no potentials available
   return;
 
@@ -3975,21 +3952,13 @@ void MCFSolution::read( const Block * const block )
   if( v_pi.size() < MCFB->get_NNodes() )
    v_pi.resize( MCFB->get_NNodes() );
 
-  auto vpii = v_pi.begin();
- 
-  // static part
-  for( auto & ei : MCFB->E )
-   *(vpii++) = ei.get_dual();
-
-  // dynamic part
-  for( auto & ei : MCFB->dE )
-   *(vpii++) = ei.get_dual();
+  MCFB->get_pi( v_pi.begin() );
   }
  }  // end( MCFSolution::read )
 
 /*--------------------------------------------------------------------------*/
 
-void MCFSolution::write( Block * const block ) 
+void MCFSolution::write( Block * block ) 
 {
  auto MCFB = dynamic_cast< MCFBlock * >( block );
  if( ! MCFB )
@@ -4000,16 +3969,7 @@ void MCFSolution::write( Block * const block )
   if( v_x.size() < MCFB->get_NStaticArcs() )
    throw( std::invalid_argument( "incompatible flow size" ) );
 
-  auto vxi = v_x.begin();
-
-  // static part
-  for( auto & xi : MCFB->x )
-   xi.set_value( *(vxi++) );
-
-  // dynamic part
-  for( auto dxi = MCFB->dx.begin() ;
-       ( dxi != MCFB->dx.end() ) && ( vxi != v_x.end() ) ; )
-   (*(dxi++)).set_value( *(vxi++) );
+  MCFB->set_x( v_x.begin() );
   }
 
  // write potentials- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -4022,16 +3982,7 @@ void MCFSolution::write( Block * const block )
  if( v_pi.size() < MCFB->get_NStaticNodes() )
   throw( std::invalid_argument( "incompatible potential size" ) );
 
- auto vpii = v_pi.begin();
-
- // static part
- for( auto & ei : MCFB->E )
-  ei.set_dual( *(vpii++) );
-
- // dynamic part
- for( auto dei = MCFB->dE.begin() ;
-      ( dei != MCFB->dE.end() ) && ( vpii != v_pi.end() ) ; )
-  (*(dei++)).set_dual( *(vpii++) );
+ MCFB->set_pi( v_pi.begin() );
 
  // write reduced costs (if any)- - - - - - - - - - - - - - - - - - - - - - -
   

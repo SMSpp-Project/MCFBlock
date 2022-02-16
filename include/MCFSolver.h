@@ -386,7 +386,7 @@ public:
   auto MCFB = static_cast< MCFBlock * >( f_Block );
   MCFBlock::Vec_FNumber X( MCFB->get_NArcs() );
   this->MCFGetX( X.data() );
-  MCFB->set_x( X.begin() , X.end() );
+  MCFB->set_x( X.begin() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -413,11 +413,11 @@ public:
   auto MCFB = static_cast< MCFBlock * >( f_Block );
   MCFBlock::Vec_CNumber Pi( MCFB->get_NNodes() );
   this->MCFGetPi( Pi.data() );
-  MCFB->set_pi( Pi.begin() , Pi.end() );
+  MCFB->set_pi( Pi.begin() );
   
   MCFBlock::Vec_FNumber RC( MCFB->get_NArcs() );
   this->MCFGetRC( RC.data() );
-  MCFB->set_rc( RC.begin() , RC.end() );
+  MCFB->set_rc( RC.begin() );
   }
 
 /*--------------------------------------------------------------------------*/

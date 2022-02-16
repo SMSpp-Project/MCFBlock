@@ -11,12 +11,7 @@
  * closures and arcs additions / deletions. The same operations are performed
  * on the two solvers, and the results are compared.
  *
- * \version 4.00
- *
- * \date 07 - 02 - 2020
- *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
