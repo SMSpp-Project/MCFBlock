@@ -2225,7 +2225,7 @@ class MCFBlockMod : public Modification
 
  /// constructor: takes the MCFBlock and the type
 
- MCFBlockMod( MCFBlock * const fblock , const int type )
+ MCFBlockMod( MCFBlock * fblock , int type )
   : f_Block( fblock ) , f_type( type ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -2241,7 +2241,7 @@ class MCFBlockMod : public Modification
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// accessor to the type of modification
 
- int type( void ) { return( f_type ); }
+ int type( void ) const { return( f_type ); }
 
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2268,7 +2268,7 @@ class MCFBlockMod : public Modification
  MCFBlock *f_Block;
                ///< pointer to the MCFBlock to which the MCFBlockMod refers
 
- int f_type;   ///< type of modification
+ int f_type;   ///< type of Modification
 
 /*--------------------------------------------------------------------------*/
 
@@ -2304,7 +2304,7 @@ class MCFBlockRngdMod : public MCFBlockMod
 
  /// accessor to the range
 
- Block::c_Range & rng( void ) { return( f_rng ); }
+ Block::c_Range & rng( void ) const { return( f_rng ); }
  
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2360,7 +2360,7 @@ class MCFBlockSbstMod : public MCFBlockMod
 
  /// accessor to the subset
 
- Block::c_Subset & nms( void ) { return( f_nms ); }
+ Block::c_Subset & nms( void ) const { return( f_nms ); }
 
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2458,9 +2458,9 @@ class MCFSolution : public Solution {
 
 /*------------- METHODS DESCRIBING THE BEHAVIOR OF A MCFSolution -----------*/
 
- void read( const Block * const block ) override final;
+ void read( const Block * block ) override final;
 
- void write( Block * const block ) override final;
+ void write( Block * block ) override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// serialize a MCFSolution into a netCDF::NcGroup

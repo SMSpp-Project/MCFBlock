@@ -291,10 +291,12 @@ public:
 
  int compute( bool changedvars = true ) override
  {
-  const static std::vector< int > MCFstatus_2_sol_type = {
+  const static std::array< int , 6 > MCFstatus_2_sol_type = {
    kUnEval , Solver::kOK , kStopTime , kInfeasible , Solver::kUnbounded ,
    Solver::kError };
 
+  lock();  // first of all, acquire self-lock
+  
   if( ! f_Block )           // there is no [MCFBlock] to solve
    return( kBlockLocked );  // return error 
 
@@ -314,6 +316,8 @@ public:
   // then (try to) solve the MCF
   this->MCFC::SolveMCF();
 
+  unlock();  // release self-lock
+  
   // now give out the result: note that the vector MCFstatus_2_sol_type[]
   // starts from 0 whereas the first value of MCFStatus is -1 (= kUnSolved),
   // hence the returned status has to be shifted by + 1
@@ -684,7 +688,7 @@ public:
    //       care to make this work (or maybe not).
    // MCFC::PreProcess();
    // besides, any outstanding modification makes no sense any longer
-   v_mod.clear();
+   mod_clear();
    }
   else
    v_mod.push_back( mod );
@@ -711,6 +715,8 @@ protected:
 /*--------------------------------------------------------------------------*/
 
  void process_outstanding_Modification( void );
+
+ void guts_of_poM( c_p_Mod mod );
 
 /*--------------------------------------------------------------------------*/
 /*---------------------------- PROTECTED FIELDS  ---------------------------*/
@@ -860,164 +866,156 @@ template< class MCFC >
 void MCFSolver< MCFC >::process_outstanding_Modification( void )
 {
  // no-frills loop: do them in order, with no attempt at optimizing
+ // note that NBModification have already been dealt with and therefore need
+ // not be considered here
 
- for( auto mod = front() ; mod ; mod = front() ) {
-  /* Use a Lambda to define a "guts" of the method that can be called
-     recursively. Note the trick of defining the std::function object and
-     "passing" it to the lambda, which allows recursive calls. Note the need
-     to explicitly capture "this" to use fields/methods of the class. */
+ for( ; ; ) {
+  auto mod = pop();
+  if( ! mod )
+   break;
 
-  auto MCFB = static_cast< MCFBlock * >( f_Block );
-
-  std::function< void( c_p_Mod )> guts_of_poM;
-  guts_of_poM = [ this , & guts_of_poM , MCFB ]( c_p_Mod mod ) {
-   // process Modification - - - - - - - - - - - - - - - - - - - - - - - - - -
-   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   /* This requires to patiently sift through the possible Modification types
-      to find what this Modification exactly is, and call the appropriate
-      method of MCFClass. */
-
-   // GroupModification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   if( const auto tmod = dynamic_cast< GroupModification * const >( mod ) ) {
-    for( const auto & submod : tmod->sub_Modifications() )
-     guts_of_poM( submod.get() );
-
-    return;
-    }
-
-
-   // MCFBlockRngdMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   /* Note: in the following we can assume that C, B and U are nonempty. This
-      is because they can be empty only if they are so when the object is
-      loaded. But if a Modification has been issued they are no longer empty
-      (a Modification changin nothing from the "empty" state is not issued).
-      */
-   if( const auto tmod = dynamic_cast< MCFBlockRngdMod * const >( mod ) ) {
-    switch( tmod->type() ) {
-     case( MCFBlockMod::eChgCost ):
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFC::ChgCost( tmod->rng().first , MCFB->get_C( tmod->rng().first ) );
-      else
-       MCFC::ChgCosts( MCFB->get_C().data() + tmod->rng().first , nullptr,
-		       tmod->rng().first , tmod->rng().second );
-      break;
-
-     case( MCFBlockMod::eChgCaps ):
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFC::ChgUCap( tmod->rng().first , MCFB->get_U( tmod->rng().first ) );
-      else
-       MCFC::ChgUCaps( MCFB->get_U().data() + tmod->rng().first , nullptr,
-		       tmod->rng().first , tmod->rng().second );
-      break;
-
-     case( MCFBlockMod::eChgDfct ):
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFC::ChgDfct( tmod->rng().first , MCFB->get_B( tmod->rng().first ) );
-      else
-       MCFC::ChgDfcts( MCFB->get_B().data() + tmod->rng().first , nullptr,
-		       tmod->rng().first , tmod->rng().second );
-      break;
-
-     case( MCFBlockMod::eOpenArc ):
-      for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
-       MCFC::OpenArc( arc++ );
-      break;
-
-     case( MCFBlockMod::eCloseArc ):
-      for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
-       MCFC::CloseArc( arc++ );
-      break;
-
-     case( MCFBlockMod::eAddArc ): {
-      auto arc = MCFC::AddArc( MCFB->get_SN( tmod->rng().first ) ,
-			       MCFB->get_EN( tmod->rng().first ) ,
-			       MCFB->get_U( tmod->rng().first ) ,
-			       MCFB->get_C( tmod->rng().first ) );
-      if( arc != tmod->rng().first )
-       throw( std::logic_error( "name mismatch in AddArc()" ) );
-      break;
-      }
-     case( MCFBlockMod::eRmvArc ):
-      MCFC::DelArc( tmod->rng().second - 1 );
-      break;
-
-     default:
-      throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
-     }
-
-    return;
-    }
-
-   // MCFBlockSbstMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   if( const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod ) ) {
-    switch( tmod->type() ) {
-     case( MCFBlockMod::eOpenArc ):
-      for( auto arc : tmod->nms() )
-       MCFC::OpenArc( arc );
-      return;
-
-     case( MCFBlockMod::eCloseArc ):
-      for( auto arc : tmod->nms() )
-       MCFC::CloseArc( arc );
-      return;
-     }
-
-    // have to InINF-terminate the vector of indices (damn!)
-    MCFBlock::Subset nmsI( tmod->nms().size() + 1 );
-    *copy( tmod->nms().begin() , tmod->nms().end() , nmsI.begin() ) =
-                                                       Inf<MCFBlock::Index>();
-    switch( tmod->type() ) {
-     case( MCFBlockMod::eChgCost ): {
-      MCFBlock::Vec_CNumber NCost( tmod->nms().size() );
-      auto C = MCFB->get_C();
-      for( MCFBlock::Index i = 0 ; i < NCost.size() ; i++ )
-       NCost[ i ] = C[ nmsI[ i ] ];
-
-      MCFC::ChgCosts( NCost.data() , nmsI.data() );
-      break;
-      }
-
-     case( MCFBlockMod::eChgCaps ): {
-      MCFBlock::Vec_FNumber NCap( tmod->nms().size() );
-      auto U = MCFB->get_U();
-      for( MCFBlock::Index i = 0 ; i < NCap.size() ; i++ )
-       NCap[ i ] = U[ nmsI[ i ] ];
-
-      MCFC::ChgUCaps( NCap.data() , nmsI.data() );
-      break;
-      }
-
-     case( MCFBlockMod::eChgDfct ): {
-      MCFBlock::Vec_FNumber NDfct( tmod->nms().size() );
-      auto B = MCFB->get_B();
-      for( MCFBlock::Index i = 0 ; i < NDfct.size() ; i++ )
-       NDfct[ i ] = B[ nmsI[ i ] ];
-
-      MCFC::ChgDfcts( NDfct.data() , nmsI.data() );
-      break;
-      }
-
-     default:
-      throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
-     }
-
-    return;
-    }
-
-   // any remaining Modification is plainly ignored, since it must be an
-   // "abstract" Modification, which this Solver does not need to look at
-
-   };  // end( guts_of_poM ) - - - - - - - - - - - - - - - - - - - - - - - - -
-       //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-  // finally, call the "guts of" - - - - - - - - - - - - - - - - - - - - - - -
-
-  guts_of_poM( mod.get() );  // now the actual call
-
-  pop_front();   // now the Modification is processed: remove it
-  
-  }  // end( while( there are Modification ) )
+  guts_of_poM( mod.get() );
+  }
  }  // end( MCFSolver::process_outstanding_Modification )
+
+/*--------------------------------------------------------------------------*/
+
+template< class MCFC >
+void MCFSolver< MCFC >::guts_of_poM( c_p_Mod mod )
+{
+ auto MCFB = static_cast< MCFBlock * >( f_Block );
+
+ // process Modification - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ /* This requires to patiently sift through the possible Modification types
+  * to find what this Modification exactly is, and call the appropriate
+  * method of MCFClass. */
+
+ // GroupModification- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ if( auto tmod = dynamic_cast< const GroupModification * >( mod ) ) {
+  for( const auto & submod : tmod->sub_Modifications() )
+   guts_of_poM( submod.get() );
+
+  return;
+  }
+
+ // MCFBlockRngdMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ /* Note: in the following we can assume that C, B and U are nonempty. This
+  * is because they can be empty only if they are so when the object is
+  * loaded. But if a Modification has been issued they are no longer empty (a
+  * Modification changin nothing from the "empty" state is not issued). */
+
+ if( auto tmod = dynamic_cast< const MCFBlockRngdMod * >( mod ) ) {
+  switch( tmod->type() ) {
+   case( MCFBlockMod::eChgCost ):
+    if( tmod->rng().second == tmod->rng().first + 1 )
+     MCFC::ChgCost( tmod->rng().first , MCFB->get_C( tmod->rng().first ) );
+    else
+     MCFC::ChgCosts( MCFB->get_C().data() + tmod->rng().first , nullptr,
+		     tmod->rng().first , tmod->rng().second );
+    return;
+
+   case( MCFBlockMod::eChgCaps ):
+    if( tmod->rng().second == tmod->rng().first + 1 )
+     MCFC::ChgUCap( tmod->rng().first , MCFB->get_U( tmod->rng().first ) );
+    else
+     MCFC::ChgUCaps( MCFB->get_U().data() + tmod->rng().first , nullptr,
+		     tmod->rng().first , tmod->rng().second );
+    return;
+
+   case( MCFBlockMod::eChgDfct ):
+    if( tmod->rng().second == tmod->rng().first + 1 )
+     MCFC::ChgDfct( tmod->rng().first , MCFB->get_B( tmod->rng().first ) );
+    else
+     MCFC::ChgDfcts( MCFB->get_B().data() + tmod->rng().first , nullptr,
+		     tmod->rng().first , tmod->rng().second );
+    return;
+
+   case( MCFBlockMod::eOpenArc ):
+    for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
+     MCFC::OpenArc( arc++ );
+    return;
+
+   case( MCFBlockMod::eCloseArc ):
+    for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
+     MCFC::CloseArc( arc++ );
+    return;
+
+   case( MCFBlockMod::eAddArc ): {
+    auto arc = MCFC::AddArc( MCFB->get_SN( tmod->rng().first ) ,
+			     MCFB->get_EN( tmod->rng().first ) ,
+			     MCFB->get_U( tmod->rng().first ) ,
+			     MCFB->get_C( tmod->rng().first ) );
+    if( arc != tmod->rng().first )
+     throw( std::logic_error( "name mismatch in AddArc()" ) );
+    return;
+    }
+
+   case( MCFBlockMod::eRmvArc ):
+    MCFC::DelArc( tmod->rng().second - 1 );
+    return;
+
+   default: throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
+   }
+  }
+
+ // MCFBlockSbstMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ if( auto tmod = dynamic_cast< const MCFBlockSbstMod * >( mod ) ) {
+  switch( tmod->type() ) {
+   case( MCFBlockMod::eOpenArc ):
+    for( auto arc : tmod->nms() )
+     MCFC::OpenArc( arc );
+    return;
+
+   case( MCFBlockMod::eCloseArc ):
+    for( auto arc : tmod->nms() )
+     MCFC::CloseArc( arc );
+    return;
+    }
+
+  // have to InINF-terminate the vector of indices (damn!)
+  MCFBlock::Subset nmsI( tmod->nms().size() + 1 );
+  *copy( tmod->nms().begin() , tmod->nms().end() , nmsI.begin() ) =
+                                                     Inf< MCFBlock::Index >();
+  switch( tmod->type() ) {
+   case( MCFBlockMod::eChgCost ): {
+    MCFBlock::Vec_CNumber NCost( tmod->nms().size() );
+    auto C = MCFB->get_C();
+    for( MCFBlock::Index i = 0 ; i < NCost.size() ; i++ )
+     NCost[ i ] = C[ nmsI[ i ] ];
+
+    MCFC::ChgCosts( NCost.data() , nmsI.data() );
+    return;
+    }
+
+   case( MCFBlockMod::eChgCaps ): {
+    MCFBlock::Vec_FNumber NCap( tmod->nms().size() );
+    auto U = MCFB->get_U();
+    for( MCFBlock::Index i = 0 ; i < NCap.size() ; i++ )
+     NCap[ i ] = U[ nmsI[ i ] ];
+
+    MCFC::ChgUCaps( NCap.data() , nmsI.data() );
+    return;
+    }
+
+   case( MCFBlockMod::eChgDfct ): {
+    MCFBlock::Vec_FNumber NDfct( tmod->nms().size() );
+    auto B = MCFB->get_B();
+    for( MCFBlock::Index i = 0 ; i < NDfct.size() ; i++ )
+     NDfct[ i ] = B[ nmsI[ i ] ];
+
+    MCFC::ChgDfcts( NDfct.data() , nmsI.data() );
+    return;
+    }
+
+   default: throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
+   }
+  }
+
+ // any remaining Modification is plainly ignored, since it must be an
+ // "abstract" Modification, which this Solver does not need to look at
+
+ }  // end( guts_of_poM )
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
