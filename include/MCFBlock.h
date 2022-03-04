@@ -864,7 +864,7 @@ public:
  /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the cost of arc i (0 <= i < get_NArcs())
 
- inline CNumber get_C( c_Index i ) const { return( C.empty() ? 0 : C[ i ] ); }
+ CNumber get_C( c_Index i ) const { return( C.empty() ? 0 : C[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc upper bounds
@@ -913,7 +913,7 @@ public:
   * accuracy defining "approximately". The parameter "useabstract" has the
   * same meaning as in is_feasible() and is_optimal(). */
 
- bool flow_feasible( c_FNumber feps , bool useabstract = false );
+ bool flow_feasible( FNumber feps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the current solution is (approximately) bound feasible
@@ -925,7 +925,7 @@ public:
   * defining "approximately". The parameter "useabstract" has the same
   * meaning as in is_feasible() and is_optimal(). */
 
- bool bound_feasible( c_FNumber feps , bool useabstract = false );
+ bool bound_feasible( FNumber feps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the current solution is (approximately) dual feasible
@@ -937,7 +937,7 @@ public:
   * "approximately". The parameter "useabstract" has the same meaning as in
   * is_feasible() and is_optimal(). */
 
- bool dual_feasible( c_CNumber ceps , bool useabstract = false );
+ bool dual_feasible( CNumber ceps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if complementary slackness are (approximately) satisfied
@@ -953,7 +953,7 @@ public:
   * The parameter "useabstract" has the same meaning as in is_feasible() and
   * is_optimal(). */
 
- bool complementary_slackness( c_CNumber ceps , c_FNumber feps ,
+ bool complementary_slackness( CNumber ceps , FNumber feps ,
 			       bool useabstract = false );
 
 /*--------------------------------------------------------------------------*/
@@ -2292,8 +2292,7 @@ class MCFBlockRngdMod : public MCFBlockMod
 
  /// constructor: takes the MCFBlock, the type, and the range
 
- MCFBlockRngdMod( MCFBlock * const fblock , const int type ,
-		  Block::Range rng )
+ MCFBlockRngdMod( MCFBlock * fblock , int type , Block::Range rng )
   : MCFBlockMod( fblock , type ) , f_rng( rng ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -2346,10 +2345,13 @@ class MCFBlockSbstMod : public MCFBlockMod
  ///< constructor: takes the MCFBlock, the type, and the subset
  /**< Constructor: takes the MCFBlock, the type, and the subset. As the the
   * && tells, nms is "consumed" by the constructor and its resources become
-  * property of the MCFBlockSbstMod object. */
+  * property of the MCFBlockSbstMod object.
+  *
+  *   NOTE THAT nms IS REQUIRED TO BE ORDERED IN INCREASING SENSE
+  *
+  * although this is not checked by the class. */
 
- MCFBlockSbstMod( MCFBlock * const fblock , const int type ,
-		  Block::Subset && nms )
+ MCFBlockSbstMod( MCFBlock * fblock , int type , Block::Subset && nms )
   : MCFBlockMod( fblock , type ) , f_nms( std::move( nms ) ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */

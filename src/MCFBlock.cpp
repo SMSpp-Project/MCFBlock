@@ -288,9 +288,9 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
  // in addition the cost has to be set to 0 - - - - - - - - - - - - - - - - -
 
  for( Index j = 0; j < C.size() ; j++ )
-  if( C[j] >= Inf<double>() ) {
-   close_arc(j,eNoMod);
-   C[j] = 0;
+  if( C[ j ] >= Inf<double>() ) {
+   close_arc( j , eNoMod );
+   C[ j ] = 0;
    }
 
  }  // end( MCFBlock::load( memory ) )
@@ -1632,11 +1632,12 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
    }
 
   // MCFBlockSbstMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  /* Note that tmod->f_nms need be copied, since the chg_*() methods
+  /* Note that tmod->nms() need be copied, since the chg_*() methods
    * *in principle* "consume" the names vector. This is actually not true
    * if MCFB will *not* issue a physical modification, which one may
    * actually know beforehand, but it has to be done anyway because the
-   * MCFBlockSbstMod only provides read-only access to the vector. */
+   * MCFBlockSbstMod only provides read-only access to the vector.
+   * However, tmod->nms() is guaranteed to be ordered. */
 
   if( const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod ) ) {
    switch( tmod->type() ) {
@@ -1651,7 +1652,8 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
      for( Index i = 0 ; i < NCost.size() ; i++ )
       NCost[ i ] = C[ tmod->nms()[ i ] ];
 
-     MCFB->chg_costs( NCost.begin() , Subset( tmod->nms() ) , iPM , iPA );
+     MCFB->chg_costs( NCost.begin() , Subset( tmod->nms() ) , true ,
+		      iPM , iPA );
      break;
      }
     case( MCFBlockMod::eChgCaps ): {
@@ -1665,7 +1667,8 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
      for( Index i = 0 ; i < NCap.size() ; i++ )
       NCap[ i ] = U[ tmod->nms()[ i ] ];
 
-     MCFB->chg_ucaps( NCap.begin() , Subset( tmod->nms() ) , iPM , iPA );
+     MCFB->chg_ucaps( NCap.begin() , Subset( tmod->nms() ) , true ,
+		      iPM , iPA );
      break;
      }
     case( MCFBlockMod::eChgDfct ): {
@@ -1679,7 +1682,8 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
      for( Index i = 0 ; i < NDfct.size() ; i++ )
       NDfct[ i ] = B[ tmod->nms()[ i ] ];
 
-     MCFB->chg_dfcts( NDfct.begin() , Subset( tmod->nms() ) , iPM , iPA );
+     MCFB->chg_dfcts( NDfct.begin() , Subset( tmod->nms() ) , true ,
+		      iPM , iPA );
      break;
      }
     case( MCFBlockMod::eOpenArc ):
@@ -1689,7 +1693,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
        throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
      #endif
-     MCFB->open_arcs( Subset( tmod->nms() ) , iPM , iPA );
+    MCFB->open_arcs( Subset( tmod->nms() ) , true , iPM , iPA );
      break;
     case( MCFBlockMod::eCloseArc ):
      #ifndef NDEBUG
@@ -1698,7 +1702,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
        throw( std::logic_error(
 		     "map_forward_Modification:: incompatible MCFBlock" ) );
      #endif
-     MCFB->close_arcs( Subset( tmod->nms() ) , iPM , iPA );
+    MCFB->close_arcs( Subset( tmod->nms() ) , true , iPM , iPA );
      break;
     default:
      throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
