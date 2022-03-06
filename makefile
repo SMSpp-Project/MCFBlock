@@ -29,11 +29,7 @@
 #           $(MCFBkH)      = the .h files to include                         #
 #           $(MCFBkINC)    = the -I$( source directory )                     #
 #                                                                            #
-#                                VERSION 2.00                                #
-#                               13 - 11 - 2018                               #
-#                                                                            #
 #                              Antonio Frangioni                             #
-#                          Operations Research Group                         #
 #                         Dipartimento di Informatica                        #
 #                             Universita' di Pisa                            #
 #                                                                            #

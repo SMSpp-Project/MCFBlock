@@ -16,18 +16,13 @@
 #           $(SMS++INC) = the -I$( core SMS++ directory )                    #
 #           $(SMS++OBJ) = the core SMS++ library                             #
 #           $(MCFBkSDR) = the directory where MCFBlock / MCFSolver source is #
-#           $(MCFBkODR) = the directory where the objects have to be put     #
 #                                                                            #
 #   Output: $(MCFBkOBJ) = the final object(s) / library                      #
 #           $(MCFBkLIB) = external libraries + -L<libdirs>                   #
 #           $(MCFBkH)   = the .h files to include for MCFBlock / MCFSolver   #
 #           $(MCFBkINC) = the -I$( MCFBlock / MCFSolver directory )          #
 #                                                                            #
-#                                VERSION 1.00                                #
-#                               11 - 07 - 2021                               #
-#                                                                            #
 #                              Antonio Frangioni                             #
-#                          Operations Research Group                         #
 #                         Dipartimento di Informatica                        #
 #                             Universita' di Pisa                            #
 #									     #
