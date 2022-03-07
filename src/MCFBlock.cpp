@@ -14,8 +14,6 @@
 /*--------------------------------------------------------------------------*/
 /*---------------------------- IMPLEMENTATION ------------------------------*/
 /*--------------------------------------------------------------------------*/
-
-/*--------------------------------------------------------------------------*/
 /*------------------------------ INCLUDES ----------------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -1992,6 +1990,33 @@ void MCFBlock::set_x( c_Vec_FNumber_it fstrt , Range rng )
 
 /*--------------------------------------------------------------------------*/
 
+void MCFBlock::set_x( c_Vec_FNumber_it fstrt , c_Subset sbst )
+{
+ if( ! ( AR & HasVar ) )  // nowhere to put the value in
+  return;                 // cowardly (and silently) return
+
+ auto it = sbst.begin();
+
+ if( HasStaticX() )
+  while( ( it != sbst.end() ) && ( *it < get_NStaticArcs() ) )
+   x[ *(it++) ].set_value( *(fstrt++) );
+
+ if( ! HasDynamicX() )
+  return;
+
+ auto dxi = dx.begin();
+ Index prev = get_NStaticArcs();
+
+ while( it != sbst.end() ) {
+  Index h = *(it++);
+  dxi = std::next( dxi , h - prev );
+  dxi->set_value( *(fstrt++) );
+  prev = h;
+  }
+ }  // end( MCFBlock::set_x( subset ) )
+
+/*--------------------------------------------------------------------------*/
+
 void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , Range rng )
 {
  if( ! ( AR & HasFlw ) )  // nowhere to put the value in
@@ -2020,6 +2045,33 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , Range rng )
 
 /*--------------------------------------------------------------------------*/
 
+void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Subset sbst )
+{
+ if( ! ( AR & HasFlw ) )  // nowhere to put the value in
+  return;                 // cowardly (and silently) return
+
+ auto it = sbst.begin();
+
+ if( HasStaticE() )
+  while( ( it != sbst.end() ) && ( *it < get_NStaticNodes() ) )
+   E[ *(it++) ].set_dual( *(pstrt++) );
+
+ if( ! HasDynamicE() )
+  return;
+
+ auto dEi = dE.begin();
+ Index prev = get_NStaticNodes();
+
+ while( it != sbst.end() ) {
+  Index h = *(it++);
+  dEi = std::next( dEi , h - prev );
+  dEi->set_dual( *(pstrt++) );
+  prev = h;
+  }
+ }  // end( MCFBlock::set_pi( subset ) )
+
+/*--------------------------------------------------------------------------*/
+
 void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , Range rng )
 {
  if( ! ( AR & HasBnd ) )  // nowhere to put the value in
@@ -2045,6 +2097,33 @@ void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , Range rng )
   (dubi++)->set_dual( *(rcstrt++) );
 
  }  // end( MCFBlock::set_rc( range ) )
+
+/*--------------------------------------------------------------------------*/
+
+void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Subset sbst )
+{
+ if( ! ( AR & HasBnd ) )  // nowhere to put the value in
+  return;                 // cowardly (and silently) return
+
+ auto it = sbst.begin();
+
+ if( HasStaticX() )
+  while( ( it != sbst.end() ) && ( *it < get_NStaticArcs() ) )
+   UB[ *(it++) ].set_dual( *(rcstrt++) );
+
+ if( ! HasDynamicX() )
+  return;
+
+ auto dubi = dUB.begin();
+ Index prev = get_NStaticArcs();
+
+ while( it != sbst.end() ) {
+  Index h = *(it++);
+  dubi = std::next( dubi , h - prev );
+  dubi->set_dual( *(rcstrt++) );
+  prev = h;
+  }
+ }  // end( MCFBlock::set_rc( subset ) )
 
 /*--------------------------------------------------------------------------*/
 /*-------------------- Methods for handling Modification -------------------*/

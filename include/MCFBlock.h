@@ -1329,10 +1329,19 @@ public:
  /// sets a contiguous interval of the flow solution
  /** Method to set the flow solution; the values found in the c_Vec_FNumber
   * starting from fstrt are copied into the value of the flow variable
-  * x[ i ] for i in Rng, in the same order. */
+  * x[ i ] for i in rng, in the same order. */
 
  void set_x( c_Vec_FNumber_it fstrt ,
 	     Range rng = Range( 0 , Inf< Index >() ) );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets a genric subset of the flow solution
+ /** Method to set the flow solution; the values found in the c_Vec_FNumber
+  * starting from fstrt are copied into the value of the flow variable
+  * x[ i ] for all i in sbst (that must be ordered in increasing sense), in
+  * the same order. */
+
+ void set_x( c_Vec_FNumber_it fstrt , c_Subset sbst );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the flow solution of the given arc
@@ -1350,12 +1359,21 @@ public:
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the potential solution
  /** Method to set the potential solution; the values found in the
-  * c_Vec_CNumber between pstrt (included) and pstop (excluded) are copied
-  * into the potential of node (dual multiplier of the flow balance
-  * constraint) strt + i. This is typically used by a Solver. */
+  * c_Vec_CNumber starting from pstrt are copied into the potential of node
+  * (dual multiplier of the flow balance constraint) i for i in rng, in the
+  * same order. */
 
  void set_pi( c_Vec_CNumber_it pstrt ,
 	      Range rng = Range( 0 , Inf< Index >() ) );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets a genric subset of the potential solution
+ /** Method to set the potential solution; the values found in the
+  * c_Vec_FNumber starting from pstrt are copied into the potential of node
+  * (dual multiplier of the flow balance constraint) i for all i in sbst
+  * (that must be ordered in increasing sense), in the same order. */
+
+ void set_pi( c_Vec_FNumber_it pstrt , c_Subset sbst );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the potential solution of the given node
@@ -1376,12 +1394,21 @@ public:
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the reduced costs
  /** Method to set the reduced costs solution; the values found in the
-  * c_Vec_CNumber between rcstrt (included) and rcstop (excluded) are copied
-  * into the reduced cost of arc (dual value of the bound constraint) strt +
-  * i. This is typically used by a Solver. */
+  * c_Vec_CNumber starting from rcstrt are copied into the reduced cost of
+  * arc (dual value of the bound constraint) i for i in rng, in the same
+  * order. */
 
  void set_rc( c_Vec_CNumber_it rcstrt ,
 	      Range rng = Range( 0 , Inf< Index >() ) );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets a genric subset of the reduced costs
+ /** Method to set the reduced costs solution; the values found in the
+  * c_Vec_FNumber starting from rcstrt are copied into the reduced cost of
+  * arc (dual value of the bound constraint) i for all i in sbst (that must
+  * be ordered in increasing sense), in the same order. */
+
+ void set_rc( c_Vec_FNumber_it rcstrt , c_Subset sbst );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the reduced cost of the given arc
