@@ -424,6 +424,45 @@ public:
  void deserialize( const netCDF::NcGroup & group ) override;
 
 /*--------------------------------------------------------------------------*/
+ /// loads the MCF instance from file in DIMACS standard format
+ /** Protected method for loading a MCFBlock out of a std::istream (which is
+  * what operator>> is dispatched to. The std::istream is assumed to contain
+  * the description of a MCF instance in DIMACS standard format, which is 
+  * the following. The first line must be
+  *
+  *      p min <number of nodes> <number of arcs>
+  *
+  * Then the node definition lines must be found, in the form
+  *
+  *      n <node number> <node supply>
+  *
+  * Not all nodes need have a node definition line; these are given zero
+  * supply, i.e., they are transhipment nodes (supplies are the inverse of
+  * deficits, i.e., a node with positive supply is a source node). Finally,
+  * the arc definition lines must be found, in the form
+  *
+  *    a <start node> <end node> <lower bound> <upper bound> <flow cost>
+  *
+  * There must be exactly <number of arcs> arc definition lines in the file.
+  *
+  * Note that the file format accepted by load() is more general than the
+  * DIMACS standard format, in that node and arc definitions can be mixed in
+  * any order, while the DIMACS file requires all node information to appear
+  * before all arc information. Also, capacities of arcs can be set to
+  * +Inf<FNumber>() by putting "INF", "Inf" or "inf" in the file (actually,
+  * any string starting with "I" or "i" where these would be expected).
+  *
+  * Note that the graph as provided by this method is considered to be
+  * "fully static".
+  *
+  * Since there is only one supported input format, \p frmt is ignored.
+  *
+  * Like load( memory ), if there is any Solver attached to this MCFBlock
+  * then a NBModification (the "nuclear option") is issued. */
+
+ void load( std::istream &input , char frmt = 0 ) override;
+
+/*--------------------------------------------------------------------------*/
  /// generate the abstract variables of the MCF
  /** Method that generates the abstract Variable of the MCF. These are:
   *
@@ -1493,11 +1532,18 @@ public:
  void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
 
 /** @} ---------------------------------------------------------------------*/
-/*------------ METHODS FOR LOADING, PRINTING & SAVING THE MCFBlock ---------*/
+/*--------------- METHODS FOR PRINTING & SAVING THE MCFBlock ---------------*/
 /*--------------------------------------------------------------------------*/
-/** @name Methods for loading, printing & saving the MCFBlock
+/** @name Methods for printing & saving the MCFBlock
  *  @{ */
 
+ /// print the MCFBlock on an ostream with the given verbosity
+ /** Protected method to print information about the MCFBlock; with the
+  * "complete" level ('C') it outputs the MCFBlock in DIMACS formar. */
+
+ void print( std::ostream & output , char vlvl = 0 ) const override;
+
+/*--------------------------------------------------------------------------*/
  /// extends Block::serialize( netCDF::NcGroup )
  /** Extends Block::serialize( netCDF::NcGroup ) to the specific format of a
   * MCFBlock. See MCFBlock::deserialize( netCDF::NcGroup ) for details of the
@@ -1962,53 +2008,8 @@ public:
 /*--------------------------------------------------------------------------*/
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 /*--------------------------------------------------------------------------*/
-/** @name Protected methods for inserting and extracting
- *  @{ */
-
- /// print the MCFBlock on an ostream with the given verbosity
- /** Protected method to print information about the MCFBlock; with the
-  * "complete" level it outputs the MCFBlock in DIMACS formar. */
-
- void print( std::ostream &output ) const override;
 
 /*--------------------------------------------------------------------------*/
- /// loads the MCF instance from file in DIMACS standard format
- /** Protected method for loading a MCFBlock out of a std::istream (which is
-  * what operator>> is dispatched to. The std::istream is assumed to contain
-  * the description of a MCF instance in DIMACS standard format, which is 
-  * the following. The first line must be
-  *
-  *      p min <number of nodes> <number of arcs>
-  *
-  * Then the node definition lines must be found, in the form
-  *
-  *      n <node number> <node supply>
-  *
-  * Not all nodes need have a node definition line; these are given zero
-  * supply, i.e., they are transhipment nodes (supplies are the inverse of
-  * deficits, i.e., a node with positive supply is a source node). Finally,
-  * the arc definition lines must be found, in the form
-  *
-  *    a <start node> <end node> <lower bound> <upper bound> <flow cost>
-  *
-  * There must be exactly <number of arcs> arc definition lines in the file.
-  *
-  * Note that the file format accepted by load() is more general than the
-  * DIMACS standard format, in that node and arc definitions can be mixed in
-  * any order, while the DIMACS file requires all node information to appear
-  * before all arc information. Also, capacities of arcs can be set to
-  * +Inf<FNumber>() by putting "INF", "Inf" or "inf" in the file (actually,
-  * any string starting with "I" or "i" where these would be expected).
-  *
-  * Note that the graph as provided by this method is considered to be
-  * "fully static".
-  *
-  * Like load( memory ), if there is any Solver attached to this MCFBlock
-  * then a NBModification (the "nuclear option") is issued. */
-
- void load( std::istream &input ) override;
-
-/** @} ---------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
 /*--------------------------------------------------------------------------*/
 

@@ -295,7 +295,7 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::load( std::istream &input )
+void MCFBlock::load( std::istream & input , char frmt )
 {
  // erase previous instance, if any- - - - - - - - - - - - - - - - - - - - - -
 
@@ -2145,6 +2145,100 @@ void MCFBlock::add_Modification( sp_Mod mod , ChnlName chnl )
 /*------------ METHODS FOR LOADING, PRINTING & SAVING THE MCFBlock ---------*/
 /*--------------------------------------------------------------------------*/
 
+void MCFBlock::print( std::ostream  & output , char vlvl ) const
+{
+ if( vlvl != 'C' ) {  // non-complete version
+  // only basic information 
+  output << "MCFBlock with: " << NNodes << " nodes and " << SN.size()
+	 << " arcs" << std::endl;
+
+  if( ! vlvl ) {     // print the graph
+   for( Index i = 0 ; i < get_NNodes() ; ++i )
+    if( B[ i ] != 0 )
+     output << "B[ " << i + 1 << " ] = " << B[ i ] << std::endl;
+
+   if( C.empty() )
+    if( U.empty() )
+     output << "all arcs have 0 cost and +Inf upper bound" << std::endl;
+    else {
+     for( Index i = 0 ; i < get_NArcs() ; ++i )
+      if( ! is_deleted( i ) ) {
+       output << "( " << SN[ i ] << " , " << EN[ i ] << " ): U = ";
+       print_UB( output , U[ i ] );
+       output << std::endl;
+       }
+     }
+   else
+    if( U.empty() )
+     for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+      if( ! is_deleted( i ) )
+       output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
+	      << std::endl;
+      }
+    else
+     for( Index i = 0 ; i < get_NArcs() ; ++i )
+      if( ! is_deleted( i ) ) {
+       output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
+	      << ", U = ";
+       print_UB( output , U[ i ] );
+       output << std::endl;
+       }
+   }
+  }
+ else  {
+  // print header in DIMACS standard format
+  output << std::endl << "p min " << get_NNodes() << " ";
+  if( HasDynamicX() ) {
+   Index narcs = get_NStaticArcs();
+   for( Index i = narcs ; i < get_NArcs() ; )
+    if( ! is_deleted( i++ ) )
+     ++narcs;
+   
+   output << narcs << std::endl;
+   }
+  else
+   output << SN.size() << std::endl;
+
+  // print node descriptors in DIMACS standard format
+  for( Index i = 0 ; i < get_NNodes() ; ++i )
+   if( B[ i ] != 0 )
+    output << "n\t" << i + 1 << "\t" << - B[ i ] << std::endl;
+
+  // print arc descriptors in DIMACS standard format
+  if( C.empty() )
+   if( U.empty() )
+    for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+     if( ! is_deleted( i ) )
+      output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t+Inf\t0"
+	     << std::endl;
+     }
+   else {
+    for( Index i = 0 ; i < get_NArcs()  ; ++i )
+     if( ! is_deleted( i ) ) {
+      output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t";
+      print_UB( output , U[ i ] );
+      output << "\t0" << std::endl;
+      }
+    }
+  else
+   if( U.empty() ) {
+    for( Index i = 0 ; i < get_NArcs() ; ++i )
+     if( ! is_deleted( i ) )
+      output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t+Inf\t"
+	     << C[ i ] << std::endl;
+    }
+   else
+    for( Index i = 0 ; i < get_NArcs() ; ++i )
+     if( ! is_deleted( i ) ) {
+      output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
+      print_UB( output , U[ i ] );
+      output << "\t" << C[ i ] << std::endl;
+      }
+  }
+ }  // end( MCFBlock::print )
+
+/*--------------------------------------------------------------------------*/
+
 void MCFBlock::serialize( netCDF::NcGroup & group ) const
 {
  // call the method of Block- - - - - - - - - - - - - - - - - - - - - - - - -
@@ -3404,101 +3498,6 @@ void MCFBlock::remove_arc( Index arc ,
 
 /*--------------------------------------------------------------------------*/
 /*-------------------------- PROTECTED METHODS -----------------------------*/
-/*--------------------------------------------------------------------------*/
-
-void MCFBlock::print( std::ostream &output ) const
-{
- if( verbosity_lvl != Block::complete ) {  // non-complete version
-  // only basic information 
-  output << "MCFBlock with: " << NNodes << " nodes and " << SN.size()
-	 << " arcs" << std::endl;
-
-  if( verbosity_lvl == Block::high ) {     // print the graph
-   for( Index i = 0 ; i < get_NNodes() ; ++i )
-    if( B[ i ] != 0 )
-     output << "B[ " << i + 1 << " ] = " << B[ i ] << std::endl;
-
-   if( C.empty() )
-    if( U.empty() )
-     output << "all arcs have 0 cost and +Inf upper bound" << std::endl;
-    else {
-     for( Index i = 0 ; i < get_NArcs() ; ++i )
-      if( ! is_deleted( i ) ) {
-       output << "( " << SN[ i ] << " , " << EN[ i ] << " ): U = ";
-       print_UB( output , U[ i ] );
-       output << std::endl;
-       }
-     }
-   else
-    if( U.empty() )
-     for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-      if( ! is_deleted( i ) )
-       output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
-	      << std::endl;
-      }
-    else
-     for( Index i = 0 ; i < get_NArcs() ; ++i )
-      if( ! is_deleted( i ) ) {
-       output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
-	      << ", U = ";
-       print_UB( output , U[ i ] );
-       output << std::endl;
-       }
-   }
-  }
- else  {
-  // print header in DIMACS standard format
-  output << std::endl << "p min " << get_NNodes() << " ";
-  if( HasDynamicX() ) {
-   Index narcs = get_NStaticArcs();
-   for( Index i = narcs ; i < get_NArcs() ; )
-    if( ! is_deleted( i++ ) )
-     ++narcs;
-   
-   output << narcs << std::endl;
-   }
-  else
-   output << SN.size() << std::endl;
-
-  // print node descriptors in DIMACS standard format
-  for( Index i = 0 ; i < get_NNodes() ; ++i )
-   if( B[ i ] != 0 )
-    output << "n\t" << i + 1 << "\t" << - B[ i ] << std::endl;
-
-  // print arc descriptors in DIMACS standard format
-  if( C.empty() )
-   if( U.empty() )
-    for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-     if( ! is_deleted( i ) )
-      output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t+Inf\t0"
-	     << std::endl;
-     }
-   else {
-    for( Index i = 0 ; i < get_NArcs()  ; ++i )
-     if( ! is_deleted( i ) ) {
-      output << "a\t" << SN[ i ] + 1 << "\t" << EN[ i ] + 1 << "\t0\t";
-      print_UB( output , U[ i ] );
-      output << "\t0" << std::endl;
-      }
-    }
-  else
-   if( U.empty() ) {
-    for( Index i = 0 ; i < get_NArcs() ; ++i )
-     if( ! is_deleted( i ) )
-      output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t+Inf\t"
-	     << C[ i ] << std::endl;
-    }
-   else
-    for( Index i = 0 ; i < get_NArcs() ; ++i )
-     if( ! is_deleted( i ) ) {
-      output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
-      print_UB( output , U[ i ] );
-      output << "\t" << C[ i ] << std::endl;
-      }
-  }
- }  // end( MCFBlock::print )
-
-/*--------------------------------------------------------------------------*/
 /*-------------------------- PRIVATE METHODS -------------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -3536,7 +3535,7 @@ void MCFBlock::guts_of_destructor( void )
  // explicitly reset all Constraint and Variable
  // this is done for the case where this method is called prior to re-loading
  // a new instance: if not, the new representation would be added to the
- // (no longer 
+ // (no longer current) one
  reset_static_constraints();
  reset_static_variables();
  reset_dynamic_constraints();
