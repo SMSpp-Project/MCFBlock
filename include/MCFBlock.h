@@ -1612,10 +1612,8 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_costs( c_Vec_CNumber_it NCost ,
-		 Range rng = Range( 0 , Inf<Index>() ) ,
-		 ModParam issueMod = eNoBlck ,
-		 ModParam issueAMod = eNoBlck );
+ void chg_costs( c_Vec_CNumber_it NCost , Range rng = INFRange ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the costs of an arbitrary subset of arcs
@@ -1669,8 +1667,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_ucaps( c_Vec_FNumber_it NCap ,
-		 Range rng = Range( 0 , Inf<Index>() ) ,
+ void chg_ucaps( c_Vec_FNumber_it NCap , Range rng = INFRange ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -1728,8 +1725,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_dfcts( c_Vec_FNumber_it NDfct ,
-		 Range rng = Range( 0 , Inf<Index>() ) ,
+ void chg_dfcts( c_Vec_FNumber_it NDfct , Range rng = INFRange ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -1784,7 +1780,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void close_arcs( Range rng = Range( 0 , Inf<Index>() ) ,
+ void close_arcs( Range rng = INFRange ,
 		  ModParam issueMod = eNoBlck ,
 		  ModParam issueAMod = eNoBlck );
 
@@ -1839,7 +1835,7 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void open_arcs( Range rng = Range( 0 , Inf<Index>() ) ,
+ void open_arcs( Range rng = INFRange ,
 		 ModParam issueMod = eNoBlck ,
 		 ModParam issueAMod = eNoBlck );
 
@@ -2019,8 +2015,8 @@ public:
  Index NStaticNodes;             ///< the number of static nodes
  Index NStaticArcs;              ///< the number of static arcs
 
- Subset SN;                   ///< vector of arc starting nodes
- Subset EN;                   ///< vector of arc ending nodes
+ Subset SN;                      ///< vector of arc starting nodes
+ Subset EN;                      ///< vector of arc ending nodes
 
  Vec_CNumber C;                  ///< vector of arc costs
  Vec_FNumber U;                  ///< vector of arc upper capacities
@@ -2037,8 +2033,8 @@ public:
  static constexpr unsigned char HasBnd = 8;
  ///< fourth bit of AR == 1 if the Bound have been constructed
 
- double f_cond_lower;            ///< conditional lower bound, can be infinite
- double f_cond_upper;            ///< conditional upper bound, can be infinite
+ double f_cond_lower;            ///< conditional lower bound, can be -INF
+ double f_cond_upper;            ///< conditional upper bound, can be +INF
  
  std::vector<ColVariable> x;     ///< the static flow variables
  std::vector<FRowConstraint> E;  ///< the static flow conservation constrs.
@@ -2073,8 +2069,7 @@ public:
  *
  * - open_arcs() (both range and subset version)
  *
- * into the corresponding method factories.
- */
+ * into the corresponding method factories. */
 
  static void static_initialization( void )
  {
@@ -2116,36 +2111,37 @@ public:
   //                              MS_sbst::args() );
 
 
-  register_method< MCFBlock, MF_dbl_it, Range >(
-   "MCFBlock::chg_costs", &MCFBlock::chg_costs );
+  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_costs" ,
+						   & MCFBlock::chg_costs );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
-   "MCFBlock::chg_costs", &MCFBlock::chg_costs );
+  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
+   "MCFBlock::chg_costs" , & MCFBlock::chg_costs );
 
-  register_method< MCFBlock, MF_dbl_it, Range >(
-   "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps );
+  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_ucaps" ,
+						   & MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
-   "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps );
+  register_method< MCFBlock , MF_dbl_it , Subset &&, bool >(
+   "MCFBlock::chg_ucaps" , & MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock, MF_dbl_it, Range >(
-   "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts );
+  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_dfcts" ,
+						   & MCFBlock::chg_dfcts );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
-   "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts );
+  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
+   "MCFBlock::chg_dfcts" , & MCFBlock::chg_dfcts );
 
-  register_method< MCFBlock, Range >(
-   "MCFBlock::close_arcs", &MCFBlock::close_arcs );
+  register_method< MCFBlock , Range >( "MCFBlock::close_arcs" ,
+				       & MCFBlock::close_arcs );
 
-  register_method< MCFBlock, Subset &&, bool >(
-   "MCFBlock::close_arcs", &MCFBlock::close_arcs );
+  register_method< MCFBlock , Subset && , bool >( "MCFBlock::close_arcs" ,
+						  & MCFBlock::close_arcs );
 
-  register_method< MCFBlock, Range >(
-   "MCFBlock::open_arcs", &MCFBlock::open_arcs );
+  register_method< MCFBlock , Range >( "MCFBlock::open_arcs" ,
+				       & MCFBlock::open_arcs );
 
-  register_method< MCFBlock, Subset &&, bool >(
-   "MCFBlock::open_arcs", &MCFBlock::open_arcs );
-  }
+  register_method< MCFBlock , Subset && , bool >( "MCFBlock::open_arcs" ,
+						  & MCFBlock::open_arcs );
+
+  }  // end( static_initialization )
 
 /*--------------------------------------------------------------------------*/
 
