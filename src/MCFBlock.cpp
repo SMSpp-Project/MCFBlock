@@ -2309,7 +2309,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
   // note that modify_coefficients owns the vector, so a copy has to be made
   get_lfo()->modify_coefficients( Vec_CNumber( NCost , NCost +
 					       ( rng.second - rng.first ) ) ,
-				  rng , issueAMod );
+				  rng , un_ModBlock( issueAMod ) );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -2359,7 +2359,8 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
   // note that modify_coefficients owns both vectors, so two copies have
   // to be made
   get_lfo()->modify_coefficients( Vec_CNumber( NCost , NCost + nms.size() ) ,
-				  Subset( nms ) , ordered , issueAMod );
+				  Subset( nms ) , ordered ,
+				  un_ModBlock( issueAMod ) );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -2407,7 +2408,7 @@ void MCFBlock::chg_cost( CNumber NCost , Index arc ,
   // in the meantime, if so instructed also issue abstract Modification
   C[ arc ] = NCost;
 
-  get_lfo()->modify_coefficient( arc , NCost , issueAMod );
+  get_lfo()->modify_coefficient( arc , NCost , un_ModBlock( issueAMod ) );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -2649,8 +2650,8 @@ void MCFBlock::chg_ucap( FNumber NCap , Index arc ,
   if( arc < get_NStaticArcs() )
    UB[ arc ].set_rhs( NCap , issueAMod );
   else
-   std::next( dUB.begin() , arc - get_NStaticArcs() )->set_rhs( NCap ,
-								issueAMod );
+   std::next( dUB.begin() , arc - get_NStaticArcs()
+	      )->set_rhs( NCap , un_ModBlock( issueAMod ) );
   }
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2866,8 +2867,8 @@ void MCFBlock::chg_dfct( FNumber NDfct , Index nde ,
   if( nde < get_NStaticNodes() )
    E[ nde ].set_both( NDfct , issueAMod );
   else
-   std::next( dE.begin() , nde - get_NStaticNodes() )->set_both( NDfct ,
-								 issueAMod );
+   std::next( dE.begin() , nde - get_NStaticNodes()
+	      )->set_both( NDfct , un_ModBlock( issueAMod ) );
   }
  
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -3048,7 +3049,7 @@ void MCFBlock::close_arc( Index arc ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  xa->is_fixed( true , issueAMod );
+  xa->is_fixed( true , un_ModBlock( issueAMod ) );
   }
 
  f_cond_lower = NAN;  // reset conditional bounds
@@ -3223,7 +3224,7 @@ void MCFBlock::open_arc( Index arc ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  xa->is_fixed( false , issueAMod );
+  xa->is_fixed( false , un_ModBlock( issueAMod ) );
   }
 
  f_cond_lower = NAN;  // reset conditional bounds
@@ -3397,7 +3398,7 @@ void MCFBlock::remove_arc( Index arc ,
 
  if( not_dry_run( issueAMod ) ) {
   ModParam ampar = make_amod_param( issueAMod ,
-				      AR & ( HasFlw | HasObj ) ? 4 : 1 );
+				    AR & ( HasFlw | HasObj ) ? 4 : 1 );
   if( arc == get_NArcs() - 1 ) {
    // removing the last arc (and possibly more)
 
@@ -3497,7 +3498,6 @@ void MCFBlock::remove_arc( Index arc ,
  }  // end( MCFBlock::remove_arc )
 
 /*--------------------------------------------------------------------------*/
-/*-------------------------- PROTECTED METHODS -----------------------------*/
 /*-------------------------- PRIVATE METHODS -------------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -3576,7 +3576,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
 				 ) );
 
   auto lfo = static_cast<LinearFunction * const>( tmod->function() );
-  if( static_cast<LinearFunction * const>( c.get_function() ) != lfo )
+  if( static_cast< LinearFunction * const >( c.get_function() ) != lfo )
    throw( std::invalid_argument( "Modification to non-Objective" ) );
 
   // note: in the following we can assume that the Range in tmod is
@@ -3746,7 +3746,7 @@ ModParam MCFBlock::make_amod_param( ModParam issueAMod , Index num )
 			      * GroupModification will automatically be a
      * "physical Modification" (i.e., concerns_Block() == false) since such
      * are all the Modification there inside: in fact, all the inner
-     * Modification will be issued with the return value, which i eNoBlck */
+     * Modification will be issued with the return value, which is eNoBlck */
    }
 
   return( make_par( eNoBlck , chnl ) );

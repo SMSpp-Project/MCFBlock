@@ -610,7 +610,6 @@ public:
 /** @name Methods for reading the data of the MCFBlock
  *  @{ */
 
-/*--------------------------------------------------------------------------*/
  /// getting the current sense of the Objective, which is minimization
 
  int get_objective_sense( void ) const override final {
@@ -1250,6 +1249,16 @@ public:
  Solution * get_Solution( Configuration *solc = nullptr ,
 			  bool emptys = true ) override;
 
+ /*--------------------------------------------------------------------------*/
+ /// returns the objective value of the current solution
+
+ FONumber get_objective_value( void ) {
+  if( ! ( AR & HasObj ) )  // the objective is not there
+   return( Inf< RealObjective::OFValue >() );
+  c.compute();
+  return( c.value() );
+  }
+
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the flow solution
  /** Method to get the flow solution; upon return, the current value of the
@@ -1476,12 +1485,24 @@ public:
  /** Returns true if there is any Solver "listening to this MCFBlock", or if
   * the MCFBlock has to "listen" anyway because the "abstract" representation
   * is constructed, and therefore "abstract" Modification have to be generated
-  * anyway to keep the two representations in sync. */
+  * anyway to keep the two representations in sync.
+  *
+  * No, this should not be needed. In fact, if the "abstract" representation
+  * is modified with the default eModBlck value of issueMod, it is issued
+  * irrespectively to the value of anyone_there(); see Observer::issue_mod().
+  * If the value of issueMod is anything else the  "abstract" representation
+  * has been modified already and there is no point in issuing the
+  * Modification.
+  * Note that that Observer::issue_mod() does not check if the "abstract"
+  * representation has been constructed, but this is clearly not
+  * necessary, as the Modification we are speaking of are issued while
+  * changing the "abstract" representation, if that has not been
+  * constructed then it cannot issue Modification
 
  bool anyone_there( void ) const override {
   return( AR ? true : Block::anyone_there() );
   }
-
+ */
 /*--------------------------------------------------------------------------*/
  /// adding a new Modification to the MCFBlock
  /** Method for handling Modification.
