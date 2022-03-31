@@ -1973,17 +1973,18 @@ void MCFBlock::set_x( c_Vec_FNumber_it fstrt , Range rng )
  Index i = rng.first;
 
  if( HasStaticX() )
-  for( auto xi = x.begin() + i ; i < get_NStaticArcs() ; ++i )
+  for( auto xi = x.begin() + i ;
+       i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
    (xi++)->set_value( *(fstrt++) );
 
- if( ! HasDynamicX() )
+ if( ( ! HasDynamicX() ) || ( rng.second <= get_NStaticArcs() ) )
   return;
 
  auto dxi = dx.begin();
  if( i > get_NStaticArcs() )
   dxi = std::next( dxi , i - get_NStaticArcs() );
 
- for( ; i < get_NArcs() ; ++i )
+ for( ; i < std::min( rng.second , get_NArcs() ) ; ++i )
   (dxi++)->set_value( *(fstrt++) );
 
  }  // end( MCFBlock::set_x( range ) )
@@ -2028,17 +2029,18 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , Range rng )
  Index i = rng.first;
 
  if( HasStaticE() )
-  for( auto ei = E.begin() + i ; i < get_NStaticNodes() ; ++i )
+  for( auto ei = E.begin() + i ;
+       i < std::min( rng.second , get_NStaticNodes() ) ; ++i )
    (ei++)->set_dual( *(pstrt++) );
 
- if( ! HasDynamicE() )
+ if( ( ! HasDynamicE() ) || ( rng.second <= get_NStaticNodes() ) )
   return;
 
  auto dei = dE.begin();
  if( i > get_NStaticNodes() )
   dei = std::next( dei , i - get_NStaticNodes() );
 
- for( ; i < get_NNodes() ; ++i )
+ for( ; i < std::min( rng.second , get_NNodes() ) ; ++i )
   (dei++)->set_dual( *(pstrt++) );
 
  }  // end( MCFBlock::set_pi( range ) )
@@ -2083,17 +2085,18 @@ void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , Range rng )
  Index i = rng.first;
 
  if( HasStaticX() )
-  for( auto ubi = UB.begin() + i ; i < get_NStaticArcs() ; ++i )
+  for( auto ubi = UB.begin() + i ;
+       i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
    (ubi++)->set_dual( *(rcstrt++) );
 
- if( ! HasDynamicX() )
+ if( ( ! HasDynamicX() ) || ( rng.second <= get_NStaticArcs() ) )
   return;
 
  auto dubi = dUB.begin();
  if( i > get_NStaticArcs() )
   dubi = std::next( dubi , i - get_NStaticArcs() );
 
- for(  ; i < get_NArcs() ; ++i )
+ for( ; i < std::min( rng.second , get_NArcs() ) ; ++i )
   (dubi++)->set_dual( *(rcstrt++) );
 
  }  // end( MCFBlock::set_rc( range ) )
