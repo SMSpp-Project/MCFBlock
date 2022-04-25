@@ -2208,10 +2208,6 @@ public:
 
  void compute_conditional_bounds( void );
 
- ModParam make_amod_param( ModParam issueAMod , Index num );
-
- void unmake_amod_param( ModParam oldiAM , ModParam newiAM , Index num );
-
 /*--------------------------------------------------------------------------*/
 
 #ifndef NDEBUG

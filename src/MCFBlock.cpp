@@ -1469,8 +1469,8 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
 
 /*--------------------------------------------------------------------------*/
 
-bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
-					 Configuration *r3bc ,
+bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
+					 Configuration * r3bc ,
 					 ModParam issuePMod ,
 					 ModParam issueAMod )
 {
@@ -1483,16 +1483,8 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
  if( r3bc != nullptr )
   throw( std::invalid_argument( "non-nullptr R3B Configuration" ) );
 
- /* When a GroupModification is processed, if no channel is provided, then
-    one is opened. This only happens "at root", after which in guts_of_mfM()
-    whenever a GroupModification is processed, then the channel is nested.
-    Indeed, if the "root" Modification is not a GroupModification, then there
-    cannot be any GroupModification in it. */
-
- ModParam iPM = issuePMod;
- ModParam iPA = make_par( std::min( ModParam( eNoBlck ) ,
-				    par2mod( issueAMod ) ) ,
-			  par2chnl( issueAMod ) );
+ auto iPM = issuePMod;
+ auto iPA = un_ModBlock( issueAMod );
 
  /* Use a Lambda to define a "guts" of the method that can be called
     recursively without having to pass "local globals". Note the trick of
@@ -1500,7 +1492,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
     which allows recursive calls. Note the need to explicitly capture
     "this" to use fields/methods of the class. */
 
- std::function< bool( c_p_Mod )> guts_of_mfM;
+ std::function< bool( c_p_Mod ) > guts_of_mfM;
  guts_of_mfM = [ this , & guts_of_mfM , & MCFB , & iPM , & iPA ]( c_p_Mod mod
 								  ) {
   // process Modification- - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1513,17 +1505,19 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
   //!! std::cout << *mod << std::endl;
   
   // GroupModification - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  if( const auto tmod = dynamic_cast< GroupModification * const >( mod ) ) {
-   MCFB->nest_channel( par2chnl( iPM ) );  // nest the channel for PM
-   MCFB->nest_channel( par2chnl( iPA ) );  // nest the channel for PA
+  if( auto tmod = dynamic_cast< const GroupModification * >( mod ) ) {
+   // open or nest the two channels
+   iPM = make_par( par2mod( iPM ) , MCFB->open_channel( par2chnl( iPM ) ) );
+   iPA = make_par( par2mod( iPA ) , MCFB->open_channel( par2chnl( iPA ) ) );
 
    bool ok = true;
    for( const auto & submod : tmod->sub_Modifications() )
     if( ! guts_of_mfM( submod.get() ) )
      ok = false;
 
-   MCFB->un_nest_channel( par2chnl( iPM ) );  // un-nest the channel for PM
-   MCFB->un_nest_channel( par2chnl( iPA ) );  // un-nest the channel for PA
+   // close or un-nest the channels
+   MCFB->close_channel( par2chnl( iPM ) );
+   MCFB->close_channel( par2chnl( iPA ) );
 
    return( ok );
    }
@@ -1534,7 +1528,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
      loaded. But if a Modification has been issued they are no longer empty
      (a Modification changin nothing from the "empty" state is not issued). */
 
-  if( const auto tmod = dynamic_cast< MCFBlockRngdMod * const >( mod ) ) {
+  if( auto tmod = dynamic_cast< const MCFBlockRngdMod * >( mod ) ) {
    switch( tmod->type() ) {
     case( MCFBlockMod::eChgCost ):
      #ifndef NDEBUG
@@ -1637,7 +1631,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
    * MCFBlockSbstMod only provides read-only access to the vector.
    * However, tmod->nms() is guaranteed to be ordered. */
 
-  if( const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod ) ) {
+  if( auto tmod = dynamic_cast< const MCFBlockSbstMod * >( mod ) ) {
    switch( tmod->type() ) {
     case( MCFBlockMod::eChgCost ): {
      #ifndef NDEBUG
@@ -1713,7 +1707,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
   // one should check that the Block is this MCFBlock, but it cannot
   // be otherwise, can it?
 
-  if( const auto tmod = dynamic_cast< NBModification * const >( mod ) ) {
+  if( auto tmod = dynamic_cast< const NBModification * >( mod ) ) {
    MCFB->load( get_NNodes() , get_NArcs() , EN , SN , U , C , B ,
 	       get_NNodes() - get_NStaticNodes() ,
 	       get_NArcs() - get_NStaticArcs() ,
@@ -1728,32 +1722,7 @@ bool MCFBlock::map_forward_Modification( Block *R3B , c_p_Mod mod ,
       // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  // finally, call the "guts of"- - - - - - - - - - - - - - - - - - - - - - - -
- // this is done differently if mod is a GroupModification, since at the root
- // a channel has to be opened while further down it has to be nested
-
- bool ok = true;  // final return value
-
- if( const auto tmod = dynamic_cast< GroupModification * const >( mod ) ) {
-  // if the channels are the default ones, open new ones
-  if( ! par2chnl( issuePMod ) )
-   iPM = make_par( par2mod( issuePMod ) , MCFB->open_channel() );
-  if( ! par2chnl( issueAMod ) )
-   iPA = make_par( par2mod( issueAMod ) , MCFB->open_channel() );
-
-  for( const auto & submod : tmod->sub_Modifications() )  // for each sub-Mod
-   if( ! guts_of_mfM( submod.get() ) )                    // make the call
-    ok = false;
-
-  // now close the opened channels, if any
-  if( ! par2chnl( issuePMod ) )
-   MCFB->close_channel( par2chnl( iPM ) );
-  if( ! par2chnl( issueAMod ) )
-   MCFB->close_channel( par2chnl( iPA ) );
-  }
- else                             // any other Modification
-  ok = guts_of_mfM( mod );        // just make the call
-
- return( ok );
+ return( guts_of_mfM( mod ) );
 
  }  // end( MCFBlock::map_forward_Modification )
 
@@ -2461,7 +2430,8 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
-  ModParam ampar = make_amod_param( issueAMod , ndiff );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod , ndiff );
 
   Index i = rng.first;
 
@@ -2482,7 +2452,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
     dubi->set_rhs( *NCap , ampar );
     }
 
-  unmake_amod_param( issueAMod , ampar , ndiff );
+  close_if_needed( ampar , ndiff );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -2531,7 +2501,8 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
    throw( std::logic_error(
 		"bound constraints not defined, cannot change capacity" ) );
 
-  ModParam ampar = make_amod_param( issueAMod , ndiff );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod , ndiff );
 
   if( HasDynamicX() )
    if( ordered ) {
@@ -2597,7 +2568,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
      }
     }
 
-  unmake_amod_param( issueAMod , ampar , ndiff );
+  close_if_needed( ampar , ndiff );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -2693,7 +2664,8 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  ModParam ampar = make_amod_param( issueAMod , ndiff );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod , ndiff );
 
   Index i = rng.first;
 
@@ -2714,7 +2686,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
     dei->set_both( *NDfct , ampar );
     }
 
-  unmake_amod_param( issueAMod , ampar , ndiff );
+  close_if_needed( ampar , ndiff );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -2756,7 +2728,8 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
   // change abstract and physical representation together - - - - - - - - - -
   // in the meantime, if so instructed also issue abstract Modification
 
-  ModParam ampar = make_amod_param( issueAMod , ndiff );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod , ndiff );
 
   if( HasDynamicE() )
    if( ordered ) {
@@ -2822,7 +2795,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
      }
     }
 
-  unmake_amod_param( issueAMod , ampar , ndiff );
+  close_if_needed( ampar , ndiff );
   }
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
@@ -2917,7 +2890,8 @@ void MCFBlock::close_arcs( Range rng ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  ModParam ampar = make_amod_param( issueAMod , ndiff );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod , ndiff );
 
   // static part
   for( i = rng.first ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
@@ -2933,7 +2907,7 @@ void MCFBlock::close_arcs( Range rng ,
     dxi->is_fixed( true , ampar );
     }
 
-  unmake_amod_param( issueAMod , ampar , ndiff );
+  close_if_needed( ampar , ndiff );
   }
 
  f_cond_lower = NAN;  // reset conditional bounds
@@ -2993,7 +2967,8 @@ void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  ModParam ampar = make_amod_param( issueAMod , ndiff );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod , ndiff );
 
   // static part
   for( nit = nms.begin() ; ( nit != nms.end() ) &&
@@ -3014,7 +2989,7 @@ void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
     ++nit;
     }
 
-  unmake_amod_param( issueAMod , ampar , ndiff );
+  close_if_needed( ampar , ndiff );
   }
 
  f_cond_lower = NAN;  // reset conditional bounds
@@ -3100,7 +3075,8 @@ void MCFBlock::open_arcs( Range rng ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  ModParam ampar = make_amod_param( issueAMod , ndiff );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod , ndiff );
 
   // static part
   for( i = rng.first ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
@@ -3112,7 +3088,7 @@ void MCFBlock::open_arcs( Range rng ,
    if( dxi->is_fixed() )
     dxi->is_fixed( false , ampar );
 
-  unmake_amod_param( issueAMod , ampar , ndiff );
+  close_if_needed( ampar , ndiff );
   }
 
  f_cond_lower = NAN;  // reset conditional bounds
@@ -3172,7 +3148,8 @@ void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
-  ModParam ampar = make_amod_param( issueAMod , ndiff );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod , ndiff );
 
   // static part
   for( nit = nms.begin() ; ( nit != nms.end() ) &&
@@ -3189,7 +3166,7 @@ void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
     ++nit;
     }
 
-  unmake_amod_param( issueAMod , ampar , ndiff );
+  close_if_needed( ampar , ndiff );
   }
 
  f_cond_lower = NAN;  // reset conditional bounds
@@ -3290,8 +3267,9 @@ MCFBlock::Index MCFBlock::add_arc( Index sn , Index en ,
  // always present
 
  if( not_dry_run( issueAMod ) ) {
-  ModParam ampar = make_amod_param( issueAMod ,
-				    AR & ( HasFlw | HasObj ) ? 4 : 1 );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod ,
+			       AR & ( HasFlw | HasObj ) ? 4 : 1 );
   ColVariable * nx;
   LB0Constraint * nUB;
   if( arc == get_NArcs() ) {
@@ -3352,7 +3330,7 @@ MCFBlock::Index MCFBlock::add_arc( Index sn , Index en ,
    get_lfc( i2p_e( en - 1 ) )->add_variable( nx ,  1 , ampar );
    }
 
-  unmake_amod_param( issueAMod , ampar , AR & ( HasFlw | HasObj ) ? 4 : 1 );
+  close_if_needed( ampar , AR & ( HasFlw | HasObj ) ? 4 : 1 );
   }
 
  if( arc == get_NArcs() )
@@ -3400,8 +3378,9 @@ void MCFBlock::remove_arc( Index arc ,
  // always present
 
  if( not_dry_run( issueAMod ) ) {
-  ModParam ampar = make_amod_param( issueAMod ,
-				    AR & ( HasFlw | HasObj ) ? 4 : 1 );
+  not_ModBlock( issueAMod );
+  auto ampar = open_if_needed( issueAMod ,
+			       AR & ( HasFlw | HasObj ) ? 4 : 1 );
   if( arc == get_NArcs() - 1 ) {
    // removing the last arc (and possibly more)
 
@@ -3479,7 +3458,7 @@ void MCFBlock::remove_arc( Index arc ,
     }
    }
 
-  unmake_amod_param( issueAMod , ampar , AR & ( HasFlw | HasObj ) ? 4 : 1 );
+  close_if_needed( ampar , AR & ( HasFlw | HasObj ) ? 4 : 1 );
   }
  else  // at the very least ensure the value is 0
   std::next( dx.begin() , arc - get_NStaticArcs() )->set_value( 0 );
@@ -3734,46 +3713,6 @@ void MCFBlock::compute_conditional_bounds( void )
     }
   }
  }  // end( MCFBlock::compute_conditional_bounds )
-
-/*--------------------------------------------------------------------------*/
-
-ModParam MCFBlock::make_amod_param( ModParam issueAMod , Index num )
-{
- if( issue_mod( issueAMod ) ) {
-  ChnlName chnl = par2chnl( issueAMod );
-  if( num > 1 ) {            // more than one Modification have to be issued
-    if( chnl )               // and a channel is already provided
-     nest_channel( chnl );   // nest the channel
-    else                     // it was being sent to default channel
-     chnl = open_channel();  /* open a new channel: note that the
-			      * GroupModification will automatically be a
-     * "physical Modification" (i.e., concerns_Block() == false) since such
-     * are all the Modification there inside: in fact, all the inner
-     * Modification will be issued with the return value, which is eNoBlck */
-   }
-
-  return( make_par( eNoBlck , chnl ) );
-  }
- else
-  return( eNoMod );
- }
-
-/*--------------------------------------------------------------------------*/
-
-void MCFBlock::unmake_amod_param( ModParam oldiAM , ModParam newiAM ,
-				  Index num )
-{
- if( newiAM == eNoMod )
-  return;
-
- ChnlName chnl = par2chnl( newiAM );
- if( num > 1 ) {               // a channel had been opened/nested
-  if( par2chnl( oldiAM ) )     // that's "nested"
-   un_nest_channel( chnl );    // un-nest it
-  else                         // that's "opened"
-   close_channel( chnl );      // close it
-  }
- }
 
 /*--------------------------------------------------------------------------*/
 
