@@ -409,7 +409,7 @@ const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_dbl = {
 
 template<>
 Solver::idx_type MCFSolver< MCFCplex >::get_num_int_par() const {
- return ( CDASolver::get_num_int_par() + 2 );
+ return( CDASolver::get_num_int_par() + 2 );
 }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -424,9 +424,9 @@ int MCFSolver< MCFCplex >::get_dflt_int_par( const idx_type par ) const {
  static const std::vector< int > my_dflt_int_par = { MCFClass::kYes,
                                                      MCFClass::kYes };
 
- return ( par >= intLastParCDAS ?
-          my_dflt_int_par[ par - intLastParCDAS ] :
-          CDASolver::get_dflt_int_par( par ) );
+ return( par >= intLastParCDAS ?
+         my_dflt_int_par[ par - intLastParCDAS ] :
+         CDASolver::get_dflt_int_par( par ) );
 }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -441,11 +441,11 @@ template<>
 Solver::idx_type MCFSolver< MCFCplex >::int_par_str2idx(
  const std::string & name ) const {
  if( name == "kReopt" )
-  return ( intLastParCDAS );
+  return( intLastParCDAS );
  if( name == "kQPMethod" )
-  return ( kQPMethod + 1 );
+  return( kQPMethod + 1 );
 
- return ( CDASolver::dbl_par_str2idx( name ) );
+ return( CDASolver::dbl_par_str2idx( name ) );
 }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -462,9 +462,9 @@ const std::string & MCFSolver< MCFCplex >::int_par_idx2str(
  static const std::vector< std::string > my_int_pars_str = { "kReopt",
                                                              "kQPMethod" };
 
- return ( idx >= intLastParCDAS ?
-          my_int_pars_str[ idx - intLastParCDAS ] :
-          CDASolver::int_par_idx2str( idx ) );
+ return( idx >= intLastParCDAS ?
+         my_int_pars_str[ idx - intLastParCDAS ] :
+         CDASolver::int_par_idx2str( idx ) );
 }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
