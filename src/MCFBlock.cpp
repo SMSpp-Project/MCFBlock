@@ -26,7 +26,7 @@
 #ifndef NDEBUG
  #define CHECK_DS 0
  /* Perform long and costly checks on the data structures representing the
-  * astract and the physical representations agree. */
+  * abstract and the physical representations agree. */
 #else
  #define CHECK_DS 0
  // never change this
@@ -666,7 +666,7 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 
  if( U.empty() ) {
   // if upper bounds are not there and the Configuration says so, the
-  // LB0Constraintare not constructed
+  // LB0Constraint are not constructed
 
   auto tstcc = dynamic_cast<SimpleConfiguration<int> *>( stcc );
 
@@ -779,22 +779,12 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
   // do it using the abstract representation, if possible - - - - - - - - - -
 
   // static part
-  for( auto & cnst : E ) {
-   if( auto ret = cnst.compute() ;
-       ( ret <= FRowConstraint::kUnEval ) || ( ret > FRowConstraint::kOK ) )
-    return( false );    
-   if( cnst.rel_viol() > feps )
-    return( false );
-   }
+  if( ! Constraint::is_feasible( E , feps ) )
+   return( false );
 
   // dynamic part
-  for( auto & cnst : dE ) {
-   if( auto ret = cnst.compute() ;
-       ( ret <= FRowConstraint::kUnEval ) || ( ret > FRowConstraint::kOK ) )
-    return( false );    
-   if( cnst.rel_viol() > feps )
-    return( false );
-   }
+  if( ! Constraint::is_feasible( dE , feps ) )
+   return( false );
   }
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
@@ -842,29 +832,25 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   // static part
   if( HasStaticX() ) {
    if( UB.empty() ) {
-    for( const auto & var : x )
-     if( ! var.is_feasible( feps ) )
-      return( false );
-    }
-   else
-    for( const auto & cnst : UB )
-     if( cnst.rel_viol() > feps )
-      return( false );
+    if( ! ColVariable::is_feasible( x , feps ) )
+     return( false );
+   } else {
+    if( ! Constraint::is_feasible( UB , feps ) )
+     return( false );
    }
+  }
 
   // dynamic part
   if( HasDynamicX() ) {
    if( dUB.empty() ) {
-    for( const auto & var : dx )
-     if( ! var.is_feasible( feps ) )
-      return( false );
-    }
-   else
-    for( const auto & cnst : dUB )
-     if( cnst.rel_viol() > feps )
-      return( false );
+    if( ! ColVariable::is_feasible( dx , feps ) )
+     return( false );
+   } else {
+    if( ! Constraint::is_feasible( dUB , feps ) )
+     return( false );
    }
   }
+ }
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
   Index i = 0;
@@ -1526,7 +1512,7 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
   /* Note: in the following we can assume that C, B and U are nonempty. This
      is because they can be empty only if they are so when the object is
      loaded. But if a Modification has been issued they are no longer empty
-     (a Modification changin nothing from the "empty" state is not issued). */
+     (a Modification changing nothing from the "empty" state is not issued). */
 
   if( auto tmod = dynamic_cast< const MCFBlockRngdMod * >( mod ) ) {
    switch( tmod->type() ) {
@@ -2868,7 +2854,7 @@ void MCFBlock::close_arcs( Range rng ,
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
- // "dry run" case; but the "phisical Modification" is issued anyway
+ // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
@@ -2941,7 +2927,7 @@ void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
- // "dry run" case; but the "phisical Modification" is issued anyway
+ // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
@@ -3014,7 +3000,7 @@ void MCFBlock::close_arc( Index arc ,
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
- // "dry run" case; but the "phisical Modification" is issued anyway
+ // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
   auto xa = i2p_x( arc );
@@ -3053,7 +3039,7 @@ void MCFBlock::open_arcs( Range rng ,
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
- // "dry run" case; but the "phisical Modification" is issued anyway
+ // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
@@ -3122,7 +3108,7 @@ void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
- // "dry run" case; but the "phisical Modification" is issued anyway
+ // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
   Index ndiff = 0;
@@ -3193,7 +3179,7 @@ void MCFBlock::open_arc( Index arc ,
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
- // "dry run" case; but the "phisical Modification" is issued anyway
+ // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
   auto xa = i2p_x( arc );
@@ -3496,16 +3482,8 @@ void MCFBlock::guts_of_destructor( void )
   cnst.clear();
 
  // clear the flow conservation constraints
- for( auto & cnst : E )
-  cnst.clear();
- for( auto & cnst : dE )
-  cnst.clear();
-
- // then delete them all
- dUB.clear();
- UB.clear();
- dE.clear();
- E.clear();
+ Constraint::clear( E );
+ Constraint::clear( dE );
 
  // clear the objective function
  c.clear();
@@ -3546,7 +3524,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
   *
   *   THE STATE OF THE DATA STRUCTURE IN MCFBlock WHEN THIS METHOD IS
   *   EXECUTED IS PRECISELY THE ONE IN WHICH THE Modification WAS ISSUED:
-  *   NO COMPLCATED OPERATIONS (Variable AND/OR Constraint BEING
+  *   NO COMPLICATED OPERATIONS (Variable AND/OR Constraint BEING
   *   ADDED/REMOVED ...) CAN HAVE BEEN PERFORMED IN THE MEANTIME
   *
   * This assumption drastically simplifies some of the logic here.*/

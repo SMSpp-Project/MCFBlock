@@ -192,7 +192,7 @@ public:
  *
  * However, while using a MCFBlock as a part of some larger problem, it may
  * be difficult to fully exploit this property: even if some Solver can
- * exploit it, not all ofthem may be able to (one example are Interior-Point
+ * exploit it, not all of them may be able to (one example are Interior-Point
  * approaches, which require both flow and cost variables to be continuous),
  * and maybe some other aspects of the overall solution algorithm will require
  * general double data anyway. One should actually have Block template over
@@ -203,7 +203,7 @@ public:
  * therefore in principle possible to change this. Note, however, that the
  * above integrality property only holds for *linear* MCF problems. Should
  * the class be extended, by even allowing arc costs to be convex quadratic
- * (the simplest possible nonlionear extension), then a single arc with a
+ * (the simplest possible nonlinear extension), then a single arc with a
  * nonzero quadratic cost coefficient implies that optimal flows and
  * potentials may be fractional even if all the data of the problem
  * (comprised quadratic cost coefficients) is integer. Hence, for such a
@@ -262,7 +262,7 @@ public:
 
  /// constructor of MCFBlock, taking a pointer to the father (generic) Block
  /** Constructor of MCFBlock. It accepts a pointer to the father Block, which
-  * can be of any type, defaulting to nullpt so that this can also be used as
+  * can be of any type, defaulting to nullptr so that this can also be used as
   * the void constructor. */
 
  explicit MCFBlock( Block *father = nullptr )
@@ -592,7 +592,7 @@ public:
   *
   * IMPORTANT NOTE: ALLOWING SPARSE Objective MAKES IT INORDINATELY MORE
   * DIFFICULT TO REACT TO ABSTRACT Modification, WHILE ITS ACTUAL IMPACT ON
-  * PERFORMANCES IS VERY DOUBIOUS. THEREFORE, THE SUPPORT FOR IT IS ONLY
+  * PERFORMANCES IS VERY DUBIOUS. THEREFORE, THE SUPPORT FOR IT IS ONLY
   * HALF-BAKED, AND WHATEVER THERE IS IS CURRENTLY COMMENTED OUT. DEVELOPMENT
   * OF THIS FEATURE WILL ONLY BE RESUMED IF CLEAR PROOF OF ITS WORTHINESS
   * IS ACHIEVED.
@@ -1383,7 +1383,7 @@ public:
 	     Range rng = Range( 0 , Inf< Index >() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// sets a genric subset of the flow solution
+ /// sets a generic subset of the flow solution
  /** Method to set the flow solution; the values found in the c_Vec_FNumber
   * starting from fstrt are copied into the value of the flow variable
   * x[ i ] for all i in sbst (that must be ordered in increasing sense), in
@@ -1415,7 +1415,7 @@ public:
 	      Range rng = Range( 0 , Inf< Index >() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// sets a genric subset of the potential solution
+ /// sets a generic subset of the potential solution
  /** Method to set the potential solution; the values found in the
   * c_Vec_FNumber starting from pstrt are copied into the potential of node
   * (dual multiplier of the flow balance constraint) i for all i in sbst
@@ -1450,7 +1450,7 @@ public:
 	      Range rng = Range( 0 , Inf< Index >() ) );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// sets a genric subset of the reduced costs
+ /// sets a generic subset of the reduced costs
  /** Method to set the reduced costs solution; the values found in the
   * c_Vec_FNumber starting from rcstrt are copied into the reduced cost of
   * arc (dual value of the bound constraint) i for all i in sbst (that must
@@ -1540,7 +1540,7 @@ public:
   *   case there cannot be any Modification to handle here;
   *
   * - VariableMod fixing and un-fixing a flow ColVariable; however, note
-  *   that *fixing is only permitted if the value() of the ColVvariable is
+  *   that *fixing is only permitted if the value() of the ColVariable is
   *   zero*, because that corresponds to closing the arc, exception being
   *   thrown otherwise.
   *
@@ -1560,7 +1560,7 @@ public:
 
  /// print the MCFBlock on an ostream with the given verbosity
  /** Protected method to print information about the MCFBlock; with the
-  * "complete" level ('C') it outputs the MCFBlock in DIMACS formar. */
+  * "complete" level ('C') it outputs the MCFBlock in DIMACS format. */
 
  void print( std::ostream & output , char vlvl = 0 ) const override;
 
@@ -1575,7 +1575,7 @@ public:
 /** @} ---------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
-/** @name Changing the data of the MCF instabnce
+/** @name Changing the data of the MCF instance
  *
  * All the methods in this section have two parameters issueMod and issueAMod
  * which control if and how the, respectively, "physical Modification" and
@@ -2095,7 +2095,7 @@ public:
  static void static_initialization( void )
  {
   /*!!
- * Not all C++ compilers enjoy the template wizardry behing the three-args
+ * Not all C++ compilers enjoy the template wizardry behind the three-args
  * version of register_method<> with the compact MS_*_*::args(), so we just
  * use the slightly less compact one with the explicit argument and be done
  * with it. !!*/
@@ -2232,7 +2232,7 @@ public:
 /*--------------------------------------------------------------------------*/
 /// derived class from Modification for modifications to a MCFBlock
 /** Derived class from Modification to describe modifications to a MCFBlock.
- *  This is acutally "sort of abstract", since it does not say exactly what
+ *  This is actually "sort of abstract", since it does not say exactly what
  *  is changed, this being demanded to derived classes (which do this in
  *  different ways). Note that it is derived from Modification rather than,
  *  say, BlockMod (which has the same structure) because this is a class of
@@ -2444,7 +2444,7 @@ class MCFBlockSbstMod : public MCFBlockMod
  *       THE REDUCED COSTS ARE NOT EXPLICITLY SAVED
  *
  * This is OK for feasible dual solutions, as the dual variables of the bound
- * constraints (a.k.a. Reduced Costs) can be cheapily computed out of the
+ * constraints (a.k.a. Reduced Costs) can be cheaply computed out of the
  * potentials. This may not be appropriate in all cases, as one may want to
  * deal with unfeasible dual solutions; if this will ever be the case, the
  * MCFSolution class will have to be changed accordingly.

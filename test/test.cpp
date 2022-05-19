@@ -640,7 +640,7 @@ int main( int argc , char **argv )
  //   (adding and subtracting the same number), then the two problems are
  //   re-solved, then the original deficits are restored;
  // - up to n_change arcs are closed, then the two problems are re-solved;
- //   the same arcs arcs are re-opened, then the two problems are re-solved
+ //   the same arcs are re-opened, then the two problems are re-solved
 
  rg.seed( seed );  // seed the pseudo-random number generator
 
@@ -709,7 +709,7 @@ int main( int argc , char **argv )
 			       Function::Range( strt , stp ) );
       }
      else {  // change via call to chg_* method
-      // in 50% of the cases a direct call, otherwise use the methos factory
+      // in 50% of the cases a direct call, otherwise use the methods factory
       //!! if( dis( rg ) <= 0.5 ) {
        mMCFB->chg_costs( newcsts.begin() , Block::Range( strt , stp ) );
        LOG1( "s(r) - " );
@@ -743,7 +743,7 @@ int main( int argc , char **argv )
 			       true );
       }
      else {  // change via call to chg_* method
-      // in 50% of the cases a direct call, otherwise use the methos factory
+      // in 50% of the cases a direct call, otherwise use the methods factory
       //!! if( dis( rg ) <= 0.5 ) {
        mMCFB->chg_costs( newcsts.begin() , std::move( nms ) , true );
        LOG1( "s(s) - " );
@@ -802,7 +802,7 @@ int main( int argc , char **argv )
        mMCFB->i2p_ub( i + strt )->set_rhs( newcaps[ i ] );
       }
      else {  // change via call to chg_* method
-      // in 50% of the cases a direct call, otherwise use the methos factory
+      // in 50% of the cases a direct call, otherwise use the methods factory
       //!! if( dis( rg ) <= 0.5 ) {
        mMCFB->chg_ucaps( newcaps.begin() , Block::Range( strt , stp ) );
        LOG1( "ies(r) - " );
@@ -833,7 +833,7 @@ int main( int argc , char **argv )
        mMCFB->i2p_ub( nms[ i ] )->set_rhs( newcaps[ i ] );
       }
      else {  // change via call to chg_* method
-      // in 50% of the cases a direct call, otherwise use the methos factory
+      // in 50% of the cases a direct call, otherwise use the methods factory
       //!! if( dis( rg ) <= 0.5 ) {
        mMCFB->chg_ucaps( newcaps.begin() , std::move( nms ) , true );
        LOG1( "ies(s) - " );
@@ -948,7 +948,7 @@ int main( int argc , char **argv )
       }
      }
     else {  // change via call to chg_* method
-     // in 50% of the cases a direct call, otherwise use the methos factory
+     // in 50% of the cases a direct call, otherwise use the methods factory
      //!! if( dis( rg ) <= 0.5 )
       mMCFB->close_arcs( std::move( nms ) );
      //!! else {
@@ -1000,7 +1000,7 @@ int main( int argc , char **argv )
       mMCFB->i2p_x( i )->is_fixed( false );
      }
     else {  // change via call to chg_* method
-     // in 50% of the cases a direct call, otherwise use the methos factory
+     // in 50% of the cases a direct call, otherwise use the methods factory
      //!! if( dis( rg ) <= 0.5 )
       mMCFB->open_arcs( std::move( nms ) );
      //!! else {

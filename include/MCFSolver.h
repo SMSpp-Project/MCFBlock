@@ -211,7 +211,7 @@ public:
  *
  * intLastParCDAS ==> kReopt             whether or not to reoptimize
  *
- * and any other paramater of specific :MCFClass following. This is done
+ * and any other parameter of specific :MCFClass following. This is done
  * via the two const static arrays Solver_2_MCFClass_int and
  * Solver_2_MCFClass_dbl, with a negative entry meaning "there is no such
  * parameter in MCFSolver".
