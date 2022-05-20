@@ -6,7 +6,7 @@
  *
  * An instance of a MCF in DIMACS format is read from file in both an object
  * of class MCFC derived from MCFClass, and a MCFBlock to which a
- * MCFSolver<MCFC> is attached. The MCF problem is then repeatedly solved
+ * MCFSolver< MCFC > is attached. The MCF problem is then repeatedly solved
  * with several changes in costs / capacities / deficits, arcs openings /
  * closures and arcs additions / deletions. The same operations are performed
  * on the two solvers, and the results are compared.
@@ -40,14 +40,9 @@
  *                   most MCF instances, except those with SPT structure
  *
  * Thus, the choice of the specific :MCFClass solver can be done in the
- * makefile with a simple -DHAVE_* argument to the compiler.
- */
-
-#define NMS_IS_USED 0
-
-// if NMS_IS_USED > 0, then the Chg****() routines are fed with a
-// non-consecutive set of names; otherwise, all the involved arcs are
-// consecutive
+ * makefile with a simple -DHAVE_* argument to the compiler. However,
+ * because of this WE ASSUME THAT ONE AND ONLY ONE OF THE ABOVE HAVE_*
+ * IS DEFINED. */
 
 #define LOG_LEVEL 0
 // 0 = only pass/fail
@@ -58,7 +53,7 @@
 #define CLOG1( y , x ) if( y ) cout << x
 #else
 #define LOG1( x )
-#define CLOG1( y, x )
+#define CLOG1( y , x )
 #endif
 
 #define USECOLORS 1
@@ -109,7 +104,6 @@
 #define MCFC SPTree
 #endif
 
-#include "MCFBlock.h"
 #include "MCFSolver.h"
 #include "UpdateSolver.h"
 

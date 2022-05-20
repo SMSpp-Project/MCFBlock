@@ -41,7 +41,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # This creates an ENABLE_TESTING option (default: ON) and enables the testing
 # using the ctest executable.
 # See: https://cmake.org/cmake/help/latest/manual/ctest.1.html
-include(CTest)
+#include(CTest)
 
 # Sets the default build type (if none was specified).
 # See: https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html
@@ -50,22 +50,22 @@ include(BuildType)
 # This will set an user-settable cache variable.
 # The value of the variable is propagated to consuming libraries via the
 # *Config.cmake file.
-set(MCFBlock_SOLVER "relax" CACHE STRING "Solver used by ${modName}.")
-set_property(CACHE MCFBlock_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
-
-if (MCFBlock_SOLVER STREQUAL "relax")
-    message(STATUS "${modName}: using RelaxIV solver")
-    add_compile_definitions(HAVE_RELAX)
-elseif (MCFBlock_SOLVER STREQUAL "cplex")
-    message(STATUS "${modName}: using CPLEX solver")
-    add_compile_definitions(HAVE_CPLEX)
-elseif (MCFBlock_SOLVER STREQUAL "mfsmx")
-    message(STATUS "${modName}: using Simplex solver")
-    add_compile_definitions(HAVE_MFSMX)
-elseif (MCFBlock_SOLVER STREQUAL "sptree")
-    message(STATUS "${modName}: using Shortest Path Tree solver")
-    add_compile_definitions(HAVE_SPTRE)
-endif ()
+#set(MCFBlock_SOLVER "mfsmx" CACHE STRING "Solver used by ${modName}.")
+#set_property(CACHE MCFBlock_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
+#
+#if (MCFBlock_SOLVER STREQUAL "relax")
+#    message(STATUS "${modName}: using RelaxIV solver")
+#    add_compile_definitions(HAVE_RELAX)
+#elseif (MCFBlock_SOLVER STREQUAL "cplex")
+#    message(STATUS "${modName}: using CPLEX solver")
+#    add_compile_definitions(HAVE_CPLEX)
+#elseif (MCFBlock_SOLVER STREQUAL "mfsmx")
+#    message(STATUS "${modName}: using Simplex solver")
+#    add_compile_definitions(HAVE_MFSMX)
+#elseif (MCFBlock_SOLVER STREQUAL "sptree")
+#    message(STATUS "${modName}: using Shortest Path Tree solver")
+#    add_compile_definitions(HAVE_SPTRE)
+#endif ()
 
 # ----- Requirements -------------------------------------------------------- #
 # If it's not being called by the umbrella, we need to

@@ -33,6 +33,7 @@ DIR = ./
 # -DHAVE_CPLEX      for the MCFCplex class
 # -DHAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
 #                   most MCF instances, except those with SPT structure
+# IMPORTANT NOTE: ONLY ONE OF THESE SHOULD BE SPECIFIED
 MCFCS = -DHAVE_MFSMX
 
 # debug switches

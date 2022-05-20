@@ -775,15 +775,13 @@ void MCFBlock::generate_objective( Configuration *objc )
 
 bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
 {
- if( useabstract &&  ( AR & HasFlw ) ) {
+ if( useabstract && ( AR & HasFlw ) ) {
   // do it using the abstract representation, if possible - - - - - - - - - -
 
-  // static part
-  if( ! Constraint::is_feasible( E , feps ) )
+  if( ! Constraint::is_feasible( E , feps ) )   // static part
    return( false );
 
-  // dynamic part
-  if( ! Constraint::is_feasible( dE , feps ) )
+  if( ! Constraint::is_feasible( dE , feps ) )  // dynamic part
    return( false );
   }
  else {
@@ -810,9 +808,9 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
      }
    }
 
- for( Index i = 0 ; i < get_NNodes() ; ++i ) {
-   c_FNumber slck = B[ i ] == 0 ? std::abs( tB[ i ] ) :
-                                  std::abs( tB[ i ] / B[ i ] );
+  for( Index i = 0 ; i < get_NNodes() ; ++i ) {
+   c_FNumber slck = B[ i ] == 0 ? std::abs( tB[ i ] )
+                                : std::abs( tB[ i ] / B[ i ] );
    if( slck > feps )
     return( false );
    }
@@ -834,23 +832,23 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
    if( UB.empty() ) {
     if( ! ColVariable::is_feasible( x , feps ) )
      return( false );
-   } else {
+    }
+   else
     if( ! Constraint::is_feasible( UB , feps ) )
      return( false );
    }
-  }
 
   // dynamic part
   if( HasDynamicX() ) {
    if( dUB.empty() ) {
     if( ! ColVariable::is_feasible( dx , feps ) )
      return( false );
-   } else {
+    }
+   else
     if( ! Constraint::is_feasible( dUB , feps ) )
      return( false );
    }
   }
- }
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
   Index i = 0;
@@ -3471,26 +3469,22 @@ void MCFBlock::remove_arc( Index arc ,
 
 void MCFBlock::guts_of_destructor( void )
 {
- /* clear() all Constraint to ensure that they do not bother to un-register
-    themselves from Variable that are going to be deleted anyway. Then
-    deletes all the "abstract representation", if any. */
+ // clear() all Constraint to ensure that they do not bother to un-register
+ // themselves from Variable that are going to be deleted anyway
 
  // clear the bound constraints
- for( auto & cnst : UB )
-  cnst.clear();
- for( auto & cnst : dUB )
-  cnst.clear();
+ Constraint::clear( UB );   // static
+ Constraint::clear( dUB );  // dynamic
 
  // clear the flow conservation constraints
- Constraint::clear( E );
- Constraint::clear( dE );
+ Constraint::clear( E );   // static
+ Constraint::clear( dE );  // dynamic
 
- // clear the objective function
- c.clear();
+ c.clear();  // clear the Objective
 
  // delete all Variable
- dx.clear();
- x.clear();
+ dx.clear();  // dynamic
+ x.clear();   // static
 
  // explicitly reset all Constraint and Variable
  // this is done for the case where this method is called prior to re-loading

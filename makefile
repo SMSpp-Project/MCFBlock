@@ -35,7 +35,6 @@
 #                                                                            #
 ##############################################################################
 
-
 # macroes to be exported- - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 MCFBkOBJ = $(MCFBkSDR)obj/MCFBlock.o $(MCFBkSDR)obj/MCFSolver.o
