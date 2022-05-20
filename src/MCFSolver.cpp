@@ -29,8 +29,6 @@
  *
  * - HAVE_RELAX      for the RelaxIV class
  *
- * - HAVE_CPLEX      for the MCFCplex class
- *
  * - HAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
  *                   most MCF instances, except those with SPT structure.
  */

@@ -29,7 +29,7 @@ target_link_libraries(MCFBlock_test PRIVATE SMS++::MCFBlock)
 # MCFClass solver will be tested
 #add_compile_definitions(HAVE_RELAX)
 #add_compile_definitions(HAVE_CPLEX)
-add_compile_definitions(HAVE_MFSMX)
+#add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_SPTRE)
 
 # This version replicates the batch file in CMake.

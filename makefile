@@ -17,6 +17,9 @@
 #   least to the extent in which they are needed by the parts of SMS++       #
 #   used by MCFBlock / MCFSolver.                                            #
 #                                                                            #
+#   The makefile defines internally (cf. MCFClssSlvr below) which            #
+#   MCFSolver< :MCFClass > will be available.                                #
+#                                                                            #
 #   Input:  $(CC)          = compiler command                                #
 #           $(SW)          = compiler options                                #
 #           $(SMS++INC)    = the -I$( core SMS++ directory )                 #
@@ -34,6 +37,13 @@
 #                             Universita' di Pisa                            #
 #                                                                            #
 ##############################################################################
+
+# define the set of MCFSolver< :MCFClass > that will be available by
+# uncommenting the -DHAVE_* below corresponding to the :MCFClass; see
+# MCFSolver.h for details. note that, obviously, the :MCFClass selected
+# here must have been compiled in the MCFClass library
+MCFClssSlvr = -DHAVE_MFSMX -DHAVE_CPLEX
+# -DHAVE_CSCL2 -DHAVE_MFZIB -DHAVE_RELAX -DHAVE_SPTRE
 
 # macroes to be exported- - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -58,6 +68,6 @@ $(MCFBkSDR)obj/MCFBlock.o: $(MCFBkSDR)src/MCFBlock.cpp \
 $(MCFBkSDR)obj/MCFSolver.o: $(MCFBkSDR)src/MCFSolver.cpp $(MCFBkH) \
 	$(SMS++OBJ) $(libMCFClOBJ) 
 	$(CC) -c $(MCFBkSDR)src/MCFSolver.cpp -o $@ \
-	$(MCFBkINC) $(SMS++INC) $(libMCFClINC) $(SW)
+	$(MCFBkINC) $(SMS++INC) $(libMCFClINC) $(MCFClssSlvr) $(SW)
 
 ########################## End of makefile ###################################

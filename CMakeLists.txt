@@ -52,7 +52,7 @@ include(BuildType)
 # *Config.cmake file.
 #set(MCFBlock_SOLVER "mfsmx" CACHE STRING "Solver used by ${modName}.")
 #set_property(CACHE MCFBlock_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
-#
+
 #if (MCFBlock_SOLVER STREQUAL "relax")
 #    message(STATUS "${modName}: using RelaxIV solver")
 #    add_compile_definitions(HAVE_RELAX)
@@ -67,6 +67,17 @@ include(BuildType)
 #    add_compile_definitions(HAVE_SPTRE)
 #endif ()
 
+# uncomment all of the following for which the corresponding
+# MCFSolver< :MCFClass > must be defined
+#add_compile_definitions(HAVE_RELAX)
+add_compile_definitions(HAVE_CPLEX)
+if (NOT MCFClass_USE_CPLEX)
+    message(FATAL_ERROR "HAVE_CPLEX defined but MCFCplex was not built")
+endif ()
+add_compile_definitions(HAVE_MFSMX)
+#add_compile_definitions(HAVE_SPTRE)
+
+
 # ----- Requirements -------------------------------------------------------- #
 # If it's not being called by the umbrella, we need to
 # look for the system-installed libraries.
@@ -75,9 +86,9 @@ if (NOT hasParent)
     find_package(MCFClass REQUIRED)
 endif ()
 
-if (MCFBlock_SOLVER STREQUAL "cplex" AND NOT MCFClass_USE_CPLEX)
-    message(FATAL_ERROR "${modName} solver is \"CPLEX\" but MCFCplex was not built")
-endif ()
+#if (MCFBlock_SOLVER STREQUAL "cplex" AND NOT MCFClass_USE_CPLEX)
+#    message(FATAL_ERROR "${modName} solver is \"CPLEX\" but MCFCplex was not built")
+#endif ()
 
 # ----- Configuration header ------------------------------------------------ #
 # This will generate a *Config.h header in the build directory.

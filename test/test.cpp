@@ -20,33 +20,29 @@
 /*--------------------------------------------------------------------------*/
 /*------------------------------ DEFINES -----------------------------------*/
 /*--------------------------------------------------------------------------*/
-/* If any of the following macros is defined, then the corresponding
- * :MCFClass solver is included and the corresponding version of
- * MCFSolver<> can be tested.
- *
- * - HAVE_CSCL2      for the CS2 class
- *
- * - HAVE_CPLEX      for the MCFCplex class
- *
- * - HAVE_MFSMX      for the MCFSimplex class
- *
- * - HAVE_MFZIB      for the MCFZIB class
- *
- * - HAVE_RELAX      for the RelaxIV class
- *
- * - HAVE_CPLEX      for the MCFCplex class
- *
- * - HAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
- *                   most MCF instances, except those with SPT structure
- *
- * Thus, the choice of the specific :MCFClass solver can be done in the
- * makefile with a simple -DHAVE_* argument to the compiler. However,
- * because of this WE ASSUME THAT ONE AND ONLY ONE OF THE ABOVE HAVE_*
- * IS DEFINED. */
 
 #define LOG_LEVEL 0
 // 0 = only pass/fail
 // 1 = result of each test
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+/* Defines which :MCFClass solver is included and the corresponding version
+ * of MCFSolver< :MCFClass > is tested:
+ *
+ * - 0      for the CS2 class
+ *
+ * - 1      for the MCFCplex class
+ *
+ * - 2      for the MCFSimplex class
+ *
+ * - 3      for the MCFZIB class
+ *
+ * - 4      for the RelaxIV class
+ *
+ * - 5      for the SPTree class; note that SPTree cannot solve
+ *          most MCF instances, except those with SPT structure */
+
+#define WHICH_MCF 2
 
 #if( LOG_LEVEL >= 1 )
 #define LOG1( x ) cout << x
@@ -74,34 +70,36 @@
 
 #include <random>
 
-#ifdef HAVE_CSCL2
+#if WHICH_MCF == 0
+
 #include "CS2.h"
-#define MCFC CS2
-#endif
+ #define MCFC CS2
 
-#ifdef HAVE_CPLEX
-#include "MCFCplex.h"
-#define MCFC MCFCplex
-#endif
+#elif WHICH_MCF == 1
 
-#ifdef HAVE_MFSMX
-#include "MCFSimplex.h"
-#define MCFC MCFSimplex
-#endif
+ #include "MCFCplex.h"
+ #define MCFC MCFCplex
 
-#ifdef HAVE_MFZIB
-#include "MCFZIB.h"
-#define MCFC MCFZIB
-#endif
+#elif WHICH_MCF == 2
 
-#ifdef HAVE_RELAX
-#include "RelaxIV.h"
-#define MCFC RelaxIV
-#endif
+ #include "MCFSimplex.h"
+ #define MCFC MCFSimplex
 
-#ifdef HAVE_SPTRE
-#include "SPTree.h"
-#define MCFC SPTree
+#elif WHICH_MCF == 3
+
+ #include "MCFZIB.h"
+ #define MCFC MCFZIB
+
+#elif WHICH_MCF == 4
+
+ #include "RelaxIV.h"
+ #define MCFC RelaxIV
+
+#elif WHICH_MCF == 5
+
+ #include "SPTree.h"
+ #define MCFC SPTree
+
 #endif
 
 #include "MCFSolver.h"
@@ -201,29 +199,38 @@ static void CreateProb( unsigned int Optns )
  mcf = nullptr;  // unknown solver, or the required solver is not
                  // available due to the macroes settings
 
- #ifdef HAVE_RELAX  // - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  RelaxIV *rlx = new RelaxIV();
-  #if( AUCTION )
-   if( Optns )
-    rlx->SetPar( RelaxIV::kAuction , MCFClass::kYes );
-  #endif
-  mcf = rlx;
-  LOG1( "RelaxIV" );
- #endif
- #ifdef HAVE_SPTRE  // - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  mcf = new SPTree();
-  LOG1( "SPTree" );
-  assert( false );  // SPTree not fully supported yet
- #endif
- #ifdef HAVE_CPLEX  // - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ #if WHICH_MCF == 0  //- - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  mcf = new CS2();
+  LOG1( "CS2" );
+  assert( false );  // CS2 not fully supported yet
+
+ #elif WHICH_MCF == 1  //- - - - - - - - - - - - - - - - - - - - - - - - - -
+
   MCFCplex *cpx = new MCFCplex();
   if( Optns >= 0 )
    cpx->SetPar( CPX_PARAM_NETPPRIIND , int( Optns ) );
   mcf = cpx;
   LOG1( "MCFCplex" );
   assert( false );  // MCFCplex not fully supported yet
- #endif
- #ifdef HAVE_MFZIB  // - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ #elif WHICH_MCF == 2  //- - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  auto *mcfs = new MCFSimplex();
+  bool PrmlSmplx = Optns & 1u;
+  char Prcng = 0;
+  switch( Optns / 2 ) {
+   case( 0 ): Prcng = char( MCFSimplex::kDantzig ); break;
+   case( 1 ): Prcng = char( MCFSimplex::kFirstEligibleArc ); break;
+   default:   Prcng = char( MCFSimplex::kCandidateListPivot );
+   }
+  if( ( ! PrmlSmplx ) && ( Prcng == MCFSimplex::kDantzig ) )
+   Prcng = char( MCFSimplex::kCandidateListPivot );
+  mcf = mcfs;
+  LOG1( "MCFSimplex" );
+
+ #elif WHICH_MCF == 3  //- - - - - - - - - - - - - - - - - - - - - - - - - -
+
   MCFZIB *zib = new MCFZIB();
   bool PrmlSmplx = Optns & 1;
   char Prcng;
@@ -238,25 +245,23 @@ static void CreateProb( unsigned int Optns )
   mcf = zib;
   LOG1( "MCFZIB" );
   assert( false );  // MCFZIB not fully supported yet
- #endif
- #ifdef HAVE_CSCL2  // - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  mcf = new CS2();
-  LOG1( "CS2" );
-  assert( false );  // CS2 not fully supported yet
- #endif
- #ifdef HAVE_MFSMX  // - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  auto *mcfs = new MCFSimplex();
-  bool PrmlSmplx = Optns & 1u;
-  char Prcng = 0;
-  switch( Optns / 2 ) {
-   case( 0 ): Prcng = char( MCFSimplex::kDantzig ); break;
-   case( 1 ): Prcng = char( MCFSimplex::kFirstEligibleArc ); break;
-   default:   Prcng = char( MCFSimplex::kCandidateListPivot );
-   }
-  if( ( ! PrmlSmplx ) && ( Prcng == MCFSimplex::kDantzig ) )
-   Prcng = char( MCFSimplex::kCandidateListPivot );
-  mcf = mcfs;
-  LOG1( "MCFSimplex" );
+
+ #elif WHICH_MCF == 4  //- - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  RelaxIV *rlx = new RelaxIV();
+  #if( AUCTION )
+   if( Optns )
+    rlx->SetPar( RelaxIV::kAuction , MCFClass::kYes );
+  #endif
+  mcf = rlx;
+  LOG1( "RelaxIV" );
+
+ #elif WHICH_MCF == 5  //- - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  mcf = new SPTree();
+  LOG1( "SPTree" );
+  assert( false );  // SPTree not fully supported yet
+
  #endif
 
  if( ! reoptmz )

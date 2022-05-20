@@ -24,24 +24,12 @@ NAME = MCFBlock_test
 # basic directory
 DIR = ./
 
-# switch to select the :MCFClass solver, supported values are
-# -DHAVE_CSCL2      for the CS2 class
-# -DHAVE_CPLEX      for the MCFCplex class
-# -DHAVE_MFSMX      for the MCFSimplex class
-# -DHAVE_MFZIB      for the MCFZIB class
-# -DHAVE_RELAX      for the RelaxIV class
-# -DHAVE_CPLEX      for the MCFCplex class
-# -DHAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
-#                   most MCF instances, except those with SPT structure
-# IMPORTANT NOTE: ONLY ONE OF THESE SHOULD BE SPECIFIED
-MCFCS = -DHAVE_MFSMX
-
 # debug switches
-#SW = -g -glldb -fno-inline -std=c++17 -ferror-limit=1 $(MCFCS)
+#SW = -g -glldb -fno-inline -std=c++17 -ferror-limit=1
 # debug switches with address sanitizer and extra pedantic warning
-#SW = -g3 -glldb -fno-inline -std=c++17 -ferror-limit=1 -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -Wpedantic -Wextra -Wno-unused-parameter $(MCFCS)
+#SW = -g3 -glldb -fno-inline -std=c++17 -ferror-limit=1 -fsanitize=undefined -fsanitize=address -fno-omit-frame-pointer -Wpedantic -Wextra -Wno-unused-parameter
 # production switches
-SW = -O3 -std=c++17 -DNDEBUG $(MCFCS) -DCLANG_1200_0_32_27_PATCH -ferror-limit=1
+SW = -O3 -std=c++17 -DNDEBUG -DCLANG_1200_0_32_27_PATCH -ferror-limit=1
 
 # compiler
 CC = clang++
