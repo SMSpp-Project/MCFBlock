@@ -25,13 +25,6 @@ endif()
 add_executable(MCFBlock_test test.cpp)
 target_link_libraries(MCFBlock_test PRIVATE SMS++::MCFBlock)
 
-# uncomment one and only one of the following to decide which specific
-# MCFClass solver will be tested
-#add_compile_definitions(HAVE_RELAX)
-#add_compile_definitions(HAVE_CPLEX)
-#add_compile_definitions(HAVE_MFSMX)
-#add_compile_definitions(HAVE_SPTRE)
-
 # This version replicates the batch file in CMake.
 # This method was preferred because it allows to keep track
 # of the single tests via the CTest application and also

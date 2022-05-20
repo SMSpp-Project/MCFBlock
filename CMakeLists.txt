@@ -47,26 +47,6 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # See: https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html
 include(BuildType)
 
-# This will set an user-settable cache variable.
-# The value of the variable is propagated to consuming libraries via the
-# *Config.cmake file.
-#set(MCFBlock_SOLVER "mfsmx" CACHE STRING "Solver used by ${modName}.")
-#set_property(CACHE MCFBlock_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
-
-#if (MCFBlock_SOLVER STREQUAL "relax")
-#    message(STATUS "${modName}: using RelaxIV solver")
-#    add_compile_definitions(HAVE_RELAX)
-#elseif (MCFBlock_SOLVER STREQUAL "cplex")
-#    message(STATUS "${modName}: using CPLEX solver")
-#    add_compile_definitions(HAVE_CPLEX)
-#elseif (MCFBlock_SOLVER STREQUAL "mfsmx")
-#    message(STATUS "${modName}: using Simplex solver")
-#    add_compile_definitions(HAVE_MFSMX)
-#elseif (MCFBlock_SOLVER STREQUAL "sptree")
-#    message(STATUS "${modName}: using Shortest Path Tree solver")
-#    add_compile_definitions(HAVE_SPTRE)
-#endif ()
-
 # uncomment all of the following for which the corresponding
 # MCFSolver< :MCFClass > must be defined
 #add_compile_definitions(HAVE_RELAX)
