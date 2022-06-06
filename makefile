@@ -42,8 +42,8 @@
 # uncommenting the -DHAVE_* below corresponding to the :MCFClass; see
 # MCFSolver.h for details. note that, obviously, the :MCFClass selected
 # here must have been compiled in the MCFClass library
-MCFClssSlvr = -DHAVE_MFSMX -DHAVE_CPLEX
-# -DHAVE_CSCL2 -DHAVE_MFZIB -DHAVE_RELAX -DHAVE_SPTRE
+MCFClssSlvr = -DHAVE_MFSMX -DHAVE_CPLEX -DHAVE_RELAX
+# -DHAVE_CSCL2 -DHAVE_MFZIB -DHAVE_SPTRE
 
 # macroes to be exported- - - - - - - - - - - - - - - - - - - - - - - - - - -
 

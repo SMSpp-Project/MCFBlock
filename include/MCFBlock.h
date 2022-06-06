@@ -839,17 +839,17 @@ public:
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// returns true if the arc is closed
+ /// returns true if the arc is closed; deleted arcs are not closed
 
  bool is_closed( Index arc ) const {
-  return( i2p_x( arc )->is_fixed() );
+  return( ( ! is_deleted( arc ) ) && i2p_x( arc )->is_fixed() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the arc is deleted
 
  bool is_deleted( Index arc ) const {
-  return( SN[ arc ] >= Inf<Index>() );
+  return( SN[ arc ] >= Inf< Index >() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/

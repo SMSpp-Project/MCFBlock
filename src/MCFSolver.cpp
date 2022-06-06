@@ -131,8 +131,10 @@ SMSpp_insert_in_factory_cpp_0( MCFSolverState );
 /*--------------------------------------------------------------------------*/
 
 template<>
-const std::vector<int> MCFSolver<MCFSimplex>::Solver_2_MCFClass_int = {
+const std::vector< int > MCFSolver< MCFSimplex >::Solver_2_MCFClass_int = {
  MCFClass::kMaxIter ,        // intMaxIter
+ -1 ,                        // intMaxThread
+ -1 ,                        // intEverykIt
  -1 ,                        // intMaxSol
  -1 ,                        // intLogVerb
  -1 ,                        // intMaxDSol
@@ -140,64 +142,62 @@ const std::vector<int> MCFSolver<MCFSimplex>::Solver_2_MCFClass_int = {
  MCFSimplex::kAlgPrimal ,
  MCFSimplex::kAlgPricing ,
  MCFSimplex::kNumCandList ,
- MCFSimplex:: kHotListSize
+ MCFSimplex::kHotListSize
  };
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
 template<>
-const std::vector<int> MCFSolver<MCFSimplex>::Solver_2_MCFClass_dbl = {
- MCFClass::kMaxTime ,         // dblMaxTime
- -1 ,                         // dblRelAcc
- MCFClass::kEpsFlw ,          // dblAbsAcc
- -1 ,                         // dblUpCutOff
- -1 ,                         // dblLwCutOff
- -1 ,                         // dblRAccSol
- -1 ,                         // dblAAccSol
- -1 ,                         // dblFAccSol
- -1 ,                         // dblRAccDSol
- MCFClass::kEpsCst ,          // dblAAccDSol
- -1                           // dblFAccDSol
+const std::vector< int > MCFSolver< MCFSimplex >::Solver_2_MCFClass_dbl = {
+ MCFClass::kMaxTime ,       // dblMaxTime
+ -1 ,                       // dblEveryTTm
+ -1 ,                       // dblRelAcc
+ MCFClass::kEpsFlw ,        // dblAbsAcc
+ -1 ,                       // dblUpCutOff
+ -1 ,                       // dblLwCutOff
+ -1 ,                       // dblRAccSol
+ -1 ,                       // dblAAccSol
+ -1 ,                       // dblFAccSol
+ -1 ,                       // dblRAccDSol
+ MCFClass::kEpsCst ,        // dblAAccDSol
+ -1                         // dblFAccDSol
  };
 
 /*--------------------------------------------------------------------------*/
 
 template<>
-Solver::idx_type MCFSolver<MCFSimplex>::get_num_int_par( void ) const
+Solver::idx_type MCFSolver< MCFSimplex >::get_num_int_par( void ) const
 {
  return( CDASolver::get_num_int_par() + 5 );
  }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
-/*
-template<>
-Solver::idx_type MCFSolver<MCFSimplex>::get_num_dbl_par( void ) const
-{
- }
- */
-/*--------------------------------------------------------------------------*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 template<>
-int MCFSolver<MCFSimplex>::get_dflt_int_par( const idx_type par ) const
+Solver::idx_type MCFSolver< MCFSimplex >::get_num_dbl_par( void ) const { }
+
+----------------------------------------------------------------------------*/
+
+template<>
+int MCFSolver< MCFSimplex >::get_dflt_int_par( idx_type par ) const
 {
- static const std::vector<int> my_dflt_int_par = { MCFClass::kYes ,
-		MCFClass::kYes , MCFSimplex::kCandidateListPivot , 0 , 0 };
+ static const std::array< int , 5 > my_dflt_int_par = { MCFClass::kYes ,
+		  MCFClass::kYes , MCFSimplex::kCandidateListPivot , 0 , 0 };
 
  return( par >= intLastParCDAS ? my_dflt_int_par[ par - intLastParCDAS ]
 	                       : CDASolver::get_dflt_int_par( par ) );
  }
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
-/*
-template<>
-double MCFSolver<MCFSimplex>::get_dflt_dbl_par( const idx_type par ) const
-{
- }
- */
-/*--------------------------------------------------------------------------*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 template<>
-Solver::idx_type MCFSolver<MCFSimplex>::int_par_str2idx(
+double MCFSolver< MCFSimplex >::get_dflt_dbl_par( const idx_type par )
+ const { }
+
+----------------------------------------------------------------------------*/
+
+template<>
+Solver::idx_type MCFSolver< MCFSimplex >::int_par_str2idx(
 					     const std::string & name ) const
 {
  if( name == "kReopt" )
@@ -217,18 +217,15 @@ Solver::idx_type MCFSolver<MCFSimplex>::int_par_str2idx(
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 template<>
-Solver::idx_type MCFSolver<MCFSimplex>::dbl_par_str2idx(
-					    const std::string & name ) const
-{
- }
+Solver::idx_type MCFSolver< MCFSimplex >::dbl_par_str2idx(
+					const std::string & name ) const { }
 
 ----------------------------------------------------------------------------*/
 
 template<>
-const std::string & MCFSolver<MCFSimplex>::int_par_idx2str(
-						   const idx_type idx ) const
-{
- static const std::vector<std::string> my_int_pars_str = {
+const std::string & MCFSolver< MCFSimplex >::int_par_idx2str( idx_type idx )
+ const {
+ static const std::array< std::string , 5 > my_int_pars_str = {
   "kReopt" , "kAlgPrimal" , "kAlgPricing" , "kNumCandList" , "kHotListSize"
   };
 
@@ -239,10 +236,8 @@ const std::string & MCFSolver<MCFSimplex>::int_par_idx2str(
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 template<>
-const std::string & MCFSolver<MCFSimplex>::dbl_par_idx2str(
-						   const idx_type idx ) const
-{
- }
+const std::string & MCFSolver< MCFSimplex >::dbl_par_idx2str( idx_type idx )
+ const { }
  */
 
 #endif
@@ -262,8 +257,10 @@ const std::string & MCFSolver<MCFSimplex>::dbl_par_idx2str(
 /*--------------------------------------------------------------------------*/
 
 template<>
-const std::vector<int> MCFSolver<RelaxIV>::Solver_2_MCFClass_int = {
+const std::vector< int > MCFSolver< RelaxIV >::Solver_2_MCFClass_int = {
  MCFClass::kMaxIter ,        // intMaxIter
+ -1 ,                        // intMaxThread
+ -1 ,                        // intEverykIt
  -1 ,                        // intMaxSol
  -1 ,                        // intLogVerb
  -1 ,                        // intMaxDSol
@@ -274,24 +271,25 @@ const std::vector<int> MCFSolver<RelaxIV>::Solver_2_MCFClass_int = {
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
 template<>
-const std::vector<int> MCFSolver<RelaxIV>::Solver_2_MCFClass_dbl = {
- MCFClass::kMaxTime ,         // dblMaxTime
- -1 ,                         // dblRelAcc
- MCFClass::kEpsFlw ,          // dblAbsAcc
- -1 ,                         // dblUpCutOff
- -1 ,                         // dblLwCutOff
- -1 ,                         // dblRAccSol
- -1 ,                         // dblAAccSol
- -1 ,                         // dblFAccSol
- -1 ,                         // dblRAccDSol
- MCFClass::kEpsCst ,          // dblAAccDSol
- -1                           // dblFAccDSol
+const std::vector< int > MCFSolver< RelaxIV >::Solver_2_MCFClass_dbl = {
+ MCFClass::kMaxTime ,       // dblMaxTime
+ -1 ,                       // dblEveryTTm
+ -1 ,                       // dblRelAcc
+ MCFClass::kEpsFlw ,        // dblAbsAcc
+ -1 ,                       // dblUpCutOff
+ -1 ,                       // dblLwCutOff
+ -1 ,                       // dblRAccSol
+ -1 ,                       // dblAAccSol
+ -1 ,                       // dblFAccSol
+ -1 ,                       // dblRAccDSol
+ MCFClass::kEpsCst ,        // dblAAccDSol
+ -1                         // dblFAccDSol
  };
 
 /*--------------------------------------------------------------------------*/
 
 template<>
-Solver::idx_type MCFSolver<RelaxIV>::get_num_int_par( void ) const
+Solver::idx_type MCFSolver< RelaxIV >::get_num_int_par( void ) const
 {
  return( CDASolver::get_num_int_par() + 2 );
  }
@@ -299,17 +297,15 @@ Solver::idx_type MCFSolver<RelaxIV>::get_num_int_par( void ) const
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 template<>
-Solver::idx_type MCFSolver<RelaxIV>::get_num_dbl_par( void ) const
-{
- }
+Solver::idx_type MCFSolver< RelaxIV >::get_num_dbl_par( void ) const { }
 
 ----------------------------------------------------------------------------*/
 
 template<>
-int MCFSolver<RelaxIV>::get_dflt_int_par( const idx_type par ) const
+int MCFSolver< RelaxIV >::get_dflt_int_par( const idx_type par ) const
 {
- static const std::vector<int> my_dflt_int_par = { MCFClass::kYes ,
-						   MCFClass::kYes };
+ static const std::array< int , 2 > my_dflt_int_par = { MCFClass::kYes ,
+						        MCFClass::kYes };
 
  return( par >= intLastParCDAS ? my_dflt_int_par[ par - intLastParCDAS ]
 	                       : CDASolver::get_dflt_int_par( par ) );
@@ -318,14 +314,12 @@ int MCFSolver<RelaxIV>::get_dflt_int_par( const idx_type par ) const
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 template<>
-double MCFSolver<RelaxIV>::get_dflt_dbl_par( const idx_type par ) const
-{
- }
+double MCFSolver< RelaxIV >::get_dflt_dbl_par( idx_type par ) const { }
 
 ----------------------------------------------------------------------------*/
 
 template<>
-Solver::idx_type MCFSolver<RelaxIV>::int_par_str2idx(
+Solver::idx_type MCFSolver< RelaxIV >::int_par_str2idx(
 					     const std::string & name ) const
 {
  if( name == "kReopt" )
@@ -339,19 +333,16 @@ Solver::idx_type MCFSolver<RelaxIV>::int_par_str2idx(
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 template<>
-Solver::idx_type MCFSolver<RelaxIV>::dbl_par_str2idx(
-					    const std::string & name ) const
-{
- }
+Solver::idx_type MCFSolver< RelaxIV >::dbl_par_str2idx(
+					 const std::string & name ) const { }
 
 ----------------------------------------------------------------------------*/
 
 template<>
-const std::string & MCFSolver<RelaxIV>::int_par_idx2str(
-						   const idx_type idx ) const
-{
- static const std::vector<std::string> my_int_pars_str =
-                                                    { "kReopt" , "kAuction" };
+const std::string & MCFSolver< RelaxIV >::int_par_idx2str( idx_type idx )
+ const {
+ static const std::array< std::string , 2 > my_int_pars_str = { "kReopt" ,
+								"kAuction" };
 
  return( idx >= intLastParCDAS ? my_int_pars_str[ idx - intLastParCDAS ]
 	                       : CDASolver::int_par_idx2str( idx ) );
@@ -360,10 +351,8 @@ const std::string & MCFSolver<RelaxIV>::int_par_idx2str(
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 template<>
-const std::string & MCFSolver<RelaxIV>::dbl_par_idx2str(
-						   const idx_type idx ) const
-{
- }
+const std::string & MCFSolver< RelaxIV >::dbl_par_idx2str( idx_type idx )
+ const { }
  */
 
 #endif
@@ -377,19 +366,123 @@ const std::string & MCFSolver<RelaxIV>::dbl_par_idx2str(
 
 template<>
 const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_int = {
+ MCFClass::kMaxIter ,        // intMaxIter
+ -1 ,                        // intMaxThread
+ -1 ,                        // intEverykIt
+ -1 ,                        // intMaxSol
+ -1 ,                        // intLogVerb
+ -1 ,                        // intMaxDSol
+ MCFClass::kReopt ,          // intLastParCDAS
+ MCFCplex::kQPMethod
+ };
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+template<>
+const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_dbl =
+{
+ MCFClass::kMaxTime ,       // dblMaxTime
+ -1 ,                       // dblEveryTTm
+ -1 ,                       // dblRelAcc
+ MCFClass::kEpsFlw ,        // dblAbsAcc
+ -1 ,                       // dblUpCutOff
+ -1 ,                       // dblLwCutOff
+ -1 ,                       // dblRAccSol
+ -1 ,                       // dblAAccSol
+ -1 ,                       // dblFAccSol
+ -1 ,                       // dblRAccDSol
+ MCFClass::kEpsCst ,        // dblAAccDSol
+ -1                         // dblFAccDSol
+ };
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+Solver::idx_type MCFSolver< MCFCplex >::get_num_int_par( void ) const {
+ return( CDASolver::get_num_int_par() + 2 );
+ }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+template<>
+Solver::idx_type MCFSolver< MCFCplex >::get_num_dbl_par( void ) const { }
+
+----------------------------------------------------------------------------*/
+
+template<>
+int MCFSolver< MCFCplex >::get_dflt_int_par( idx_type par ) const {
+ static const std::array< int , 2 > my_dflt_int_par = { MCFClass::kYes ,
+                                                        MCFClass::kYes };
+ return( par >= intLastParCDAS ?
+         my_dflt_int_par[ par - intLastParCDAS ] :
+         CDASolver::get_dflt_int_par( par ) );
+ }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+ template<>
+ double MCFSolver< MCFCplex >::get_dflt_dbl_par( idx_type par ) const { }
+
+----------------------------------------------------------------------------*/
+
+template<>
+Solver::idx_type MCFSolver< MCFCplex >::int_par_str2idx(
+					   const std::string & name ) const {
+ if( name == "kReopt" )
+  return( intLastParCDAS );
+ if( name == "kQPMethod" )
+  return( kQPMethod + 1 );
+
+ return( CDASolver::dbl_par_str2idx( name ) );
+ }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+template<>
+Solver::idx_type MCFSolver< MCFCplex >::dbl_par_str2idx(
+                                         const std::string & name ) const { }
+
+----------------------------------------------------------------------------*/
+
+template<>
+const std::string & MCFSolver< MCFCplex >::int_par_idx2str( idx_type idx )
+ const {
+ static const std::array< std::string , 2 > my_int_pars_str = { "kReopt" ,
+                                                                "kQPMethod" };
+ return( idx >= intLastParCDAS ?
+         my_int_pars_str[ idx - intLastParCDAS ] :
+         CDASolver::int_par_idx2str( idx ) );
+ }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+template<>
+const std::string & MCFSolver< MCFCplex >::dbl_par_idx2str( idx_type idx )
+ const { }
+*/
+
+#endif
+
+/*--------------------------------------------------------------------------*/
+/* Managing parameters for SPTree ------------------------------------------*/
+
+#ifdef HAVE_SPTRE
+
+/*--------------------------------------------------------------------------*/
+
+template<>
+const std::vector< int > MCFSolver< SPTree >::Solver_2_MCFClass_int = {
  MCFClass::kMaxIter,        // intMaxIter
  -1,                        // intMaxSol
  -1,                        // intLogVerb
  -1,                        // intMaxDSol
  MCFClass::kReopt,          // intLastParCDAS
- MCFCplex::kQPMethod
-};
-
+ };
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
 template<>
-const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_dbl = {
+const std::vector< int > MCFSolver< SPTree >::Solver_2_MCFClass_dbl = {
  MCFClass::kMaxTime,        // dblMaxTime
  -1,                        // dblRelAcc
  MCFClass::kEpsFlw,         // dblAbsAcc
@@ -401,76 +494,70 @@ const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_dbl = {
  -1,                        // dblRAccDSol
  MCFClass::kEpsCst,         // dblAAccDSol
  -1                         // dblFAccDSol
-};
+ };
 
 /*--------------------------------------------------------------------------*/
 
 template<>
-Solver::idx_type MCFSolver< MCFCplex >::get_num_int_par() const {
- return( CDASolver::get_num_int_par() + 2 );
-}
+Solver::idx_type MCFSolver< SPTree >::get_num_int_par( void ) const {
+ return( CDASolver::get_num_int_par() + 1 );
+ }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- template<> Solver::idx_type MCFSolver< MCFCplex >::get_num_dbl_par() const {
-  }
+template<>
+Solver::idx_type MCFSolver< SPTree >::get_num_dbl_par( void ) const { }
 
 ----------------------------------------------------------------------------*/
 
 template<>
-int MCFSolver< MCFCplex >::get_dflt_int_par( const idx_type par ) const {
- static const std::vector< int > my_dflt_int_par = { MCFClass::kYes,
-                                                     MCFClass::kYes };
+int MCFSolver< SPTree >::get_dflt_int_par( idx_type par ) const {
+ static const std::array< int , 1 > my_dflt_int_par = { MCFClass::kYes };
 
  return( par >= intLastParCDAS ?
          my_dflt_int_par[ par - intLastParCDAS ] :
          CDASolver::get_dflt_int_par( par ) );
-}
+ }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- template<>
- double MCFSolver< MCFCplex >::get_dflt_dbl_par( const idx_type par ) const {
-  }
+template<>
+double MCFSolver< SPTree >::get_dflt_dbl_par( idx_type par ) const { }
 
 ----------------------------------------------------------------------------*/
 
 template<>
-Solver::idx_type MCFSolver< MCFCplex >::int_par_str2idx(
- const std::string & name ) const {
+Solver::idx_type MCFSolver< SPTree >::int_par_str2idx(
+					  const std::string & name ) const {
  if( name == "kReopt" )
   return( intLastParCDAS );
- if( name == "kQPMethod" )
-  return( kQPMethod + 1 );
 
  return( CDASolver::dbl_par_str2idx( name ) );
-}
+ }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- template<>
- Solver::idx_type MCFSolver< MCFCplex >::dbl_par_str2idx(
-  const std::string & name ) const { }
+template<>
+Solver::idx_type MCFSolver< SPTree >::dbl_par_str2idx(
+                                         const std::string & name ) const { }
 
 ----------------------------------------------------------------------------*/
 
 template<>
-const std::string & MCFSolver< MCFCplex >::int_par_idx2str(
- const idx_type idx ) const {
- static const std::vector< std::string > my_int_pars_str = { "kReopt",
-                                                             "kQPMethod" };
+const std::string & MCFSolver< SPTree >::int_par_idx2str( idx_type idx )
+ const {
+ static const std::array< std::string , 1 > my_int_pars_str = { "kReopt" };
 
  return( idx >= intLastParCDAS ?
          my_int_pars_str[ idx - intLastParCDAS ] :
          CDASolver::int_par_idx2str( idx ) );
-}
+ }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  template<>
- const std::string &
- MCFSolver< MCFCplex >::dbl_par_idx2str( const idx_type idx ) const {
-  }
+ const std::string & MCFSolver< SPTree >::dbl_par_idx2str( idx_type idx )
+ const { }
 */
 
 #endif

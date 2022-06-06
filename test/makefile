@@ -2,15 +2,11 @@
 ################################ makefile ####################################
 ##############################################################################
 #                                                                            #
-#   makefile of test (for core SMS++)                                        #
-#                                                                            #
-#                                VERSION 2.00                                #
-#                               20 - 04 - 2005                               #
+#   makefile of test (for MCFBlock / MCFSolver)                              #
 #                                                                            #
 #                              Implementation by:                            #
 #                                                                            #
 #                              Antonio Frangioni                             #
-#                           Operations Research Group                        #
 #                          Dipartimento di Informatica                       #
 #                              Universita' di Pisa                           #
 #                                                                            #

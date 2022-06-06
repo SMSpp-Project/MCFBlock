@@ -3220,7 +3220,7 @@ MCFBlock::Index MCFBlock::add_arc( Index sn , Index en ,
   ++arc;
 
  if( arc >= get_MaxNArcs() )
-  return( Inf<Index>() );
+  return( Inf< Index >() );
 
  // change the physical representation- - - - - - - - - - - - - - - - - - - -
  if( not_dry_run( issueMod ) ) {
@@ -3232,8 +3232,8 @@ MCFBlock::Index MCFBlock::add_arc( Index sn , Index en ,
    C[ arc ] = cst;
 
   // set new arc capacity
-  if( U.empty() && ( cap < Inf<FNumber>() ) )
-   U.assign( get_MaxNArcs() , Inf<FNumber>() );
+  if( U.empty() && ( cap < Inf< FNumber >() ) )
+   U.assign( get_MaxNArcs() , Inf< FNumber >() );
 
   if( ! U.empty() )
    U[ arc ] = cap;
@@ -3352,7 +3352,7 @@ void MCFBlock::remove_arc( Index arc ,
 
  // change the physical representation- - - - - - - - - - - - - - - - - - - -
  if( not_dry_run( issueMod ) )
-  SN[ arc ] = EN[ arc ] = Inf<Index>();
+  SN[ arc ] = EN[ arc ] = Inf< Index >();
 
  // change the abstract representation- - - - - - - - - - - - - - - - - - - -
  // in the meantime, if so instructed also issue abstract Modification(s)

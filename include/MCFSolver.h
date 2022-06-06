@@ -271,14 +271,14 @@ public:
 
  void set_par( idx_type par , int value ) override {
   if( Solver_2_MCFClass_int[ par ] >= 0 )
-   this->MCFC::SetPar( Solver_2_MCFClass_int[ par ] , value );
+   MCFC::SetPar( Solver_2_MCFClass_int[ par ] , int( value ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
  void set_par( idx_type par , double value ) override {
   if( Solver_2_MCFClass_dbl[ par ] >= 0 )
-   this->MCFC::SetPar( Solver_2_MCFClass_dbl[ par ] , value );
+   MCFC::SetPar( Solver_2_MCFClass_dbl[ par ] , double( value ) );
   }
 
 /** @} ---------------------------------------------------------------------*/
