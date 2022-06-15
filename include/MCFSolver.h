@@ -667,9 +667,8 @@ public:
   * MCFBlock: then, this MCFBlock may be copied from a MCFBlock that has
   * closed or deleted arcs and this method would not work. */
 
- void add_Modification( sp_Mod &mod ) override
- {
-  if( const auto tmod = std::dynamic_pointer_cast<NBModification>( mod ) ) {
+ void add_Modification( sp_Mod &mod ) override {
+  if( std::dynamic_pointer_cast< const NBModification >( mod ) ) {
    // this is the "nuclear option": the MCFBlock has been re-loaded, so
    // the MCFClass solver also has to (immediately)
    auto MCFB = static_cast< MCFBlock * >( f_Block );
@@ -691,7 +690,7 @@ public:
    mod_clear();
    }
   else
-   v_mod.push_back( mod );
+   push_back( mod );
   }
 
 /*--------------------------------------------------------------------------*/

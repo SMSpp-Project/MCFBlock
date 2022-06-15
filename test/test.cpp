@@ -4,12 +4,15 @@
 /** @file
  * Main for testing MCFBlock and MCFSolver.
  *
- * An instance of a MCF in DIMACS format is read from file in both an object
- * of class MCFC derived from MCFClass, and a MCFBlock to which a
- * MCFSolver< MCFC > is attached. The MCF problem is then repeatedly solved
- * with several changes in costs / capacities / deficits, arcs openings /
- * closures and arcs additions / deletions. The same operations are performed
- * on the two solvers, and the results are compared.
+ * Reads an instance of a MCF from a file (in either DIMACS or netCDF format)
+ * in an MCFBlock, and from there in an object of a class MCFC derived from
+ * MCFClass, as decided by the macro WHICH_MCF. Then, a MCFSolver< MCFC > is
+ * attached to the MCFBlock. The MCF problem is then repeatedly solved with
+ * several changes in costs / capacities / deficits, arcs openings / closures
+ * and arcs additions / deletions. The same operations are performed on the
+ * two solvers, and the results are compared. This mostly tests MCFBlock and
+ * MCFSolver, since the actual MCFClass solved is the same, and so it can
+ * easily be wrong in the same way for both the objects.
  *
  * \author Antonio Frangioni \n
  *         Dipartimento di Informatica \n
@@ -42,7 +45,7 @@
  * - 5      for the SPTree class; note that SPTree cannot solve
  *          most MCF instances, except those with SPT structure */
 
-#define WHICH_MCF 2
+#define WHICH_MCF 1
 
 #if( LOG_LEVEL >= 1 )
 #define LOG1( x ) cout << x

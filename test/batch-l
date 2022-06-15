@@ -1,0 +1,90 @@
+#/bin/tcsh
+
+#wchg=127
+
+#for mode in 0 1 2 12 13 14 20 29 30
+for mode in 0
+do
+for (( seed=0 ; seed<1 ; seed++ ))
+do
+
+for type in goto net
+#for type in net
+do
+
+# 8*
+for j in 8 32
+do
+for h in 1 2 3 4 5
+do
+
+what=../data/nc4/${type}8_${j}_${h}.nc4
+if [ -z "$wchg" ]; then
+printf "[$what $seed $mode]: "
+else
+printf "[$what $seed $mode $wchg]: "
+fi
+
+./MCFBlock_test $what $seed $mode $wchg
+
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    exit 1
+fi
+
+done
+done
+
+# 10*
+for j in 8 64
+do
+for h in 1 2 3 4 5
+do
+
+what=../data/nc4/${type}10_${j}_${h}.nc4
+if [ -z "$wchg" ]; then
+printf "[$what $seed $mode]: "
+else
+printf "[$what $seed $mode $wchg]: "
+fi
+
+./MCFBlock_test $what $seed $mode $wchg
+
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    exit 1
+fi
+
+done
+done
+
+# 12 - 14*
+#for i in 12 14
+for i in 12
+do
+for j in 8
+do
+for h in 1 2 3 4 5
+do
+
+what=../data/nc4/${type}${i}_${j}_${h}.nc4
+if [ -z "$wchg" ]; then
+printf "[$what $seed $mode]: "
+else
+printf "[$what $seed $mode $wchg]: "
+fi
+
+./MCFBlock_test $what $seed $mode $wchg
+
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    exit 1
+fi
+
+done
+done
+done
+done
+
+done
+done
