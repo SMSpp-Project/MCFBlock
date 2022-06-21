@@ -2530,7 +2530,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
 	 ++pit )
      if( U[ pit->first ] != pit->second ) {
       U[ pit->first ] = pit->second;
-      UB[ pit->first ].set_rhs( *NCap , ampar );
+      UB[ pit->first ].set_rhs( pit->second , ampar );
       }
 
     // dynamic part

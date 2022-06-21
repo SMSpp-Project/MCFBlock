@@ -37,15 +37,6 @@ make
 
 The library has the same configuration options of
 [SMS++](https://gitlab.com/smspp/smspp-project/-/wikis/Customize-the-configuration).
-Moreover, you can choose the solver with the variable `MCFBlock_SOLVER`.
-Available values are:
-
-| Value     | Solver             |
-| --------- | ------------------ |
-| `relax`   | RelaxIV            |
-| `cplex`   | CPLEX (default)    |
-| `mfsmx`   | Simplex            |
-| `sptree`  | Shortest Path Tree |
 
 Optionally, install the library in the system with:
 
@@ -135,7 +126,7 @@ CC =
 SW =
 ```
 
-  for setting the c++ compiler and its options are "automatically forwarded"
+  for setting the C++ compiler and its options are "automatically forwarded"
   from the makefile to these of the other SMS++ components, and therefore
   (possibly at the cost of a make clean) ensure consistency during the
   building process.
