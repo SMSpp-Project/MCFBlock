@@ -771,8 +771,12 @@ public:
   if( i < get_NStaticArcs() )
    return( const_cast< ColVariable * >( & x[ i ] ) );
   else
-   return( const_cast< ColVariable * >(
+   if( i - get_NStaticArcs() < get_NArcs() - i )
+    return( const_cast< ColVariable * >(
 		   &( *std::next( dx.begin() , i - get_NStaticArcs() ) ) ) );
+   else
+    return( const_cast< ColVariable * >(
+		           &( *std::prev( dx.end() , get_NArcs() - i ) ) ) );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -812,8 +816,12 @@ public:
   if( i < get_NStaticArcs() )
    return( const_cast< LB0Constraint * >( & UB[ i ] ) );
   else
-   return( const_cast< LB0Constraint * >(
+   if( i - get_NStaticArcs() < get_NArcs() - i )
+    return( const_cast< LB0Constraint * >(
 		  &( *std::next( dUB.begin() , i - get_NStaticArcs() ) ) ) );
+   else
+    return( const_cast< LB0Constraint * >(
+		          &( *std::prev( dUB.end() , get_NArcs() - i ) ) ) );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -849,7 +857,7 @@ public:
  /// returns true if the arc is deleted
 
  bool is_deleted( Index arc ) const {
-  return( SN[ arc ] >= Inf< Index >() );
+  return( ( ! C.empty() ) && std::isnan( C[ arc ] ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -867,8 +875,12 @@ public:
   if( i < get_NStaticNodes() )
    return( const_cast< FRowConstraint * >( &E[ i ] ) );
   else
-   return( const_cast< FRowConstraint * >(
+   if( i - get_NStaticNodes() < get_NNodes() - i )
+    return( const_cast< FRowConstraint * >(
 		  &( *std::next( dE.begin() , i - get_NStaticNodes() ) ) ) );
+   else
+    return( const_cast< FRowConstraint * >(
+		          &( *std::prev( dE.end() , get_NNodes() - i ) ) ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -893,16 +905,15 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc costs
- /** Returns a const reference to the vector of arc costs. Note that the
-  * returned vector can either be of size get_MaxNArcs() or of size 0, in
-  * which case all arc costs are assumed to be 0. */
+ /** Returns a const reference to the vector of arc costs of size
+  * get_MaxNArcs(). Note that the cost of a deleted arc is NaN. */
 
  c_Vec_CNumber & get_C( void ) const { return( C ); }
 
  /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// get the cost of arc i (0 <= i < get_NArcs())
+ /// get the cost of arc i (0 <= i < get_NArcs()), NaN if deleted
 
- CNumber get_C( c_Index i ) const { return( C.empty() ? 0 : C[ i ] ); }
+ CNumber get_C( c_Index i ) const { return( C[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc upper bounds
@@ -1601,10 +1612,7 @@ public:
  * Note: the methods accept the eDryRun value for the issueAMod parameter for
  * the "abstract" representation. This allows to re-use them within MCFBlock
  * itself when reacting to abstract Modification, where the  "abstract"
- * representation has been changed already. However, the eDryRun value is not
- * allowed (it is ignored) for the issuePMod parameter for the "physical"
- * representation, as there is no reasonable use for this. Basically, this
- * makes eDryRun equivalent to eNoMod.
+ * representation has been changed already.
  *  @{ */
 
  /// change the costs of a contiguous interval of arcs
@@ -1613,12 +1621,10 @@ public:
   * \p rng. Note that if the right extreme of the range is >= get_NArcs() it 
   * is ignored.
   *
-  * Note that, if the Objective is a "sparse" LinearFunction (see
-  * compute_objective()), then changing the costs can issue up to three
-  * different Modification; in particular a LinearFunctionMod for adding a
-  * Variable (setting to nonzero a previously zero coefficient), one for
-  * removing Variable (vice-versa), and one C05FunctionModLin for modifying
-  * the coefficients.
+  * Note that if \p rng contains some closed arc, its cost is also changed.
+  * While this has no immediate impact on the problem solved, if the arc is
+  * re-opened then the cost set with this method when the arc was closed is
+  * in effect.
   *
   * If more than one Modification is actually issued and issueAMod specifies
   * an open channel, then the channel is nested so that the three Modification
@@ -1646,7 +1652,8 @@ public:
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * See chg_costs( range ) for Modification issued (except that, of course,
-  * the "physical" one is a MCFBlockSbstMod). */
+  * the "physical" one is a MCFBlockSbstMod), and about changes in costs
+  * of closed arcs. */
 
  void chg_costs( c_Vec_CNumber_it NCost ,
 		 Subset && nms , bool ordered = false ,
@@ -1670,6 +1677,11 @@ public:
   * >= get_NArcs() it is ignored. Note that, according to the Configuration of
   * the static Constraint, the capacity of the arcs cannot be changed: trying
   * to do that will result in an exception being thrown.
+  *
+  * Note that if \p rng contains some closed arc, its capacity is also
+  * changed. While this has no immediate impact on the problem solved, if the
+  * arc is re-opened then the capacity set with this method when the arc was
+  * closed is in effect.
   *
   * Note that changing the capacities can issue as many Modification as there
   * are arcs in the range, in particular OneVarConstraintMod with type
@@ -1705,7 +1717,8 @@ public:
   * an exception being thrown.
   *
   * See chg_ucaps( range ) for Modification issued (except that, of course,
-  * the "physical" one is a MCFBlockSbstMod). */
+  * the "physical" one is a MCFBlockSbstMod) and about changing capacities
+  * of closed arcs. */
 
  void chg_ucaps( c_Vec_FNumber_it NCap ,
 		 Subset && nms , bool ordered = false ,
@@ -2019,10 +2032,6 @@ public:
  protected:
 
 /*--------------------------------------------------------------------------*/
-/*-------------------------- PROTECTED FRIENDS -----------------------------*/
-/*--------------------------------------------------------------------------*/
-
-/*--------------------------------------------------------------------------*/
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -2225,7 +2234,7 @@ public:
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-};  // end( class( MCFBlock ) )
+ };  // end( class( MCFBlock ) )
 
 /*--------------------------------------------------------------------------*/
 /*-------------------------- CLASS MCFBlockMod -----------------------------*/

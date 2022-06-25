@@ -905,53 +905,75 @@ void MCFSolver< MCFC >::guts_of_poM( c_p_Mod mod )
   * Modification changin nothing from the "empty" state is not issued). */
 
  if( auto tmod = dynamic_cast< const MCFBlockRngdMod * >( mod ) ) {
+  auto rng = tmod->rng();
+
   switch( tmod->type() ) {
    case( MCFBlockMod::eChgCost ):
-    if( tmod->rng().second == tmod->rng().first + 1 )
-     MCFC::ChgCost( tmod->rng().first , MCFB->get_C( tmod->rng().first ) );
-    else
-     MCFC::ChgCosts( MCFB->get_C().data() + tmod->rng().first , nullptr,
-		     tmod->rng().first , tmod->rng().second );
+    if( rng.second == rng.first + 1 ) {
+     if( ! MCFB->is_deleted( rng.first ) )
+      MCFC::ChgCost( rng.first , MCFB->get_C( rng.first ) );
+     }
+    else {
+     if( std::any_of( MCFB->get_C().data() + rng.first ,
+		      MCFB->get_C().data() + rng.second ,
+		      []( auto ci ) { return( std::isnan( ci ) ); } ) ) {
+      MCFBlock::Vec_CNumber NCost( MCFB->get_C().data() + rng.first ,
+				   MCFB->get_C().data() + rng.second );
+      for( auto & ci : NCost )
+       if( std::isnan( ci ) )
+	ci = 0;
+
+      MCFC::ChgCosts( NCost.data() , nullptr , rng.first , rng.second );
+      }
+     else
+      MCFC::ChgCosts( MCFB->get_C().data() + rng.first , nullptr ,
+		      rng.first , rng.second );
+     }
     return;
 
    case( MCFBlockMod::eChgCaps ):
-    if( tmod->rng().second == tmod->rng().first + 1 )
-     MCFC::ChgUCap( tmod->rng().first , MCFB->get_U( tmod->rng().first ) );
+    if( rng.second == rng.first + 1 ) {
+     if( ! MCFB->is_deleted( rng.first ) )
+      MCFC::ChgUCap( rng.first , MCFB->get_U( rng.first ) );
+     }
     else
-     MCFC::ChgUCaps( MCFB->get_U().data() + tmod->rng().first , nullptr,
-		     tmod->rng().first , tmod->rng().second );
+     MCFC::ChgUCaps( MCFB->get_U().data() + rng.first , nullptr ,
+		     rng.first , rng.second );
     return;
 
    case( MCFBlockMod::eChgDfct ):
-    if( tmod->rng().second == tmod->rng().first + 1 )
-     MCFC::ChgDfct( tmod->rng().first , MCFB->get_B( tmod->rng().first ) );
+    if( rng.second == rng.first + 1 )
+     MCFC::ChgDfct( rng.first , MCFB->get_B( rng.first ) );
     else
-     MCFC::ChgDfcts( MCFB->get_B().data() + tmod->rng().first , nullptr,
-		     tmod->rng().first , tmod->rng().second );
+     MCFC::ChgDfcts( MCFB->get_B().data() + rng.first , nullptr ,
+		     rng.first , rng.second );
     return;
 
    case( MCFBlockMod::eOpenArc ):
-    for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
-     MCFC::OpenArc( arc++ );
+    for( ; rng.first < rng.second ; ++rng.first )
+     if( ! MCFB->is_deleted( rng.first ) )
+      MCFC::OpenArc( rng.first );
     return;
 
    case( MCFBlockMod::eCloseArc ):
-    for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
-     MCFC::CloseArc( arc++ );
+    for( ; rng.first < rng.second ; ++rng.first )
+     if( ! MCFB->is_deleted( rng.first ) )
+      MCFC::CloseArc( rng.first );
     return;
 
    case( MCFBlockMod::eAddArc ): {
-    auto arc = MCFC::AddArc( MCFB->get_SN( tmod->rng().first ) ,
-			     MCFB->get_EN( tmod->rng().first ) ,
-			     MCFB->get_U( tmod->rng().first ) ,
-			     MCFB->get_C( tmod->rng().first ) );
-    if( arc != tmod->rng().first )
+    auto ca = MCFB->get_C( rng.first );
+    auto arc = MCFC::AddArc( MCFB->get_SN( rng.first ) ,
+			     MCFB->get_EN( rng.first ) ,
+			     MCFB->get_U( rng.first ) ,
+			     std::isnan( ca ) ? 0 : ca );
+    if( arc != rng.first )
      throw( std::logic_error( "name mismatch in AddArc()" ) );
     return;
     }
 
    case( MCFBlockMod::eRmvArc ):
-    MCFC::DelArc( tmod->rng().second - 1 );
+    MCFC::DelArc( rng.second - 1 );
     return;
 
    default: throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
@@ -963,35 +985,52 @@ void MCFSolver< MCFC >::guts_of_poM( c_p_Mod mod )
   switch( tmod->type() ) {
    case( MCFBlockMod::eOpenArc ):
     for( auto arc : tmod->nms() )
-     MCFC::OpenArc( arc );
+     if( ! MCFB->is_deleted( arc ) )
+      MCFC::OpenArc( arc );
     return;
 
    case( MCFBlockMod::eCloseArc ):
     for( auto arc : tmod->nms() )
-     MCFC::CloseArc( arc );
+     if( ! MCFB->is_deleted( arc ) )
+      MCFC::CloseArc( arc );
     return;
     }
 
   // have to InINF-terminate the vector of indices (damn!)
-  MCFBlock::Subset nmsI( tmod->nms().size() + 1 );
-  *copy( tmod->nms().begin() , tmod->nms().end() , nmsI.begin() ) =
-                                                     Inf< MCFBlock::Index >();
+  // meanwhile, when appropriate remove the indices of deleted
+  // arcs for which the operations make no sense;
+                                                     ;
   switch( tmod->type() ) {
    case( MCFBlockMod::eChgCost ): {
-    MCFBlock::Vec_CNumber NCost( tmod->nms().size() );
-    auto C = MCFB->get_C();
-    for( MCFBlock::Index i = 0 ; i < NCost.size() ; i++ )
-     NCost[ i ] = C[ nmsI[ i ] ];
+    MCFBlock::Subset nmsI;
+    nmsI.reserve( tmod->nms().size() + 1 );
+    MCFBlock::Vec_CNumber NCost;
+    NCost.reserve( tmod->nms().size() );
+    auto & C = MCFB->get_C();
+    for( auto i : tmod->nms() )
+     if( auto ci = C[ i ] ; ! std::isnan( ci ) ) {
+      NCost.push_back( ci );
+      nmsI.push_back( i );
+      }
+    nmsI.push_back( Inf< MCFBlock::Index >() );
 
     MCFC::ChgCosts( NCost.data() , nmsI.data() );
     return;
     }
 
    case( MCFBlockMod::eChgCaps ): {
-    MCFBlock::Vec_FNumber NCap( tmod->nms().size() );
-    auto U = MCFB->get_U();
-    for( MCFBlock::Index i = 0 ; i < NCap.size() ; i++ )
-     NCap[ i ] = U[ nmsI[ i ] ];
+    MCFBlock::Subset nmsI;
+    nmsI.reserve( tmod->nms().size() + 1 );
+    MCFBlock::Vec_FNumber NCap;
+    NCap.reserve( tmod->nms().size() );
+    auto & C = MCFB->get_C();
+    auto & U = MCFB->get_U();
+    for( auto i : tmod->nms() )
+     if( ! std::isnan( C[ i ] ) ) {
+      NCap.push_back( U[ i ] );
+      nmsI.push_back( i );
+      }
+    nmsI.push_back( Inf< MCFBlock::Index >() );
 
     MCFC::ChgUCaps( NCap.data() , nmsI.data() );
     return;
@@ -999,6 +1038,9 @@ void MCFSolver< MCFC >::guts_of_poM( c_p_Mod mod )
 
    case( MCFBlockMod::eChgDfct ): {
     MCFBlock::Vec_FNumber NDfct( tmod->nms().size() );
+    MCFBlock::Subset nmsI( tmod->nms().size() + 1 );
+    *copy( tmod->nms().begin() , tmod->nms().end() , nmsI.begin() ) =
+                                                   Inf< MCFBlock::Index >();
     auto B = MCFB->get_B();
     for( MCFBlock::Index i = 0 ; i < NDfct.size() ; i++ )
      NDfct[ i ] = B[ nmsI[ i ] ];
