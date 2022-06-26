@@ -2129,35 +2129,26 @@ void MCFBlock::print( std::ostream  & output , char vlvl ) const
      if( B[ i ] != 0 )
       output << "B[ " << i + 1 << " ] = " << B[ i ] << std::endl;
 
-   if( U.empty() )
-    for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-     if( ( ! is_deleted( i ) ) && ( ! is_closed( i ) ) )
-      output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
-	     << std::endl;
+   for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+    output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = ";
+    if( is_deleted( i ) )
+     output << "1000000";
+    else
+     output << C[ i ];
+
+    if( ! U.empty() ) {
+     output << ", U = ";
+     print_UB( output , U[ i ] );
      }
-   else
-    for( Index i = 0 ; i < get_NArcs() ; ++i )
-     if( ( ! is_deleted( i ) ) && ( ! is_closed( i ) ) ) {
-      output << "( " << SN[ i ] << " , " << EN[ i ] << " ): C = " << C[ i ]
-	     << ", U = ";
-      print_UB( output , U[ i ] );
-      output << std::endl;
-      }
+
+    output << std::endl;
+    }
    }
   }
  else  {
   // print header in DIMACS standard format
-  output << std::endl << "p min " << get_NNodes() << " ";
-  if( HasDynamicX() ) {
-   Index narcs = get_NStaticArcs();
-   for( Index i = narcs ; i < get_NArcs() ; ++i )
-    if( ( ! is_deleted( i ) ) && ( ! is_closed( i ) ) )
-     ++narcs;
-   
-   output << narcs << std::endl;
-   }
-  else
-   output << SN.size() << std::endl;
+  output << "p min " << get_NNodes() << " " << get_NArcs() << std::endl;
+  output << std::setprecision( 16 );
 
   // print node descriptors in DIMACS standard format
   if( ! B.empty() )
@@ -2166,19 +2157,25 @@ void MCFBlock::print( std::ostream  & output , char vlvl ) const
      output << "n\t" << i + 1 << "\t" << - B[ i ] << std::endl;
 
   // print arc descriptors in DIMACS standard format
-  if( U.empty() ) {
-   for( Index i = 0 ; i < get_NArcs() ; ++i )
-    if( ( ! is_deleted( i ) ) && ( ! is_closed( i ) ) )
-     output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t+Inf\t"
-	    << C[ i ] << std::endl;
-   }
-  else
-   for( Index i = 0 ; i < get_NArcs() ; ++i )
-    if( ( ! is_deleted( i ) ) && ( ! is_closed( i ) ) ) {
-     output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
+  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+   output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
+
+   if( ( is_deleted( i ) ) || is_closed( i ) )
+    output << "0";
+   else {
+    if( U.empty() )
+     output << "+Inf";
+    else
      print_UB( output , U[ i ] );
-     output << "\t" << C[ i ] << std::endl;
-     }
+    }
+
+   output << "\t";
+   if( is_deleted( i ) )
+    output << "1000000";
+   else
+    output << C[ i ];
+   output << std::endl;
+   }
   }
  }  // end( MCFBlock::print )
 
@@ -2875,50 +2872,44 @@ void MCFBlock::close_arcs( Range rng ,
 {
  rng.second = std::min( rng.second , get_NArcs() );
  if( rng.second <= rng.first )  // nothing to change
-  return;                 // cowardly (and silently) return
+  return;                       // cowardly (and silently) return
 
  // since the physical and abstract representation are the same, anything
  // that has to do with the abstract representation is skipped in the
  // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  Index ndiff = 0;
+  std::vector< ColVariable * > toclose;
+  toclose.reserve( rng.second - rng.first );
   Index i = rng.first;
 
   // static part
   for( ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
    if( ! x[ i ].is_fixed() )
-    ndiff++;
+    toclose.push_back( & x[ i ] );
 
   // dynamic part
-  for( auto dxi = dx.begin() ; i++ < rng.second ; )
-   if( ! (dxi++)->is_fixed() )
-    ndiff++;
+  if( HasDynamicX() )
+   for( auto dxi = std::next( dx.begin() , i - get_NStaticArcs() ) ;
+	i++ < rng.second ; ++dxi )
+    if( ! dxi->is_fixed() )
+     toclose.push_back( & (*dxi) );
 
-  if( ! ndiff )
+  if( toclose.empty() )
    return;
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
   not_ModBlock( issueAMod );
-  auto ampar = open_if_needed( issueAMod , ndiff );
+  auto ampar = open_if_needed( issueAMod , toclose.size() );
 
-  // static part
-  for( i = rng.first ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
-   if( ! x[ i ].is_fixed() ) {
-    x[ i ].set_value( 0 );
-    x[ i ].is_fixed( true , ampar );
-    }
+  for( auto vi : toclose ) {
+   vi->set_value( 0 );
+   vi->is_fixed( true , ampar );
+   }
 
-  // dynamic part
-  for( auto dxi = dx.begin() ; i++ < rng.second ; ++dxi )
-   if( ! dxi->is_fixed() ) {
-    dxi->set_value( 0 );
-    dxi->is_fixed( true , ampar );
-    }
-
-  close_if_needed( ampar , ndiff );
+  close_if_needed( ampar , toclose.size() );
   }
 
  f_cond_lower = dNAN;  // reset conditional bounds
@@ -2955,52 +2946,39 @@ void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
  // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  Index ndiff = 0;
+  std::vector< ColVariable * > toclose;
+  toclose.reserve( nms.size() );
 
   // static part
   auto nit = nms.begin();
   for( ; ( nit != nms.end() ) && ( *nit < get_NStaticArcs() ) ; ++nit )
    if( ! x[ *nit ].is_fixed() )
-    ndiff++;
+    toclose.push_back( & x[ *nit ] );
 
   // dynamic part
   auto dxi = dx.begin();
   for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
    if( *nit == i ) {
     if( ! dxi->is_fixed() )
-     ndiff++;
+     toclose.push_back( & (*dxi) );
     ++nit;
     }
 
-  if( ! ndiff )
+  if( toclose.empty() )
    return;
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
   not_ModBlock( issueAMod );
-  auto ampar = open_if_needed( issueAMod , ndiff );
+  auto ampar = open_if_needed( issueAMod , toclose.size() );
 
-  // static part
-  for( nit = nms.begin() ; ( nit != nms.end() ) &&
-	                   ( *nit < get_NStaticArcs() ) ; ++nit )
-   if( ! x[ *nit ].is_fixed() ) {
-    x[ *nit ].set_value( 0 );
-    x[ *nit ].is_fixed( true , ampar );
-    }
+  for( auto vi : toclose ) {
+   vi->set_value( 0 );
+   vi->is_fixed( true , ampar );
+   }
 
-  // dynamic part
-  dxi = dx.begin();
-  for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
-   if( *nit == i ) {
-    if( ! dxi->is_fixed() ) {
-     dxi->set_value( 0 );
-     dxi->is_fixed( true , ampar );
-     }
-    ++nit;
-    }
-
-  close_if_needed( ampar , ndiff );
+  close_if_needed( ampar , toclose.size() );
   }
 
  f_cond_lower = dNAN;  // reset conditional bounds
@@ -3067,39 +3045,35 @@ void MCFBlock::open_arcs( Range rng ,
  // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  Index ndiff = 0;
+  std::vector< ColVariable * > toopen;
+  toopen.reserve( rng.second - rng.first );
   Index i = rng.first;
 
-  // static part
+   // static part
   for( ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
    if( x[ i ].is_fixed() )
-    ndiff++;
+    toopen.push_back( & x[ i ] );
 
   // dynamic part
-  for( auto dxi = dx.begin() ; i++ < rng.second ; )
-   if( (dxi++)->is_fixed() )
-    ndiff++;
+  if( HasDynamicX() )
+   for( auto dxi = std::next( dx.begin() , i - get_NStaticArcs() ) ;
+	i++ < rng.second ; ++dxi )
+    if( dxi->is_fixed() )
+     toopen.push_back( & (*dxi) );
 
-  if( ! ndiff )
+  if( toopen.empty() )
    return;
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
   not_ModBlock( issueAMod );
-  auto ampar = open_if_needed( issueAMod , ndiff );
+  auto ampar = open_if_needed( issueAMod , toopen.size() );
 
-  // static part
-  for( i = rng.first ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
-   if( x[ i ].is_fixed() )
-    x[ i ].is_fixed( false , ampar );
+  for( auto vi : toopen )
+   vi->is_fixed( false , ampar );
 
-  // dynamic part
-  for( auto dxi = dx.begin() ; i++ < rng.second ; ++dxi )
-   if( dxi->is_fixed() )
-    dxi->is_fixed( false , ampar );
-
-  close_if_needed( ampar , ndiff );
+  close_if_needed( ampar , toopen.size() );
   }
 
  f_cond_lower = dNAN;  // reset conditional bounds
@@ -3136,53 +3110,40 @@ void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
  // "dry run" case; but the "physical Modification" is issued anyway
 
  if( not_dry_run( issueAMod ) ) {
-  Index ndiff = 0;
+  std::vector< ColVariable * > toopen;
+  toopen.reserve( nms.size() );
 
   // static part
   auto nit = nms.begin();
   for( ; ( nit != nms.end() ) && ( *nit < get_NStaticArcs() ) ; ++nit )
    if( x[ *nit ].is_fixed() )
-    ndiff++;
+    toopen.push_back( & x[ *nit ] );
 
   // dynamic part
   auto dxi = dx.begin();
   for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
    if( *nit == i ) {
     if( dxi->is_fixed() )
-     ndiff++;
+     toopen.push_back( & (*dxi) );
     ++nit;
     }
 
-  if( ! ndiff )
+  if( toopen.empty() )
    return;
 
   // the physical and abstract representation are the same- - - - - - - - - -
   // change both (doh!), and if so instructed also issue abstract Modification
 
   not_ModBlock( issueAMod );
-  auto ampar = open_if_needed( issueAMod , ndiff );
+  auto ampar = open_if_needed( issueAMod , toopen.size() );
 
-  // static part
-  for( nit = nms.begin() ; ( nit != nms.end() ) &&
-	                   ( *nit < get_NStaticArcs() ) ; ++nit )
-   if( x[ *nit ].is_fixed() )
-    x[ *nit ].is_fixed( false , ampar );
+  for( auto vi : toopen )
+   vi->is_fixed( false , ampar );
 
-  // dynamic part
-  dxi = dx.begin();
-  for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
-   if( *nit == i ) {
-    if( dxi->is_fixed() )
-     dxi->is_fixed( false , ampar );
-    ++nit;
-    }
-
-  close_if_needed( ampar , ndiff );
+  close_if_needed( ampar , toopen.size() );
   }
 
  f_cond_lower = dNAN;  // reset conditional bounds
-
- // TODO: eliminate from nms the "fake" changes
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
   Block::add_Modification( std::make_shared< MCFBlockSbstMod >( this ,

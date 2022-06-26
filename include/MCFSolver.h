@@ -147,8 +147,34 @@ public:
  */
 
 /*--------------------------------------------------------------------------*/
+ /// public enum "extending" int_par_type_CDAS to MCFSolver
 
-// typedef double OFValue;
+ enum int_par_type_MCFS {
+  kReopt = intLastParCDAS ,  ///< whether or not to reoptimize
+  intLastParMCF    ///< first allowed parameter value for derived classes
+                   /**< convenience value for easily allow derived classes
+                    * to further extend the set of types of return codes */
+  };             // end( int_par_type_MCFS )
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// public enum "extending" dbl_par_type_CDAS to MCFSolver
+
+ enum dbl_par_type_MCFS {
+  dblLastParMCF = dblLastParCDAS
+                   ///< first allowed parameter value for derived classes
+                   /**< convenience value for easily allow derived classes
+                    * to further extend the set of types of return codes */
+  };             // end( dbl_par_type_MCFS )
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// public enum "extending" str_par_type_CDAS to MCFSolver
+
+ enum str_par_type_MCFS {
+  strDMXFile = strLastParCDAS ,  ///< DMX filename to output the instance
+  strLastParMCF    ///< first allowed parameter value for derived classes
+                   /**< convenience value for easily allow derived classes
+                    * to further extend the set of types of return codes */
+  };             // end( dbl_par_type_MCFS )
 
 /** @} ---------------------------------------------------------------------*/
 /*----------------- CONSTRUCTING AND DESTRUCTING MCFSolver -----------------*/
@@ -281,6 +307,13 @@ public:
    MCFC::SetPar( Solver_2_MCFClass_dbl[ par ] , double( value ) );
   }
 
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ void set_par( idx_type par , const std::string & value ) override {
+  if( par == strDMXFile )
+   f_dmx_file = value;
+  }
+
 /** @} ---------------------------------------------------------------------*/
 /*--------------------- METHODS FOR SOLVING THE Block ----------------------*/
 /*--------------------------------------------------------------------------*/
@@ -306,6 +339,16 @@ public:
   
   // while [read_]locked, process any outstanding Modification
   process_outstanding_Modification();
+
+  if( ! f_dmx_file.empty() ) {  // if so required
+   // output the current instance (after the changes) to a DMX file
+   std::ofstream ProbFile( f_dmx_file , ios_base::out | ios_base::trunc );
+   if( ! ProbFile.is_open() )
+    throw( std::logic_error( "cannot open DMX file " + f_dmx_file ) );
+
+   WriteMCF( ProbFile );
+   ProbFile.close();
+   }
 
   if( ! owned )             // if the [MCF]Block was actually read_locked
    f_Block->read_unlock();  // read_unlock it
@@ -552,6 +595,12 @@ public:
   return( CDASolver::get_num_dbl_par() );
   }
 
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ idx_type get_num_str_par( void ) const override {
+  return( CDASolver::get_num_str_par() + 1 );
+  }
+
 /*--------------------------------------------------------------------------*/
  
  int get_dflt_int_par( idx_type par ) const override {
@@ -565,6 +614,16 @@ public:
  
  double get_dflt_dbl_par( idx_type par ) const override {
   return( CDASolver::get_dflt_dbl_par( par ) );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ const std::string & get_dflt_str_par( idx_type par ) const override {
+  static const std::string _empty;
+  if( par == strLastParCDAS )
+   return( _empty );
+
+  return( CDASolver::get_dflt_str_par( par ) );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -591,11 +650,20 @@ public:
   return( get_dflt_dbl_par( par ) );
   }
 
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ 
+ const std::string & get_str_par( idx_type par ) const override {
+  if( par == strDMXFile )
+   return( f_dmx_file );
+
+  return( get_dflt_str_par( par ) );
+  }
+
 /*--------------------------------------------------------------------------*/
 
  idx_type int_par_str2idx( const std::string & name ) const override {
   if( name == "kReopt" )
-   return( intLastParCDAS );
+   return( kReopt );
 
   return( CDASolver::int_par_str2idx( name ) );
   }
@@ -604,6 +672,15 @@ public:
 
  idx_type dbl_par_str2idx( const std::string & name ) const override {
   return( CDASolver::dbl_par_str2idx( name ) );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ idx_type str_par_str2idx( const std::string & name ) const override {
+  if( name == "strDMXFile" )
+   return( strDMXFile );
+
+  return( CDASolver::str_par_str2idx( name ) );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -621,6 +698,17 @@ public:
 
  const std::string & dbl_par_idx2str( idx_type idx ) const override {
   return( CDASolver::dbl_par_idx2str( idx ) );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ const std::string & str_par_idx2str( idx_type idx ) const override {
+  static const std::string my_name = "strDMXFile";
+
+  if( idx == strDMXFile )
+   return( my_name );
+
+  return( CDASolver::str_par_idx2str( idx ) );
   }
 
 /** @} ---------------------------------------------------------------------*/
@@ -726,6 +814,8 @@ protected:
 
  const static std::vector<int> Solver_2_MCFClass_dbl;
  // the (static const) map between Solver int parameters and MCFClass ones
+
+ std::string f_dmx_file;  // string for DMX file output
 
 /*--------------------------------------------------------------------------*/
 /*--------------------- PRIVATE PART OF THE CLASS --------------------------*/
