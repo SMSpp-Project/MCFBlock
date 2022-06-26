@@ -585,25 +585,25 @@ public:
  * "there is no such parameter in MCFSolver".
  *  @{ */
 
- idx_type get_num_int_par( void ) const override {
+ [[nodiscard]] idx_type get_num_int_par( void ) const override {
   return( CDASolver::get_num_int_par() + 1 );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- idx_type get_num_dbl_par( void ) const override {
+ [[nodiscard]] idx_type get_num_dbl_par( void ) const override {
   return( CDASolver::get_num_dbl_par() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- idx_type get_num_str_par( void ) const override {
+ [[nodiscard]] idx_type get_num_str_par( void ) const override {
   return( CDASolver::get_num_str_par() + 1 );
   }
 
 /*--------------------------------------------------------------------------*/
  
- int get_dflt_int_par( idx_type par ) const override {
+ [[nodiscard]] int get_dflt_int_par( idx_type par ) const override {
   if( par == intLastParCDAS )
    return( MCFClass::kYes );
 
@@ -612,13 +612,14 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  
- double get_dflt_dbl_par( idx_type par ) const override {
+ [[nodiscard]] double get_dflt_dbl_par( idx_type par ) const override {
   return( CDASolver::get_dflt_dbl_par( par ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- const std::string & get_dflt_str_par( idx_type par ) const override {
+ [[nodiscard]] const std::string & get_dflt_str_par( idx_type par )
+  const override {
   static const std::string _empty;
   if( par == strLastParCDAS )
    return( _empty );
@@ -628,7 +629,7 @@ public:
 
 /*--------------------------------------------------------------------------*/
  
- int get_int_par( idx_type par ) const override {
+ [[nodiscard]] int get_int_par( idx_type par ) const override {
   if( Solver_2_MCFClass_int[ par ] >= 0 ) {
    int val;
    this->GetPar( Solver_2_MCFClass_int[ par ] , val );
@@ -640,7 +641,7 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  
- double get_dbl_par( idx_type par ) const override {
+ [[nodiscard]] double get_dbl_par( idx_type par ) const override {
   if( Solver_2_MCFClass_dbl[ par ] >= 0 ) {
    double val;
    this->GetPar( Solver_2_MCFClass_dbl[ par ] , val );
@@ -652,7 +653,8 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  
- const std::string & get_str_par( idx_type par ) const override {
+ [[nodiscard]] const std::string & get_str_par( idx_type par )
+  const override {
   if( par == strDMXFile )
    return( f_dmx_file );
 
@@ -661,7 +663,8 @@ public:
 
 /*--------------------------------------------------------------------------*/
 
- idx_type int_par_str2idx( const std::string & name ) const override {
+ [[nodiscard]] idx_type int_par_str2idx( const std::string & name )
+  const override {
   if( name == "kReopt" )
    return( kReopt );
 
@@ -670,13 +673,15 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- idx_type dbl_par_str2idx( const std::string & name ) const override {
+ [[nodiscard]] idx_type dbl_par_str2idx( const std::string & name )
+  const override {
   return( CDASolver::dbl_par_str2idx( name ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- idx_type str_par_str2idx( const std::string & name ) const override {
+ [[nodiscard]] idx_type str_par_str2idx( const std::string & name )
+  const override {
   if( name == "strDMXFile" )
    return( strDMXFile );
 
@@ -685,7 +690,8 @@ public:
 
 /*--------------------------------------------------------------------------*/
 
- const std::string & int_par_idx2str( idx_type idx ) const override {
+ [[nodiscard]] const std::string & int_par_idx2str( idx_type idx )
+  const override {
   static const std::string my_name = "kReopt";
 
   if( idx == intLastParCDAS )
@@ -696,13 +702,15 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- const std::string & dbl_par_idx2str( idx_type idx ) const override {
+ [[nodiscard]] const std::string & dbl_par_idx2str( idx_type idx )
+  const override {
   return( CDASolver::dbl_par_idx2str( idx ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- const std::string & str_par_idx2str( idx_type idx ) const override {
+ [[nodiscard]] const std::string & str_par_idx2str( idx_type idx )
+  const override {
   static const std::string my_name = "strDMXFile";
 
   if( idx == strDMXFile )
@@ -717,7 +725,7 @@ public:
 /** @name Handling the State of the MCFSolver
  *  @{ */
 
- State * get_State( void ) const override;
+ [[nodiscard]] State * get_State( void ) const override;
 
 /*--------------------------------------------------------------------------*/
 

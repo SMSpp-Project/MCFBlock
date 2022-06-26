@@ -153,6 +153,8 @@ using c_Range = Block::c_Range;
 using Subset = Block::Subset;
 using c_Subset = Block::c_Subset;
 
+static constexpr double BA = 1e-12;  // base accuracy of the MCFSolver
+
 /*--------------------------------------------------------------------------*/
 /*------------------------------- GLOBALS ----------------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -641,8 +643,6 @@ int main( int argc , char **argv )
 
  // set epsilons in MCFClass and MCFSolver- - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
- static constexpr double BA = 1e-12;  // base accuracy
 
  // set epsilons in MCFClass
  mcf->SetPar( MCFClass::kEpsFlw ,

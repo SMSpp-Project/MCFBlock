@@ -612,7 +612,7 @@ public:
 
  /// getting the current sense of the Objective, which is minimization
 
- int get_objective_sense( void ) const override final {
+ [[nodiscard]] int get_objective_sense( void ) const override {
   return( Objective::eMin );
   }
   
@@ -637,8 +637,8 @@ public:
   *       is surely not empty, and thus the conditionally valid upper bound is
   *       also a globally valid upper bound. */
 
- double get_valid_upper_bound( bool conditional = false )
-  override final {
+ [[nodiscard]] double get_valid_upper_bound( bool conditional = false )
+  override {
   if( ! conditional )
    return( + Inf<double>() );
    
@@ -659,8 +659,8 @@ public:
   * cannot be unbounded below (although it can still be empty, but that's an
   * issue for upper bound, this being a minimization problem). */
 
- double get_valid_lower_bound( bool conditional = false )
-  override final {
+ [[nodiscard]] double get_valid_lower_bound( bool conditional = false )
+  override {
   if( std::isnan( f_cond_lower ) )
    compute_conditional_bounds();
 
@@ -670,68 +670,74 @@ public:
 /*--------------------------------------------------------------------------*/
  /// get the number of nodes
 
- Index get_NNodes( void ) const { return( NNodes ); }
+ [[nodiscard]] Index get_NNodes( void ) const { return( NNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of arcs
 
- Index get_NArcs( void ) const { return( NArcs ); }
+ [[nodiscard]] Index get_NArcs( void ) const { return( NArcs ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the maximum number of nodes
 
- Index get_MaxNNodes( void ) const { return( MaxNNodes ); }
+ [[nodiscard]] Index get_MaxNNodes( void ) const { return( MaxNNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the maximum number of arcs
 
- Index get_MaxNArcs( void ) const { return( SN.size() ); }
+ [[nodiscard]] Index get_MaxNArcs( void ) const { return( SN.size() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static nodes
 
- Index get_NStaticNodes( void ) const { return( NStaticNodes ); }
+ [[nodiscard]] Index get_NStaticNodes( void ) const {
+  return( NStaticNodes );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static arcs
 
- Index get_NStaticArcs( void ) const { return( NStaticArcs ); }
+ [[nodiscard]] Index get_NStaticArcs( void ) const {
+  return( NStaticArcs );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are static nodes (= possibly flow constraints)
 
- bool HasStaticE( void ) const { return( get_NStaticNodes() ); }
+ [[nodiscard]] bool HasStaticE( void ) const {
+  return( get_NStaticNodes() );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are dynamic nodes (= possibly flow constraints)
 
- bool HasDynamicE( void ) const {
+ [[nodiscard]] bool HasDynamicE( void ) const {
   return( get_NNodes() > get_NStaticNodes() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there may ever be dynamic nodes (= flow constraints)
 
- bool MayHaveDynE( void ) const {
+ [[nodiscard]] bool MayHaveDynE( void ) const {
   return( get_MaxNNodes() > get_NStaticNodes() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are static arcs (= flow variables if constructed)
 
- bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
+ [[nodiscard]] bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are dynamic arcs (= flow variables if constructed)
 
- bool HasDynamicX( void ) const {
+ [[nodiscard]] bool HasDynamicX( void ) const {
   return( get_NArcs() > get_NStaticArcs() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there may ever be dynamic arcs  (= flow variables)
 
-  bool MayHaveDynX( void ) const {
+ [[nodiscard]] bool MayHaveDynX( void ) const {
   return( get_MaxNArcs() > get_NStaticArcs() );
   }
 
@@ -742,8 +748,7 @@ public:
   * index of the corresponding arc. Throws exception if the pointer is not to
   * a [Col]Variable of the MCFBlock. */
 
- Index p2i_x( const Variable * var ) const
- {
+ [[nodiscard]] Index p2i_x( const Variable * var ) const {
   auto i = p2i_x_s( var );
   if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
    return( i );
@@ -763,8 +768,7 @@ public:
   * variable (a ColVariable *). This ASSUMES THE Variable ARE CONSTRUCTED IN
   * THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE. */
 
- ColVariable * i2p_x( Index i ) const
- {
+ [[nodiscard]] ColVariable * i2p_x( Index i ) const {
   if( i >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -786,8 +790,7 @@ public:
   * index of the corresponding arc. Throws exception if the pointer is not to
   * a [LB0]Constraint of the MCFBlock. */
 
- Index p2i_ub( const Constraint * cns ) const
- {
+ [[nodiscard]] Index p2i_ub( const Constraint * cns ) const {
   auto i = p2i_ub_s( cns );
   if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
    return( i );
@@ -808,8 +811,7 @@ public:
   * CONSTRUCTED IN THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE.
   */
 
- LB0Constraint * i2p_ub( Index i ) const
- {
+ [[nodiscard]] LB0Constraint * i2p_ub( Index i ) const {
   if( i >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -831,8 +833,7 @@ public:
   * the index of the corresponding arc. Throws exception if the pointer is
   * not to a [FRow]Constraint of the MCFBlock. */
 
- Index p2i_e( const Constraint * cns ) const
- {
+ [[nodiscard]] Index p2i_e( const Constraint * cns ) const {
   auto i = p2i_e_s( cns );
   if( ( i >= 0 ) && ( i < int( get_NStaticNodes() ) ) )
    return( i );
@@ -849,14 +850,14 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the arc is closed; deleted arcs are not closed
 
- bool is_closed( Index arc ) const {
+ [[nodiscard]] bool is_closed( Index arc ) const {
   return( ( ! is_deleted( arc ) ) && i2p_x( arc )->is_fixed() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the arc is deleted
 
- bool is_deleted( Index arc ) const {
+ [[nodiscard]] bool is_deleted( Index arc ) const {
   return( ( ! C.empty() ) && std::isnan( C[ arc ] ) );
   }
 
@@ -867,8 +868,7 @@ public:
   * CONSTRUCTED IN THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE.
   */
 
- FRowConstraint * i2p_e( Index i ) const
- {
+ [[nodiscard]] FRowConstraint * i2p_e( Index i ) const {
   if( i >= get_NNodes() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -886,34 +886,34 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
 
- c_Subset & get_SN( void ) const { return( SN ); }
+ [[nodiscard]] c_Subset & get_SN( void ) const { return( SN ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the starting node of arc i (0 <= i < get_NArcs())
 
- Index get_SN( Index i ) const { return( SN[ i ] ); }
+ [[nodiscard]] Index get_SN( Index i ) const { return( SN[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of ending nodes
 
- c_Subset & get_EN( void ) const { return( EN ); }
+ [[nodiscard]] c_Subset & get_EN( void ) const { return( EN ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the ending node of arc i (0 <= i < get_NArcs())
 
- Index get_EN( Index i ) const { return( EN[ i ] ); }
+ [[nodiscard]] Index get_EN( Index i ) const { return( EN[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc costs
  /** Returns a const reference to the vector of arc costs of size
   * get_MaxNArcs(). Note that the cost of a deleted arc is NaN. */
 
- c_Vec_CNumber & get_C( void ) const { return( C ); }
+ [[nodiscard]] c_Vec_CNumber & get_C( void ) const { return( C ); }
 
  /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the cost of arc i (0 <= i < get_NArcs()), NaN if deleted
 
- CNumber get_C( c_Index i ) const { return( C[ i ] ); }
+ [[nodiscard]] CNumber get_C( c_Index i ) const { return( C[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc upper bounds
@@ -921,13 +921,14 @@ public:
   * the returned vector can either be of size get_MaxNArcs() or of size 0, in
   * which case all arc upper bounds are assumed to be +Inf. */
 
- c_Vec_FNumber & get_U( void ) const { return( U ); }
+ [[nodiscard]] c_Vec_FNumber & get_U( void ) const { return( U ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the upper bound of arc i (0 <= i < get_NArcs())
 
- FNumber get_U( Index i ) const { return( U.empty() ?
-					  Inf<FNumber>() : U[ i ] ); }
+ [[nodiscard]] FNumber get_U( Index i ) const {
+  return( U.empty() ? Inf<FNumber>() : U[ i ] );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of node deficits
@@ -937,7 +938,7 @@ public:
   * position i (0 <= i < get_NNodes()) in this vector correspond to the node
   * whose name is i + 1 as returned from get_SN() and get_EN(). */
 
- c_Vec_FNumber & get_B( void ) const { return( B ); }
+ [[nodiscard]] c_Vec_FNumber & get_B( void ) const { return( B ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the upper deficit of node i (0 <= i < get_NNodes())
@@ -945,7 +946,9 @@ public:
   * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
   * "names" between 1 and get_NNodes(). */
 
- FNumber get_B( Index i ) const { return( B.empty() ? 0 : B[ i ] ); }
+ [[nodiscard]] FNumber get_B( Index i ) const {
+  return( B.empty() ? 0 : B[ i ] );
+  }
 
 /** @} ---------------------------------------------------------------------*/
 /*--------------------- Methods for checking the Block ---------------------*/

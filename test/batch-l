@@ -1,9 +1,9 @@
 #/bin/tcsh
 
-#wchg=127
+wchg=127
 
 #for mode in 0 1 2 12 13 14 20 29 30
-for mode in 0
+for mode in 16
 do
 for (( seed=0 ; seed<3 ; seed++ ))
 do
