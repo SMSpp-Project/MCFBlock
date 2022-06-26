@@ -5,7 +5,6 @@
  * Implementation of the MCFBlock class.
  *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
@@ -2889,7 +2888,7 @@ void MCFBlock::close_arcs( Range rng ,
     toclose.push_back( & x[ i ] );
 
   // dynamic part
-  if( HasDynamicX() )
+  if( ( rng.second > get_NStaticArcs() ) && HasDynamicX() )
    for( auto dxi = std::next( dx.begin() , i - get_NStaticArcs() ) ;
 	i++ < rng.second ; ++dxi )
     if( ! dxi->is_fixed() )
@@ -3055,7 +3054,7 @@ void MCFBlock::open_arcs( Range rng ,
     toopen.push_back( & x[ i ] );
 
   // dynamic part
-  if( HasDynamicX() )
+  if( ( rng.second > get_NStaticArcs() ) && HasDynamicX() )
    for( auto dxi = std::next( dx.begin() , i - get_NStaticArcs() ) ;
 	i++ < rng.second ; ++dxi )
     if( dxi->is_fixed() )
