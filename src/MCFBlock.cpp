@@ -3050,14 +3050,14 @@ void MCFBlock::open_arcs( Range rng ,
 
    // static part
   for( ; i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
-   if( x[ i ].is_fixed() )
+   if( x[ i ].is_fixed() && ( ! std::isnan( C[ i ] ) ) )
     toopen.push_back( & x[ i ] );
 
   // dynamic part
   if( ( rng.second > get_NStaticArcs() ) && HasDynamicX() )
    for( auto dxi = std::next( dx.begin() , i - get_NStaticArcs() ) ;
 	i++ < rng.second ; ++dxi )
-    if( dxi->is_fixed() )
+    if( dxi->is_fixed() && ( ! std::isnan( C[ i ] ) ) )
      toopen.push_back( & (*dxi) );
 
   if( toopen.empty() )
@@ -3115,14 +3115,14 @@ void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
   // static part
   auto nit = nms.begin();
   for( ; ( nit != nms.end() ) && ( *nit < get_NStaticArcs() ) ; ++nit )
-   if( x[ *nit ].is_fixed() )
+   if( x[ *nit ].is_fixed() && ( ! std::isnan( C[ *nit ] ) ) )
     toopen.push_back( & x[ *nit ] );
 
   // dynamic part
   auto dxi = dx.begin();
   for( Index i = get_NStaticArcs() ; nit != nms.end() ; ++i , ++dxi )
    if( *nit == i ) {
-    if( dxi->is_fixed() )
+    if( dxi->is_fixed() && ( ! std::isnan( C[ i ] ) ) )
      toopen.push_back( & (*dxi) );
     ++nit;
     }
@@ -3169,7 +3169,7 @@ void MCFBlock::open_arc( Index arc ,
  if( not_dry_run( issueAMod ) ) {
   auto xa = i2p_x( arc );
 
-  if( ! xa->is_fixed() )
+  if( ( ! xa->is_fixed() ) || std::isnan( C[ arc ] ) )
    return;
 
   // the physical and abstract representation are the same- - - - - - - - - -

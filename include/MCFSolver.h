@@ -1047,13 +1047,15 @@ void MCFSolver< MCFC >::guts_of_poM( c_p_Mod mod )
 
    case( MCFBlockMod::eOpenArc ):
     for( ; rng.first < rng.second ; ++rng.first )
-     if( ! MCFB->is_deleted( rng.first ) )
+     if( ( ! MCFB->is_deleted( rng.first ) ) &&
+	 ( ! MCFC::IsDeletedArc( rng.first ) ) )
       MCFC::OpenArc( rng.first );
     return;
 
    case( MCFBlockMod::eCloseArc ):
     for( ; rng.first < rng.second ; ++rng.first )
-     if( ! MCFB->is_deleted( rng.first ) )
+     if( ( ! MCFB->is_deleted( rng.first ) ) &&
+	 ( ! MCFC::IsDeletedArc( rng.first ) ) )
       MCFC::CloseArc( rng.first );
     return;
 
@@ -1081,13 +1083,15 @@ void MCFSolver< MCFC >::guts_of_poM( c_p_Mod mod )
   switch( tmod->type() ) {
    case( MCFBlockMod::eOpenArc ):
     for( auto arc : tmod->nms() )
-     if( ! MCFB->is_deleted( arc ) )
+     if( ( ! MCFB->is_deleted( arc ) ) &&
+	 ( ! MCFC::IsDeletedArc( arc ) ) )
       MCFC::OpenArc( arc );
     return;
 
    case( MCFBlockMod::eCloseArc ):
     for( auto arc : tmod->nms() )
-     if( ! MCFB->is_deleted( arc ) )
+     if( ( ! MCFB->is_deleted( arc ) ) &&
+	 ( ! MCFC::IsDeletedArc( arc ) ) )
       MCFC::CloseArc( arc );
     return;
     }
