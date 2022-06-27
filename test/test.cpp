@@ -1023,13 +1023,11 @@ int main( int argc , char **argv )
 
    Subset nms( n_change );
    for( auto i = mMCFB->get_NStaticArcs() ; i < mMCFB->get_NArcs() ; ++i ) {
-    if( mcf->IsDeletedArc( i ) )
-     continue;
-    if( ! mcf->IsClosedArc( i ) )
+    if( ( mcf->IsDeletedArc( i ) ) || ( ! mcf->IsClosedArc( i ) ) )
      continue;
     if( dis( rg ) <= 0.5 )
      continue;
-    
+
     nms[ changed++ ] = i;
     mcf->OpenArc( i );
 

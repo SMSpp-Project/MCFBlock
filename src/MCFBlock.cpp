@@ -3593,7 +3593,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
 
  // VariableMod - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  if( const auto tmod = dynamic_cast< VariableMod * >( mod ) ) {
-  auto xi = dynamic_cast<ColVariable * const>( tmod->variable() );
+  auto xi = dynamic_cast< const ColVariable * >( tmod->variable() );
   if( ! xi )
    throw( std::logic_error( "Modification to wrong type of Variable" ) );
   if( ( xi->get_type() != ColVariable::kNonNegative ) &&
@@ -3601,6 +3601,8 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
    throw( std::logic_error( "changing type of flow Variable not allowed" ) );
    
   auto i = p2i_x( xi );
+  if( std::isnan( C[ i ] ) )
+   throw( std::logic_error( "[un]fixing deleted arc not allowed" ) );
   if( xi->is_fixed() )
    close_arc( i , make_par( eNoBlck , chnl ) , eDryRun );
   else

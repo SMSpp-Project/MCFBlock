@@ -152,10 +152,30 @@ namespace SMSpp_di_unipi_it
  * opened). Then, new arcs and nodes, up to a set maximum, can be dynamically
  * added or deleted. This means that the graph can be fully static (if the
  * maximum number of dynamic arcs and nodes is set to zero) as well as fully
- * dynamic (if the initial graph is empty). */
+ * dynamic (if the initial graph is empty). Note that deleting the very last
+ * arc decreases the number of arcs, while deleting one "in the middle" just
+ * leaves "a hole": the arc "is not there" and any newly created arc can
+ * "take its name", but the reported total number of arcs do not change.
+ *
+ * Note that changing costs, capacities and deficits is also allowed via the
+ * abstract representation. Similarly, opening and closing arcs can be
+ * performed by unfixing and fixing (respectively) the corresponding flow
+ * variable. However, all other operations require "complex work" on the
+ * abstract representation and therefore cannot be performed via that. One
+ * could in principle allow it provided that all the Modification be grouped
+ * in a GroupModification allowing to check that all the necessary operations
+ * to, say, create and delete one arc have been properly done in the
+ * abstract representation, but this is not implemented yet (and it's
+ * doubtful it ever will). Thus, adding/removing Variable to flow
+ * conservation constraints, or even changing their coefficients, via the
+ * abstract representation is not allowed, as is (not) adding/removing
+ * dynamic Constraint (be them flow conservation or bound ones). Similarly,
+ * deleted arcs "in the middle" correspond to flow variables fixed to 0,
+ * which cannot be unfixed via the abstract representation. In all these
+ * cases, exceptions will be thrown. */
 
-class MCFBlock : public Block {
-
+class MCFBlock : public Block
+{
 /*--------------------------------------------------------------------------*/
 /*----------------------- PUBLIC PART OF THE CLASS -------------------------*/
 /*--------------------------------------------------------------------------*/
