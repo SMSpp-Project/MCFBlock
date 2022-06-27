@@ -3056,7 +3056,7 @@ void MCFBlock::open_arcs( Range rng ,
   // dynamic part
   if( ( rng.second > get_NStaticArcs() ) && HasDynamicX() )
    for( auto dxi = std::next( dx.begin() , i - get_NStaticArcs() ) ;
-	i++ < rng.second ; ++dxi )
+	i < rng.second ; ++i , ++dxi )
     if( dxi->is_fixed() && ( ! std::isnan( C[ i ] ) ) )
      toopen.push_back( & (*dxi) );
 
@@ -3560,7 +3560,6 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
 	     make_par( eNoBlck , chnl ) , eDryRun );
   return;
   }
-
 
  // RowConstraintMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  if( const auto tmod = dynamic_cast< RowConstraintMod * >( mod ) ) {
