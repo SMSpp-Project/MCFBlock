@@ -8,12 +8,7 @@
  *
  * Little more than a compilation check.
  *
- * \version 0.10
- *
- * \date 17 - 09 - 2018
- *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
@@ -45,14 +40,14 @@ int main( int argc , char **argv )
   cerr << "Usage: " << argv[ 0 ]
        << " DIMACS_in [ DIMACS_out netCDF_out netCDF_out_2 ]" << endl;
   return( 1 );
- }
+  }
 
  // open input file in DIMACS format
  ifstream ProbFile( argv[ 1 ] );
  if( ! ProbFile.is_open() ) {
   cerr << "Error: cannot open file " << argv[ 1 ] << endl;
   return( 1 );
- }
+  }
 
  // load the MCFBlock from the file
  auto MCFB = dynamic_cast<MCFBlock *>( Block::new_Block( "MCFBlock" ) );
@@ -64,7 +59,7 @@ int main( int argc , char **argv )
   cout << *MCFB;
   delete MCFB;
   return( 0 );
- }
+  }
 
  // open output DIMACS file
  ofstream OutFile( argv[ 2 ] );
@@ -72,7 +67,7 @@ int main( int argc , char **argv )
   cerr << "Error: cannot open file " << argv[ 2 ] << endl;
   delete MCFB;
   return( 1 );
- }
+  }
 
  // save the MCFBLock there
  MCFB->set_verbosity( Block::complete );
@@ -81,7 +76,7 @@ int main( int argc , char **argv )
  if( argc == 3 ) {
   delete MCFB;
   return( 0 );
- }
+  }
 
  // serialize the MCFBlock (in a netCDF BlockFile)
  MCFB->Block::serialize( argv[ 3 ] , eBlockFile );
@@ -103,7 +98,7 @@ int main( int argc , char **argv )
 
  // all done
  return( 0 );
-}
+ }
 
 /*--------------------------------------------------------------------------*/
 /*------------------------- End File main.cpp ------------------------------*/

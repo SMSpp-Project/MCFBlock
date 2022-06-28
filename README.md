@@ -37,15 +37,6 @@ make
 
 The library has the same configuration options of
 [SMS++](https://gitlab.com/smspp/smspp-project/-/wikis/Customize-the-configuration).
-Moreover, you can choose the solver with the variable `MCFBlock_SOLVER`.
-Available values are:
-
-| Value     | Solver             |
-| --------- | ------------------ |
-| `relax`   | RelaxIV            |
-| `cplex`   | CPLEX (default)    |
-| `mfsmx`   | Simplex            |
-| `sptree`  | Shortest Path Tree |
 
 Optionally, install the library in the system with:
 
@@ -135,7 +126,7 @@ CC =
 SW =
 ```
 
-  for setting the c++ compiler and its options are "automatically forwarded"
+  for setting the C++ compiler and its options are "automatically forwarded"
   from the makefile to these of the other SMS++ components, and therefore
   (possibly at the cost of a make clean) ensure consistency during the
   building process.
@@ -143,7 +134,6 @@ SW =
 - The [MCFClass project](https://github.com/frangio68/Min-Cost-Flow-Class)
   has a similar arrangement with its own extlib/ folder that must be
   independently edited in an analogous way.
-
 
 ## Tools
 
@@ -160,6 +150,31 @@ Run the tool without arguments for info on its usage:
 dmx2nc4
 ```
 
+## Data
+
+We provide a small sample of small-to-mid-size MCF problems in the
+[data](data) folder. The instances comes compressed in the `dmx.tgz` file
+in [data/dmx](data/dmx). Once this is decompressed and `data/nc4` is
+created, the netCDF versions of the instances can be created in there by
+running the `batch` file in the `tools` folded.
+
+## Tests
+
+The [test](test) folder contains a tester that reads an instance of a MCF
+from a file (in either DIMACS or netCDF format) in an `MCFBlock`, and from
+there in an object of a class MCFC derived from `MCFClass`, as decided by
+the macro `WHICH_MCF`. Then, a `MCFSolver< MCFC >` is attached to the
+`MCFBlock`. The MCF problem is then repeatedly solved with several changes in
+costs / capacities / deficits, arcs openings / closures and arcs additions /
+deletions. The same operations are performed on the two solvers, and the
+results are compared. This mostly tests `MCFBlock` and `MCFSolver`, since
+the actual `MCFClass` solved is the same, and so it can easily be wrong in
+the same way for both the objects. The `batch` file tests basically only one
+instance but in many different configurations (there can actually be two
+`MCFBlock`, one of which is modified and the other solved, in all possible
+combinations) and repeatedly, while the `batch-l` tests only the simplest
+case but on several different problems of the [data](data) folder.
+
 ## Getting help
 
 If you need support, you want to submit bugs or propose a new feature, you can
@@ -175,7 +190,6 @@ conduct, and the process for submitting merge requests to us.
 ### Current Lead Authors
 
 - **Antonio Frangioni**  
-  *Operations Research Group*  
   Dipartimento di Informatica  
   Università di Pisa
 

@@ -5,12 +5,7 @@
  * Header file for the *concrete* class MCFBlock, which implements the Block
  * concept [see Block.h] for (linear) Min-Cost Flow problems.
  *
- * \version 1.30
- *
- * \date 27 - 09 - 2019
- *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
@@ -157,10 +152,30 @@ namespace SMSpp_di_unipi_it
  * opened). Then, new arcs and nodes, up to a set maximum, can be dynamically
  * added or deleted. This means that the graph can be fully static (if the
  * maximum number of dynamic arcs and nodes is set to zero) as well as fully
- * dynamic (if the initial graph is empty). */
+ * dynamic (if the initial graph is empty). Note that deleting the very last
+ * arc decreases the number of arcs, while deleting one "in the middle" just
+ * leaves "a hole": the arc "is not there" and any newly created arc can
+ * "take its name", but the reported total number of arcs do not change.
+ *
+ * Note that changing costs, capacities and deficits is also allowed via the
+ * abstract representation. Similarly, opening and closing arcs can be
+ * performed by unfixing and fixing (respectively) the corresponding flow
+ * variable. However, all other operations require "complex work" on the
+ * abstract representation and therefore cannot be performed via that. One
+ * could in principle allow it provided that all the Modification be grouped
+ * in a GroupModification allowing to check that all the necessary operations
+ * to, say, create and delete one arc have been properly done in the
+ * abstract representation, but this is not implemented yet (and it's
+ * doubtful it ever will). Thus, adding/removing Variable to flow
+ * conservation constraints, or even changing their coefficients, via the
+ * abstract representation is not allowed, as is (not) adding/removing
+ * dynamic Constraint (be them flow conservation or bound ones). Similarly,
+ * deleted arcs "in the middle" correspond to flow variables fixed to 0,
+ * which cannot be unfixed via the abstract representation. In all these
+ * cases, exceptions will be thrown. */
 
-class MCFBlock : public Block {
-
+class MCFBlock : public Block
+{
 /*--------------------------------------------------------------------------*/
 /*----------------------- PUBLIC PART OF THE CLASS -------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -197,7 +212,7 @@ public:
  *
  * However, while using a MCFBlock as a part of some larger problem, it may
  * be difficult to fully exploit this property: even if some Solver can
- * exploit it, not all ofthem may be able to (one example are Interior-Point
+ * exploit it, not all of them may be able to (one example are Interior-Point
  * approaches, which require both flow and cost variables to be continuous),
  * and maybe some other aspects of the overall solution algorithm will require
  * general double data anyway. One should actually have Block template over
@@ -208,7 +223,7 @@ public:
  * therefore in principle possible to change this. Note, however, that the
  * above integrality property only holds for *linear* MCF problems. Should
  * the class be extended, by even allowing arc costs to be convex quadratic
- * (the simplest possible nonlionear extension), then a single arc with a
+ * (the simplest possible nonlinear extension), then a single arc with a
  * nonzero quadratic cost coefficient implies that optimal flows and
  * potentials may be fractional even if all the data of the problem
  * (comprised quadratic cost coefficients) is integer. Hence, for such a
@@ -251,7 +266,7 @@ public:
  typedef std::vector<FONumber> Vec_FONumber;   ///< a vector of FONumber
  typedef const Vec_FONumber c_Vec_FONumber;    ///< a const vector of FONumber
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------------------------- FRIENDS ----------------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -267,7 +282,7 @@ public:
 
  /// constructor of MCFBlock, taking a pointer to the father (generic) Block
  /** Constructor of MCFBlock. It accepts a pointer to the father Block, which
-  * can be of any type, defaulting to nullpt so that this can also be used as
+  * can be of any type, defaulting to nullptr so that this can also be used as
   * the void constructor. */
 
  explicit MCFBlock( Block *father = nullptr )
@@ -280,7 +295,7 @@ public:
 
  virtual ~MCFBlock() { guts_of_destructor(); }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------------------- OTHER INITIALIZATIONS -------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Other initializations
@@ -429,6 +444,45 @@ public:
  void deserialize( const netCDF::NcGroup & group ) override;
 
 /*--------------------------------------------------------------------------*/
+ /// loads the MCF instance from file in DIMACS standard format
+ /** Protected method for loading a MCFBlock out of a std::istream (which is
+  * what operator>> is dispatched to. The std::istream is assumed to contain
+  * the description of a MCF instance in DIMACS standard format, which is 
+  * the following. The first line must be
+  *
+  *      p min <number of nodes> <number of arcs>
+  *
+  * Then the node definition lines must be found, in the form
+  *
+  *      n <node number> <node supply>
+  *
+  * Not all nodes need have a node definition line; these are given zero
+  * supply, i.e., they are transhipment nodes (supplies are the inverse of
+  * deficits, i.e., a node with positive supply is a source node). Finally,
+  * the arc definition lines must be found, in the form
+  *
+  *    a <start node> <end node> <lower bound> <upper bound> <flow cost>
+  *
+  * There must be exactly <number of arcs> arc definition lines in the file.
+  *
+  * Note that the file format accepted by load() is more general than the
+  * DIMACS standard format, in that node and arc definitions can be mixed in
+  * any order, while the DIMACS file requires all node information to appear
+  * before all arc information. Also, capacities of arcs can be set to
+  * +Inf<FNumber>() by putting "INF", "Inf" or "inf" in the file (actually,
+  * any string starting with "I" or "i" where these would be expected).
+  *
+  * Note that the graph as provided by this method is considered to be
+  * "fully static".
+  *
+  * Since there is only one supported input format, \p frmt is ignored.
+  *
+  * Like load( memory ), if there is any Solver attached to this MCFBlock
+  * then a NBModification (the "nuclear option") is issued. */
+
+ void load( std::istream &input , char frmt = 0 ) override;
+
+/*--------------------------------------------------------------------------*/
  /// generate the abstract variables of the MCF
  /** Method that generates the abstract Variable of the MCF. These are:
   *
@@ -558,7 +612,7 @@ public:
   *
   * IMPORTANT NOTE: ALLOWING SPARSE Objective MAKES IT INORDINATELY MORE
   * DIFFICULT TO REACT TO ABSTRACT Modification, WHILE ITS ACTUAL IMPACT ON
-  * PERFORMANCES IS VERY DOUBIOUS. THEREFORE, THE SUPPORT FOR IT IS ONLY
+  * PERFORMANCES IS VERY DUBIOUS. THEREFORE, THE SUPPORT FOR IT IS ONLY
   * HALF-BAKED, AND WHATEVER THERE IS IS CURRENTLY COMMENTED OUT. DEVELOPMENT
   * OF THIS FEATURE WILL ONLY BE RESUMED IF CLEAR PROOF OF ITS WORTHINESS
   * IS ACHIEVED.
@@ -570,16 +624,15 @@ public:
 
  void generate_objective( Configuration *objc = nullptr ) override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------- Methods for reading the data of the MCFBlock --------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for reading the data of the MCFBlock
  *  @{ */
 
-/*--------------------------------------------------------------------------*/
  /// getting the current sense of the Objective, which is minimization
 
- int get_objective_sense( void ) const override final {
+ [[nodiscard]] int get_objective_sense( void ) const override {
   return( Objective::eMin );
   }
   
@@ -604,8 +657,8 @@ public:
   *       is surely not empty, and thus the conditionally valid upper bound is
   *       also a globally valid upper bound. */
 
- double get_valid_upper_bound( bool conditional = false )
-  override final {
+ [[nodiscard]] double get_valid_upper_bound( bool conditional = false )
+  override {
   if( ! conditional )
    return( + Inf<double>() );
    
@@ -626,8 +679,8 @@ public:
   * cannot be unbounded below (although it can still be empty, but that's an
   * issue for upper bound, this being a minimization problem). */
 
- double get_valid_lower_bound( bool conditional = false )
-  override final {
+ [[nodiscard]] double get_valid_lower_bound( bool conditional = false )
+  override {
   if( std::isnan( f_cond_lower ) )
    compute_conditional_bounds();
 
@@ -637,68 +690,74 @@ public:
 /*--------------------------------------------------------------------------*/
  /// get the number of nodes
 
- inline Index get_NNodes( void ) const { return( NNodes ); }
+ [[nodiscard]] Index get_NNodes( void ) const { return( NNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of arcs
 
- inline Index get_NArcs( void ) const { return( NArcs ); }
+ [[nodiscard]] Index get_NArcs( void ) const { return( NArcs ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the maximum number of nodes
 
- inline Index get_MaxNNodes( void ) const { return( MaxNNodes ); }
+ [[nodiscard]] Index get_MaxNNodes( void ) const { return( MaxNNodes ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the maximum number of arcs
 
- inline Index get_MaxNArcs( void ) const { return( SN.size() ); }
+ [[nodiscard]] Index get_MaxNArcs( void ) const { return( SN.size() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static nodes
 
- inline Index get_NStaticNodes( void ) const { return( NStaticNodes ); }
+ [[nodiscard]] Index get_NStaticNodes( void ) const {
+  return( NStaticNodes );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the number of static arcs
 
- inline Index get_NStaticArcs( void ) const { return( NStaticArcs ); }
+ [[nodiscard]] Index get_NStaticArcs( void ) const {
+  return( NStaticArcs );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are static nodes (= possibly flow constraints)
 
- inline bool HasStaticE( void ) const { return( get_NStaticNodes() ); }
+ [[nodiscard]] bool HasStaticE( void ) const {
+  return( get_NStaticNodes() );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are dynamic nodes (= possibly flow constraints)
 
- inline bool HasDynamicE( void ) const {
+ [[nodiscard]] bool HasDynamicE( void ) const {
   return( get_NNodes() > get_NStaticNodes() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there may ever be dynamic nodes (= flow constraints)
 
- inline bool MayHaveDynE( void ) const {
+ [[nodiscard]] bool MayHaveDynE( void ) const {
   return( get_MaxNNodes() > get_NStaticNodes() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are static arcs (= flow variables if constructed)
 
- inline bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
+ [[nodiscard]] bool HasStaticX( void ) const { return( get_NStaticArcs() ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there are dynamic arcs (= flow variables if constructed)
 
- inline bool HasDynamicX( void ) const {
+ [[nodiscard]] bool HasDynamicX( void ) const {
   return( get_NArcs() > get_NStaticArcs() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if there may ever be dynamic arcs  (= flow variables)
 
- inline bool MayHaveDynX( void ) const {
+ [[nodiscard]] bool MayHaveDynX( void ) const {
   return( get_MaxNArcs() > get_NStaticArcs() );
   }
 
@@ -709,15 +768,14 @@ public:
   * index of the corresponding arc. Throws exception if the pointer is not to
   * a [Col]Variable of the MCFBlock. */
 
- inline Index p2i_x( Variable * const var ) const
- {
+ [[nodiscard]] Index p2i_x( const Variable * var ) const {
   auto i = p2i_x_s( var );
   if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
    return( i );
 
   i = get_NStaticArcs();
   for( auto dxi = dx.begin() ; dxi != dx.end() ; ++i , ++dxi )
-   if( &(*dxi) == static_cast< ColVariable * >( var ) )
+   if( &(*dxi) == static_cast< const ColVariable * >( var ) )
     return( i );
 
   throw( std::invalid_argument( "invalid arc pointer" ) );
@@ -730,16 +788,19 @@ public:
   * variable (a ColVariable *). This ASSUMES THE Variable ARE CONSTRUCTED IN
   * THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE. */
 
- inline ColVariable * i2p_x( c_Index i ) const
- {
+ [[nodiscard]] ColVariable * i2p_x( Index i ) const {
   if( i >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
   if( i < get_NStaticArcs() )
-   return( const_cast< ColVariable * >( &x[ i ] ) );
+   return( const_cast< ColVariable * >( & x[ i ] ) );
   else
-   return( const_cast< ColVariable * >(
+   if( i - get_NStaticArcs() < get_NArcs() - i )
+    return( const_cast< ColVariable * >(
 		   &( *std::next( dx.begin() , i - get_NStaticArcs() ) ) ) );
+   else
+    return( const_cast< ColVariable * >(
+		           &( *std::prev( dx.end() , get_NArcs() - i ) ) ) );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -749,15 +810,14 @@ public:
   * index of the corresponding arc. Throws exception if the pointer is not to
   * a [LB0]Constraint of the MCFBlock. */
 
- inline Index p2i_ub( Constraint * const cns ) const
- {
+ [[nodiscard]] Index p2i_ub( const Constraint * cns ) const {
   auto i = p2i_ub_s( cns );
   if( ( i >= 0 ) && ( i < int( get_NStaticArcs() ) ) )
    return( i );
 
   i = get_NStaticArcs();
   for( auto dubi = dUB.begin() ; dubi != dUB.end() ; ++i , ++dubi )
-   if( &(*dubi) == static_cast< LB0Constraint * >( cns ) )
+   if( &(*dubi) == static_cast< const LB0Constraint * >( cns ) )
     return( i );
 
   throw( std::invalid_argument( "invalid ub constraint pointer" ) );
@@ -771,16 +831,19 @@ public:
   * CONSTRUCTED IN THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE.
   */
 
- inline LB0Constraint * i2p_ub( c_Index i ) const
- {
+ [[nodiscard]] LB0Constraint * i2p_ub( Index i ) const {
   if( i >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
   if( i < get_NStaticArcs() )
-   return( const_cast< LB0Constraint * >( &UB[ i ] ) );
+   return( const_cast< LB0Constraint * >( & UB[ i ] ) );
   else
-   return( const_cast< LB0Constraint * >(
+   if( i - get_NStaticArcs() < get_NArcs() - i )
+    return( const_cast< LB0Constraint * >(
 		  &( *std::next( dUB.begin() , i - get_NStaticArcs() ) ) ) );
+   else
+    return( const_cast< LB0Constraint * >(
+		          &( *std::prev( dUB.end() , get_NArcs() - i ) ) ) );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -790,15 +853,14 @@ public:
   * the index of the corresponding arc. Throws exception if the pointer is
   * not to a [FRow]Constraint of the MCFBlock. */
 
- inline Index p2i_e( Constraint * const cns ) const
- {
+ [[nodiscard]] Index p2i_e( const Constraint * cns ) const {
   auto i = p2i_e_s( cns );
   if( ( i >= 0 ) && ( i < int( get_NStaticNodes() ) ) )
    return( i );
 
   i = get_NStaticNodes();
   for( auto dei = dE.begin() ; dei != dE.end() ; ++i , ++dei )
-   if( &(*dei) == static_cast< FRowConstraint * >( cns ) )
+   if( &(*dei) == static_cast< const FRowConstraint * >( cns ) )
     return( i );
 
   throw( std::invalid_argument( "invalid flow constraint pointer" ) );
@@ -806,17 +868,17 @@ public:
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// returns true if the arc is closed
+ /// returns true if the arc is closed; deleted arcs are not closed
 
- inline bool is_closed( c_Index arc ) const {
-  return( i2p_x( arc )->is_fixed() );
+ [[nodiscard]] bool is_closed( Index arc ) const {
+  return( ( ! is_deleted( arc ) ) && i2p_x( arc )->is_fixed() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the arc is deleted
 
- inline bool is_deleted( c_Index arc ) const {
-  return( SN[ arc ] >= Inf<Index>() );
+ [[nodiscard]] bool is_deleted( Index arc ) const {
+  return( ( ! C.empty() ) && std::isnan( C[ arc ] ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -826,50 +888,52 @@ public:
   * CONSTRUCTED IN THE FIRST PLACE, SEGFAULTS ARE BOUND TO HAPPEN OTHERWISE.
   */
 
- inline FRowConstraint * i2p_e( c_Index i ) const
- {
+ [[nodiscard]] FRowConstraint * i2p_e( Index i ) const {
   if( i >= get_NNodes() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
   if( i < get_NStaticNodes() )
    return( const_cast< FRowConstraint * >( &E[ i ] ) );
   else
-   return( const_cast< FRowConstraint * >(
+   if( i - get_NStaticNodes() < get_NNodes() - i )
+    return( const_cast< FRowConstraint * >(
 		  &( *std::next( dE.begin() , i - get_NStaticNodes() ) ) ) );
+   else
+    return( const_cast< FRowConstraint * >(
+		          &( *std::prev( dE.end() , get_NNodes() - i ) ) ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of starting nodes
 
- inline c_Subset & get_SN( void ) const { return( SN ); }
+ [[nodiscard]] c_Subset & get_SN( void ) const { return( SN ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the starting node of arc i (0 <= i < get_NArcs())
 
- inline Index get_SN( c_Index i ) const { return( SN[ i ] ); }
+ [[nodiscard]] Index get_SN( Index i ) const { return( SN[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of ending nodes
 
- inline  c_Subset & get_EN( void ) const { return( EN ); }
+ [[nodiscard]] c_Subset & get_EN( void ) const { return( EN ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the ending node of arc i (0 <= i < get_NArcs())
 
- inline Index get_EN( c_Index i ) const { return( EN[ i ] ); }
+ [[nodiscard]] Index get_EN( Index i ) const { return( EN[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc costs
- /** Returns a const reference to the vector of arc costs. Note that the
-  * returned vector can either be of size get_MaxNArcs() or of size 0, in
-  * which case all arc costs are assumed to be 0. */
+ /** Returns a const reference to the vector of arc costs of size
+  * get_MaxNArcs(). Note that the cost of a deleted arc is NaN. */
 
- inline c_Vec_CNumber & get_C( void ) const { return( C ); }
+ [[nodiscard]] c_Vec_CNumber & get_C( void ) const { return( C ); }
 
  /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// get the cost of arc i (0 <= i < get_NArcs())
+ /// get the cost of arc i (0 <= i < get_NArcs()), NaN if deleted
 
- inline CNumber get_C( c_Index i ) const { return( C.empty() ? 0 : C[ i ] ); }
+ [[nodiscard]] CNumber get_C( c_Index i ) const { return( C[ i ] ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of arc upper bounds
@@ -877,14 +941,14 @@ public:
   * the returned vector can either be of size get_MaxNArcs() or of size 0, in
   * which case all arc upper bounds are assumed to be +Inf. */
 
- inline c_Vec_FNumber & get_U( void ) const { return( U ); }
+ [[nodiscard]] c_Vec_FNumber & get_U( void ) const { return( U ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the upper bound of arc i (0 <= i < get_NArcs())
 
- inline FNumber get_U( c_Index i ) const { return( U.empty() ?
-						   Inf<FNumber>() : U[ i ]
-						   ); }
+ [[nodiscard]] FNumber get_U( Index i ) const {
+  return( U.empty() ? Inf<FNumber>() : U[ i ] );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the vector of node deficits
@@ -894,7 +958,7 @@ public:
   * position i (0 <= i < get_NNodes()) in this vector correspond to the node
   * whose name is i + 1 as returned from get_SN() and get_EN(). */
 
- inline c_Vec_FNumber & get_B( void ) const { return( B ); }
+ [[nodiscard]] c_Vec_FNumber & get_B( void ) const { return( B ); }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// get the upper deficit of node i (0 <= i < get_NNodes())
@@ -902,9 +966,11 @@ public:
   * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
   * "names" between 1 and get_NNodes(). */
 
- inline FNumber get_B( c_Index i ) const { return( B.empty() ? 0 : B[ i ] ); }
+ [[nodiscard]] FNumber get_B( Index i ) const {
+  return( B.empty() ? 0 : B[ i ] );
+  }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*--------------------- Methods for checking the Block ---------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for checking the Block
@@ -914,12 +980,12 @@ public:
  /** Returns true if the solution encoded in the current value of the flow
   * (x) Variable of the MCFBlock is approximately feasible w.r.t. the flow
   * conservation constraints only. This clearly requires the Variable of the
-  * MCFBlock to have been defined, i.e., that generate_abstract_variables() has
-  * been called prior to this method. The parameter feps is the relative
+  * MCFBlock to have been defined, i.e., that generate_abstract_variables()
+  * has been called prior to this method. The parameter feps is the relative
   * accuracy defining "approximately". The parameter "useabstract" has the
   * same meaning as in is_feasible() and is_optimal(). */
 
- bool flow_feasible( c_FNumber feps , bool useabstract = false );
+ bool flow_feasible( FNumber feps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the current solution is (approximately) bound feasible
@@ -931,7 +997,7 @@ public:
   * defining "approximately". The parameter "useabstract" has the same
   * meaning as in is_feasible() and is_optimal(). */
 
- bool bound_feasible( c_FNumber feps , bool useabstract = false );
+ bool bound_feasible( FNumber feps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the current solution is (approximately) dual feasible
@@ -943,7 +1009,7 @@ public:
   * "approximately". The parameter "useabstract" has the same meaning as in
   * is_feasible() and is_optimal(). */
 
- bool dual_feasible( c_CNumber ceps , bool useabstract = false );
+ bool dual_feasible( CNumber ceps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if complementary slackness are (approximately) satisfied
@@ -959,7 +1025,7 @@ public:
   * The parameter "useabstract" has the same meaning as in is_feasible() and
   * is_optimal(). */
 
- bool complementary_slackness( c_CNumber ceps , c_FNumber feps ,
+ bool complementary_slackness( CNumber ceps , FNumber feps ,
 			       bool useabstract = false );
 
 /*--------------------------------------------------------------------------*/
@@ -1021,7 +1087,7 @@ public:
  bool is_optimal( bool useabstract = false  , Configuration *optc = nullptr )
   override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for R3 Blocks
@@ -1169,7 +1235,7 @@ public:
 			     ModParam issuePMod = eNoBlck ,
 			     ModParam issueAMod = eModBlck ) override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*----------------------- Methods for handling Solution --------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for handling Solution
@@ -1177,24 +1243,25 @@ public:
 
  /// returns a MCFSolution representing the current solution of this MCFBlock
  /** Returns a MCFSolution representing the current solution status of this
-  * MCFBlock.The parameter solc decides which part of the solution is saved:
+  * MCFBlock. What kind of solution is saved depends on the integer value ws,
+  * obtained as follows:
   *
-  * - if solc != nullptr and it is a SimpleConfiguration<int>, then it
-  *   depends on solc->f_value:
-  *
-  *   = 1 means "only map the primal solution"
-  *
-  *   = 2 means "only map the dual solution"
-  *
-  *   = everything else (e.g., 0) means "map everything";
+  * - if solc != nullptr and it is a SimpleConfiguration< int >, then
+  *   ws == solc->f_value:
   *
   * - if solc == nullptr, f_BlockConfig != nullptr,
   *   f_BlockConfig->f_solution_Configuration != nullptr and it
-  *   is a SimpleConfiguration<int>, then it depends on its f_value as in
-  *   the previous case;
+  *   is a SimpleConfiguration< int >, ws is its f_value
   *
-  * - otherwise, everything (both the primal and the dual solution) is
-  *   mapped.
+  * - otherwise ws is 0.
+  *
+  * The encoding of ws is:
+  *
+  *   = 1 means "only save the primal solution"
+  *
+  *   = 2 means "only save the dual solution"
+  *
+  *   = everything else (e.g., 0) means "save everything";
   *
   * The same format applies verbatim to the case of primal or dual unbounded
   * rays (negative-cost unbounded cycles and cuts, respectively), although
@@ -1203,7 +1270,7 @@ public:
   *
   * Note that MCFBlock may not contain some or all of the required solution,
   * if the corresponding Variable/Constraint have not been constructed yet:
-  * this throws an exception, unless emptys = true, in which case thew
+  * this throws an exception, unless emptys = true, in which case the
   * MCFSolution object is only prepped for getting a solution, but it is not
   * really getting one now.
   *
@@ -1216,28 +1283,40 @@ public:
  Solution * get_Solution( Configuration *solc = nullptr ,
 			  bool emptys = true ) override;
 
+ /*--------------------------------------------------------------------------*/
+ /// returns the objective value of the current solution
+
+ FONumber get_objective_value( void ) {
+  if( ! ( AR & HasObj ) )  // the objective is not there
+   return( Inf< RealObjective::OFValue >() );
+  c.compute();
+  return( c.value() );
+  }
+
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the flow solution
- /** Method to get the flow solution; upon return, FSol[ i ] contains the
-  * current value of the flow solution for the i-th arc in \p rng. Note that
-  * if the right extreme of the range is >= get_NArcs() it is ignored.  */
+ /** Method to get the flow solution; upon return, the current value of the
+  * flow solution for the i-th arc in \p rng is written in *( FSol + i ).
+  * Note that if the right extreme of the range is >= get_NArcs() it is
+  * ignored. */
 
- void get_x( Vec_FNumber & FSol , Range rng = Range( 0 , Inf<Index>() ) );
+ void get_x( Vec_FNumber_it FSol , Range rng = Range( 0 , Inf<Index>() ) )
+  const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the flow solution for an arbitrary subset of arcs
- /** Method to get the flow solution; upon return, FSol[ i ] contains the
-  * current value of the flow solution for arc nms[ i ] for all 0 <= i < 
-  * nms.size(). Note that
+ /** Method to get the flow solution; upon return, the current value of the
+  * flow solution for arc nms[ i ] for all 0 <= i <  nms.size() is written
+  * in *( FSol + i ). Note that
   *
   *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
 
- void get_x( Vec_FNumber & FSol , c_Subset & nms );
+ void get_x( Vec_FNumber_it FSol , c_Subset & nms ) const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the flow solution of the given arc
 
- FNumber get_x( c_Index arc ) {
+ FNumber get_x( Index arc ) const {
   if( arc >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -1249,35 +1328,35 @@ public:
 
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the potential solution
- /** Method to get the potential solution; upon return, PSol[ i ] contains the
-  * current value of the potential solution for the i-th node in \p rng. Note
-  * that if the right extreme of the range is >= get_NNodes() it is ignored.
-  * Note that "node names" here go from 0 to get_NNodes() - 1, despite the
-  * fact that get_SN() and get_EN() report node "names" between 1 and
-  * get_NNodes(). */
+ /** Method to get the potential solution; upon return, the current value of
+  * the potential solution for the i-th node in \p rng is written into
+  * *( PSol + i ). Note that if the right extreme of the range is >=
+  * get_NNodes() it is ignored. Note that "node names" here go from 0 to
+  * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
+  * "names" between 1 and get_NNodes(). */
 
- void get_pi( Vec_CNumber & PSol , Range rng = Range( 0 , Inf<Index>() ) );
+ void get_pi( Vec_CNumber_it PSol , Range rng = Range( 0 , Inf<Index>() ) )
+  const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the flow potential for an arbitrary subset of nodes
- /** Method to get the potential solution; upon return, PSol[ i ] contains the
-  * current value of the potential solution for node nms[ i ] for all 0 <= i
-  * < nms.size(). Note that "node names" here go from 0 to get_NNodes() - 1,
-  * despite the fact that get_SN() and get_EN() report node "names" between
-  * 1 and get_NNodes(). Also, note that
+ /** Method to get the potential solution; upon return, the current value of
+  * the potential solution for node nms[ i ] for all 0 <= i < nms.size() is
+  * written into *( PSol + i ). Note that "node names" here go from 0 to
+  * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
+  * "names" between 1 and get_NNodes(). Also, note that
   *
   *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
 
+ void get_pi( Vec_CNumber_it PSol , c_Subset & nms ) const;
 
- void get_pi( Vec_CNumber & PSol , c_Subset & nms );
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the potential solution of the given node
  /** Method to get the potential solution of the given node; note that "node
   * names" here go from 0 to get_NNodes() - 1, despite the fact that get_SN()
   * and get_EN() report node "names" between 1 and get_NNodes(). */
 
- CNumber get_pi( c_Index nde ) {
+ CNumber get_pi( Index nde ) const {
   if( nde >= get_NNodes() )
    throw( std::invalid_argument( "invalid node name" ) );
 
@@ -1292,29 +1371,30 @@ public:
 
 /*--------------------------------------------------------------------------*/
  /// gets a contiguous interval of the reduced costs
- /** Method to get the reduced costs; upon return, RC[ i ] contains the
-  * current value of the reduced cost for the i-th arc in \p rng. Note that
-  * if the right extreme of the range is >= get_NArcs() it is ignored. */
+ /** Method to get the reduced costs; upon return, the current value of the
+  * reduced cost for the i-th arc in \p rng is written into *( RC + i ). Note
+  * that if the right extreme of the range is >= get_NArcs() it is ignored. */
 
- void get_rc( Vec_CNumber & RC , Range rng = Range( 0 , Inf<Index>() ) );
+ void get_rc( Vec_CNumber_it RC , Range rng = Range( 0 , Inf<Index>() ) )
+  const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the reduced costs for an arbitrary subset of arcs
- /** Method to get the reduced costs; upon return, RC[ i ] contains the
-  * current value of the reduced costs for arc nms[ i ] for all 0 <= i < 
-  * nms.size(). Note that
+ /** Method to get the reduced costs; upon return, the current value of the
+  * reduced costs for arc nms[ i ] for all 0 <= i < nms.size() is written
+  * into *( RC + i ). Note that
   *
   *     nms IS ASSUMED TO BE ORDERED BY INCREASING Index */
 
- void get_rc( Vec_CNumber & RC , c_Subset & nms );
+ void get_rc( Vec_CNumber_it RC , c_Subset & nms ) const;
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// gets the reduced costs of the given arc
 
- CNumber get_rc( c_Index arc ) {
+ CNumber get_rc( Index arc ) const {
   if( E.empty() && dE.empty() )
    throw( std::logic_error( "reduced costs unavailable if Constraint aren't"
-			   ) );
+			    ) );
   if( arc >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -1330,16 +1410,25 @@ public:
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the flow solution
  /** Method to set the flow solution; the values found in the c_Vec_FNumber
-  * between fstrt (included) and fstop (excluded) are copied into the value of
-  * the flow variable x[ strt + i ]. This is typically used by a Solver. */
+  * starting from fstrt are copied into the value of the flow variable
+  * x[ i ] for i in rng, in the same order. */
 
- void set_x( c_Vec_FNumber_it fstrt , c_Vec_FNumber_it fstop ,
-	     c_Index strt = 0 );
+ void set_x( c_Vec_FNumber_it fstrt ,
+	     Range rng = Range( 0 , Inf< Index >() ) );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets a generic subset of the flow solution
+ /** Method to set the flow solution; the values found in the c_Vec_FNumber
+  * starting from fstrt are copied into the value of the flow variable
+  * x[ i ] for all i in sbst (that must be ordered in increasing sense), in
+  * the same order. */
+
+ void set_x( c_Vec_FNumber_it fstrt , c_Subset sbst );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the flow solution of the given arc
 
- void set_x( c_Index arc , c_FNumber FSol ) {
+ void set_x( Index arc , FNumber FSol ) {
   if( arc >= get_NArcs() )
    throw( std::invalid_argument( "invalid arc name" ) );
 
@@ -1352,17 +1441,26 @@ public:
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the potential solution
  /** Method to set the potential solution; the values found in the
-  * c_Vec_CNumber between pstrt (included) and pstop (excluded) are copied
-  * into the potential of node (dual multiplier of the flow balance
-  * constraint) strt + i. This is typically used by a Solver. */
+  * c_Vec_CNumber starting from pstrt are copied into the potential of node
+  * (dual multiplier of the flow balance constraint) i for i in rng, in the
+  * same order. */
 
- void set_pi( c_Vec_CNumber_it pstrt , c_Vec_CNumber_it pstop ,
-	      c_Index strt = 0 );
+ void set_pi( c_Vec_CNumber_it pstrt ,
+	      Range rng = Range( 0 , Inf< Index >() ) );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets a generic subset of the potential solution
+ /** Method to set the potential solution; the values found in the
+  * c_Vec_FNumber starting from pstrt are copied into the potential of node
+  * (dual multiplier of the flow balance constraint) i for all i in sbst
+  * (that must be ordered in increasing sense), in the same order. */
+
+ void set_pi( c_Vec_FNumber_it pstrt , c_Subset sbst );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the potential solution of the given node
 
- void set_pi( CNumber PSol , c_Index nde ) {
+ void set_pi( CNumber PSol , Index nde ) {
   if( ! ( AR & HasFlw ) )  // nowhere to put the value
    return;                 // cowardly (and silently) return
 
@@ -1378,17 +1476,26 @@ public:
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the reduced costs
  /** Method to set the reduced costs solution; the values found in the
-  * c_Vec_CNumber between rcstrt (included) and rcstop (excluded) are copied
-  * into the reduced cost of arc (dual value of the bound constraint) strt +
-  * i. This is typically used by a Solver. */
+  * c_Vec_CNumber starting from rcstrt are copied into the reduced cost of
+  * arc (dual value of the bound constraint) i for i in rng, in the same
+  * order. */
 
- void set_rc( c_Vec_CNumber_it rcstrt , c_Vec_CNumber_it rcstop ,
-	      c_Index strt = 0 );
+ void set_rc( c_Vec_CNumber_it rcstrt ,
+	      Range rng = Range( 0 , Inf< Index >() ) );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets a generic subset of the reduced costs
+ /** Method to set the reduced costs solution; the values found in the
+  * c_Vec_FNumber starting from rcstrt are copied into the reduced cost of
+  * arc (dual value of the bound constraint) i for all i in sbst (that must
+  * be ordered in increasing sense), in the same order. */
+
+ void set_rc( c_Vec_FNumber_it rcstrt , c_Subset sbst );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// sets the reduced cost of the given arc
 
- void set_rc( c_CNumber RC , c_Index arc ) {
+ void set_rc( CNumber RC , Index arc ) {
  if( ! ( AR & HasBnd ) )  // nowhere to put the value in
   return;                 // cowardly (and silently) return
 
@@ -1402,7 +1509,7 @@ public:
 
  }  // end( MCFBlock::set_rc( one ) )
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------------- Methods for handling Modification -------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Methods for handling Modification
@@ -1412,13 +1519,26 @@ public:
  /** Returns true if there is any Solver "listening to this MCFBlock", or if
   * the MCFBlock has to "listen" anyway because the "abstract" representation
   * is constructed, and therefore "abstract" Modification have to be generated
-  * anyway to keep the two representations in sync. */
+  * anyway to keep the two representations in sync.
+  *
+  * No, this should not be needed. In fact, if the "abstract" representation
+  * is modified with the default eModBlck value of issueMod, it is issued
+  * irrespectively to the value of anyone_there(); see Observer::issue_mod().
+  * If the value of issueMod is anything else the  "abstract" representation
+  * has been modified already and there is no point in issuing the
+  * Modification.
+  * Note that that Observer::issue_mod() does not check if the "abstract"
+  * representation has been constructed, but this is clearly not
+  * necessary, as the Modification we are speaking of are issued while
+  * changing the "abstract" representation, if that has not been
+  * constructed then it cannot issue Modification
 
  bool anyone_there( void ) const override {
   return( AR ? true : Block::anyone_there() );
   }
-
-/*--------------------------------------------------------------------------*/ /// adding a new Modification to the MCFBlock
+ */
+/*--------------------------------------------------------------------------*/
+ /// adding a new Modification to the MCFBlock
  /** Method for handling Modification.
   *
   * The version of MCFBlock has to intercept any "abstract Modification" that
@@ -1454,7 +1574,7 @@ public:
   *   case there cannot be any Modification to handle here;
   *
   * - VariableMod fixing and un-fixing a flow ColVariable; however, note
-  *   that *fixing is only permitted if the value() of the ColVvariable is
+  *   that *fixing is only permitted if the value() of the ColVariable is
   *   zero*, because that corresponds to closing the arc, exception being
   *   thrown otherwise.
   *
@@ -1466,12 +1586,19 @@ public:
 
  void add_Modification( sp_Mod mod , ChnlName chnl = 0 ) override;
 
-/**@} ----------------------------------------------------------------------*/
-/*------------ METHODS FOR LOADING, PRINTING & SAVING THE MCFBlock ---------*/
+/** @} ---------------------------------------------------------------------*/
+/*--------------- METHODS FOR PRINTING & SAVING THE MCFBlock ---------------*/
 /*--------------------------------------------------------------------------*/
-/** @name Methods for loading, printing & saving the MCFBlock
+/** @name Methods for printing & saving the MCFBlock
  *  @{ */
 
+ /// print the MCFBlock on an ostream with the given verbosity
+ /** Protected method to print information about the MCFBlock; with the
+  * "complete" level ('C') it outputs the MCFBlock in DIMACS format. */
+
+ void print( std::ostream & output , char vlvl = 0 ) const override;
+
+/*--------------------------------------------------------------------------*/
  /// extends Block::serialize( netCDF::NcGroup )
  /** Extends Block::serialize( netCDF::NcGroup ) to the specific format of a
   * MCFBlock. See MCFBlock::deserialize( netCDF::NcGroup ) for details of the
@@ -1479,10 +1606,10 @@ public:
 
  void serialize( netCDF::NcGroup & group ) const override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
-/** @name Changing the data of the MCF instabnce
+/** @name Changing the data of the MCF instance
  *
  * All the methods in this section have two parameters issueMod and issueAMod
  * which control if and how the, respectively, "physical Modification" and
@@ -1508,10 +1635,7 @@ public:
  * Note: the methods accept the eDryRun value for the issueAMod parameter for
  * the "abstract" representation. This allows to re-use them within MCFBlock
  * itself when reacting to abstract Modification, where the  "abstract"
- * representation has been changed already. However, the eDryRun value is not
- * allowed (it is ignored) for the issuePMod parameter for the "physical"
- * representation, as there is no reasonable use for this. Basically, this
- * makes eDryRun equivalent to eNoMod.
+ * representation has been changed already.
  *  @{ */
 
  /// change the costs of a contiguous interval of arcs
@@ -1520,12 +1644,10 @@ public:
   * \p rng. Note that if the right extreme of the range is >= get_NArcs() it 
   * is ignored.
   *
-  * Note that, if the Objective is a "sparse" LinearFunction (see
-  * compute_objective()), then changing the costs can issue up to three
-  * different Modification; in particular a LinearFunctionMod for adding a
-  * Variable (setting to nonzero a previously zero coefficient), one for
-  * removing Variable (vice-versa), and one C05FunctionModLin for modifying
-  * the coefficients.
+  * Note that if \p rng contains some closed arc, its cost is also changed.
+  * While this has no immediate impact on the problem solved, if the arc is
+  * re-opened then the cost set with this method when the arc was closed is
+  * in effect.
   *
   * If more than one Modification is actually issued and issueAMod specifies
   * an open channel, then the channel is nested so that the three Modification
@@ -1540,37 +1662,35 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_costs( c_Vec_CNumber_it NCost ,
-		 Range rng = Range( 0 , Inf<Index>() ) ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_costs( c_Vec_CNumber_it NCost , Range rng = INFRange ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the costs of an arbitrary subset of arcs
  /** Method to change the costs of an arbitrary subset of arc. That is,
   * *( NCost + i ) becomes the new cost of arc nms[ i ] for all 0 <= i <
   * NCost.size(), (which means that nms.size() == NCost.size()). The
   * parameter ordered tells if the nms vector is ordered for increasing
-  * index of the arc. As the the && tells, nms is "consumed" by the method,
+  * index of the arc. As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * See chg_costs( range ) for Modification issued (except that, of course,
-  * the "physical" one is a MCFBlockSbstMod). */
+  * the "physical" one is a MCFBlockSbstMod), and about changes in costs
+  * of closed arcs. */
 
- void chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
-		 bool ordered = false , c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_costs( c_Vec_CNumber_it NCost ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// changes the cost of the given arc
  /** Changes the cost of the given arc.
   *
   * Note that this can issue only one Modification of each type; the
   * "physical" one is a MCFBlockRngdMod with rng = [ arc ). */
 
- void chg_cost( c_CNumber NCost , c_Index arc ,
-		c_ModParam issueMod = eNoBlck ,
-		c_ModParam issueAMod = eNoBlck );
+ void chg_cost( CNumber NCost , Index arc ,
+		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// change the capacities of a contiguous interval of arcs
@@ -1580,6 +1700,11 @@ public:
   * >= get_NArcs() it is ignored. Note that, according to the Configuration of
   * the static Constraint, the capacity of the arcs cannot be changed: trying
   * to do that will result in an exception being thrown.
+  *
+  * Note that if \p rng contains some closed arc, its capacity is also
+  * changed. While this has no immediate impact on the problem solved, if the
+  * arc is re-opened then the capacity set with this method when the arc was
+  * closed is in effect.
   *
   * Note that changing the capacities can issue as many Modification as there
   * are arcs in the range, in particular OneVarConstraintMod with type
@@ -1598,18 +1723,16 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_ucaps( c_Vec_FNumber_it NCap ,
-		 Range rng = Range( 0 , Inf<Index>() ) ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_ucaps( c_Vec_FNumber_it NCap , Range rng = INFRange ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the capacities of an arbitrary subset of arcs
  /** Method to change the capacities of an arbitrary subset of arc. That is,
   * *( NCap + i ) becomes the new capacity of arc nms[ i ] for all 0 <= i <
   * NCap.size() (which means that nms.size() == NCap.size()). The parameter
   * ordered tells if the nms vector is ordered for increasing index of the
-  * arc. As the the && tells, nms is "consumed" by the method, typically
+  * arc. As the && tells, nms is "consumed" by the method, typically
   * being shipped to an appropriate MCFBlockSbstMod object.
   *
   * Note that, according to the Configuration of the static Constraint, the
@@ -1617,14 +1740,14 @@ public:
   * an exception being thrown.
   *
   * See chg_ucaps( range ) for Modification issued (except that, of course,
-  * the "physical" one is a MCFBlockSbstMod). */
+  * the "physical" one is a MCFBlockSbstMod) and about changing capacities
+  * of closed arcs. */
 
- void chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
-		 bool ordered = false ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_ucaps( c_Vec_FNumber_it NCap ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the capacity of the given arc
  /** Method to change the capacity of a given arc: NCap becomes the new
   * capacity of arc arc. Note that, according to the Configuration of the
@@ -1634,9 +1757,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with rng = [ arc ). */
 
- void chg_ucap( c_FNumber NCap , c_Index arc ,
-		c_ModParam issueMod = eNoBlck ,
-		c_ModParam issueAMod = eNoBlck );
+ void chg_ucap( FNumber NCap , Index arc ,
+		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// change the deficits of a contiguous interval of nodes
@@ -1660,12 +1782,10 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_dfcts( c_Vec_FNumber_it NDfct ,
-		 Range rng = Range( 0 , Inf<Index>() ) ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_dfcts( c_Vec_FNumber_it NDfct , Range rng = INFRange ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the deficits of an arbitrary subset of nodes
  /** Method to change the deficits of an arbitrary subset of nodes. That is,
   * *( NDfct + i ) becomes the new deficit of node nms[ i ] for all 0 <= i <
@@ -1673,18 +1793,17 @@ public:
   * parameter ordered tells if the nms vector is ordered for increasing index
   * of the node. Note that "node names" here go from 0 to get_NNodes() - 1,
   * despite the fact that get_SN() and get_EN() report node "names" between
-  * 1 and get_NNodes(). As the the && tells, nms is "consumed" by the method,
+  * 1 and get_NNodes(). As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * See chg_dfcts( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void chg_dfcts( c_Vec_FNumber_it NDfct , Subset && nms ,
-		 bool ordered = false ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void chg_dfcts( c_Vec_FNumber_it NDfct ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// changes the deficit of the given node
  /** Method to change the deficit of a given node: NDfct becomes the new
   * deficit of node nde. Note that "node names" here go from 0 to
@@ -1694,9 +1813,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with rng = [ arc ). */
 
- void chg_dfct( c_FNumber NDfct , c_Index nde ,
-		c_ModParam issueMod = eNoBlck ,
-		c_ModParam issueAMod = eNoBlck );
+ void chg_dfct( FNumber NDfct , Index nde ,
+		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// closes a contiguous interval of arcs
@@ -1719,11 +1837,11 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void close_arcs( Range rng = Range( 0 , Inf<Index>() ) ,
-		  c_ModParam issueMod = eNoBlck ,
-		  c_ModParam issueAMod = eNoBlck );
+ void close_arcs( Range rng = INFRange ,
+		  ModParam issueMod = eNoBlck ,
+		  ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// closes an arbitrary subset of arcs
  /** Method to close an arbitrary subset of arc, i.e., all those whose names
   * are found in the array nms. The flow on the arcs is fixed to 0 but the
@@ -1733,17 +1851,17 @@ public:
   * nothing.
   *
   * The parameter ordered tells if the nms vector is ordered for increasing 
-  * index of the arc. As the the && tells, nms is "consumed" by the method,
+  * index of the arc. As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * See close_arcs( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
  void close_arcs( Subset && nms , bool ordered = false ,
-		  c_ModParam issueMod = eNoBlck ,
-		  c_ModParam issueAMod = eNoBlck );
+		  ModParam issueMod = eNoBlck ,
+		  ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// closes the given arc
  /** Method to "close" the given arc: the flow on arc is fixed to 0. The arc
   * is not removed from the problem, and its capacity and cost are not
@@ -1753,8 +1871,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with rng = [ arc ). */
 
- void close_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
-		               c_ModParam issueAMod = eNoBlck );
+ void close_arc( Index arc , ModParam issueMod = eNoBlck ,
+		             ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
 /// re-opens a contiguous interval of arcs
@@ -1774,18 +1892,18 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void open_arcs( Range rng = Range( 0 , Inf<Index>() ) ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+ void open_arcs( Range rng = INFRange ,
+		 ModParam issueMod = eNoBlck ,
+		 ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// re-opens an arbitrary subset of arcs
  /** Method to "open" an arbitrary subset of closed arc, i.e., all those
   * whose names are found in the array nms. Opening an already open arc
   * (which is what all arcs are when the problem is created) does nothing.
   *
   * The parameter ordered tells if the nms vector is ordered for increasing 
-  * index of the arc. As the the && tells, nms is "consumed" by the method,
+  * index of the arc. As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
   *
   * Note that closing multiple arcs can issue as many Modification as there
@@ -1802,10 +1920,10 @@ public:
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
  void open_arcs( Subset && nms , bool ordered = false ,
-		 c_ModParam issueMod = eNoBlck ,
-		 c_ModParam issueAMod = eNoBlck );
+		 ModParam issueMod = eNoBlck ,
+		 ModParam issueAMod = eNoBlck );
 
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// re-opens the given arc
  /** Method to "open" the given closed arc, i.e., allow the flow on arc to
   * vary. Opening an already open arc (which is what all arcs are when the
@@ -1814,8 +1932,8 @@ public:
   * Note that this can issue only one Modification; the "physical" one is a
   * MCFBlockRngdMod with rng = [ arc ). */
 
- void open_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
-		              c_ModParam issueAMod = eNoBlck );
+ void open_arc( Index arc , ModParam issueMod = eNoBlck ,
+		            ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// add a new arc
@@ -1869,10 +1987,9 @@ public:
   *  Of course, all the "abstract" Modification are only issued if the
   *  corresponding part of the "abstract" representation is constructed. */
  
- Index add_arc( c_Index sn , c_Index en , c_CNumber cst = 0 ,
-		c_FNumber cap = Inf<FNumber>() ,
-		c_ModParam issueMod = eNoBlck ,
-		c_ModParam issueAMod = eNoBlck );
+ Index add_arc( Index sn , Index en , CNumber cst = 0 ,
+		FNumber cap = Inf<FNumber>() ,
+		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
  /// removes an existing arc
@@ -1928,69 +2045,20 @@ public:
   *  Of course, all the "abstract" Modification are only issued if the
   *  corresponding part of the "abstract" representation is constructed. */
 
- void remove_arc( c_Index arc , c_ModParam issueMod = eNoBlck ,
-		                c_ModParam issueAMod = eNoBlck );
+ void remove_arc( Index arc , ModParam issueMod = eNoBlck ,
+		              ModParam issueAMod = eNoBlck );
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 /*--------------------------------------------------------------------------*/
 
  protected:
 
 /*--------------------------------------------------------------------------*/
-/*-------------------------- PROTECTED FRIENDS -----------------------------*/
-/*--------------------------------------------------------------------------*/
-
-/*--------------------------------------------------------------------------*/
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 /*--------------------------------------------------------------------------*/
-/** @name Protected methods for inserting and extracting
- *  @{ */
-
- /// print the MCFBlock on an ostream with the given verbosity
- /** Protected method to print information about the MCFBlock; with the
-  * "complete" level it outputs the MCFBlock in DIMACS formar. */
-
- void print( std::ostream &output ) const override;
 
 /*--------------------------------------------------------------------------*/
- /// loads the MCF instance from file in DIMACS standard format
- /** Protected method for loading a MCFBlock out of a std::istream (which is
-  * what operator>> is dispatched to. The std::istream is assumed to contain
-  * the description of a MCF instance in DIMACS standard format, which is 
-  * the following. The first line must be
-  *
-  *      p min <number of nodes> <number of arcs>
-  *
-  * Then the node definition lines must be found, in the form
-  *
-  *      n <node number> <node supply>
-  *
-  * Not all nodes need have a node definition line; these are given zero
-  * supply, i.e., they are transhipment nodes (supplies are the inverse of
-  * deficits, i.e., a node with positive supply is a source node). Finally,
-  * the arc definition lines must be found, in the form
-  *
-  *    a <start node> <end node> <lower bound> <upper bound> <flow cost>
-  *
-  * There must be exactly <number of arcs> arc definition lines in the file.
-  *
-  * Note that the file format accepted by load() is more general than the
-  * DIMACS standard format, in that node and arc definitions can be mixed in
-  * any order, while the DIMACS file requires all node information to appear
-  * before all arc information. Also, capacities of arcs can be set to
-  * +Inf<FNumber>() by putting "INF", "Inf" or "inf" in the file (actually,
-  * any string starting with "I" or "i" where these would be expected).
-  *
-  * Note that the graph as provided by this method is considered to be
-  * "fully static".
-  *
-  * Like load( memory ), if there is any Solver attached to this MCFBlock
-  * then a NBModification (the "nuclear option") is issued. */
-
- void load( std::istream &input ) override;
-
-/**@} ----------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -2000,8 +2068,8 @@ public:
  Index NStaticNodes;             ///< the number of static nodes
  Index NStaticArcs;              ///< the number of static arcs
 
- Subset SN;                   ///< vector of arc starting nodes
- Subset EN;                   ///< vector of arc ending nodes
+ Subset SN;                      ///< vector of arc starting nodes
+ Subset EN;                      ///< vector of arc ending nodes
 
  Vec_CNumber C;                  ///< vector of arc costs
  Vec_FNumber U;                  ///< vector of arc upper capacities
@@ -2018,8 +2086,8 @@ public:
  static constexpr unsigned char HasBnd = 8;
  ///< fourth bit of AR == 1 if the Bound have been constructed
 
- double f_cond_lower;            ///< conditional lower bound, can be infinite
- double f_cond_upper;            ///< conditional upper bound, can be infinite
+ double f_cond_lower;            ///< conditional lower bound, can be -INF
+ double f_cond_upper;            ///< conditional upper bound, can be +INF
  
  std::vector<ColVariable> x;     ///< the static flow variables
  std::vector<FRowConstraint> E;  ///< the static flow conservation constrs.
@@ -2054,13 +2122,12 @@ public:
  *
  * - open_arcs() (both range and subset version)
  *
- * into the corresponding method factories.
- */
+ * into the corresponding method factories. */
 
  static void static_initialization( void )
  {
   /*!!
- * Not all C++ compilers enjoy the template wizardry behing the three-args
+ * Not all C++ compilers enjoy the template wizardry behind the three-args
  * version of register_method<> with the compact MS_*_*::args(), so we just
  * use the slightly less compact one with the explicit argument and be done
  * with it. !!*/
@@ -2097,60 +2164,56 @@ public:
   //                              MS_sbst::args() );
 
 
-  register_method< MCFBlock, MF_dbl_it, Range >(
-   "MCFBlock::chg_costs", &MCFBlock::chg_costs );
+  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_costs" ,
+						   & MCFBlock::chg_costs );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
-   "MCFBlock::chg_costs", &MCFBlock::chg_costs );
+  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
+   "MCFBlock::chg_costs" , & MCFBlock::chg_costs );
 
-  register_method< MCFBlock, MF_dbl_it, Range >(
-   "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps );
+  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_ucaps" ,
+						   & MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
-   "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps );
+  register_method< MCFBlock , MF_dbl_it , Subset &&, bool >(
+   "MCFBlock::chg_ucaps" , & MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock, MF_dbl_it, Range >(
-   "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts );
+  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_dfcts" ,
+						   & MCFBlock::chg_dfcts );
 
-  register_method< MCFBlock, MF_dbl_it, Subset &&, bool >(
-   "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts );
+  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
+   "MCFBlock::chg_dfcts" , & MCFBlock::chg_dfcts );
 
-  register_method< MCFBlock, Range >(
-   "MCFBlock::close_arcs", &MCFBlock::close_arcs );
+  register_method< MCFBlock , Range >( "MCFBlock::close_arcs" ,
+				       & MCFBlock::close_arcs );
 
-  register_method< MCFBlock, Subset &&, bool >(
-   "MCFBlock::close_arcs", &MCFBlock::close_arcs );
+  register_method< MCFBlock , Subset && , bool >( "MCFBlock::close_arcs" ,
+						  & MCFBlock::close_arcs );
 
-  register_method< MCFBlock, Range >(
-   "MCFBlock::open_arcs", &MCFBlock::open_arcs );
+  register_method< MCFBlock , Range >( "MCFBlock::open_arcs" ,
+				       & MCFBlock::open_arcs );
 
-  register_method< MCFBlock, Subset &&, bool >(
-   "MCFBlock::open_arcs", &MCFBlock::open_arcs );
+  register_method< MCFBlock , Subset && , bool >( "MCFBlock::open_arcs" ,
+						  & MCFBlock::open_arcs );
 
-  }
+  }  // end( static_initialization )
 
 /*--------------------------------------------------------------------------*/
 
- inline int p2i_x_s( Variable * const var ) const
- {
+ int p2i_x_s( const Variable * var ) const {
   return( std::distance( x.data() ,
 			 static_cast< const ColVariable * >( var ) ) );
   }
 
- inline int p2i_ub_s( Constraint * const cns ) const
- {
+ int p2i_ub_s( const Constraint * cns ) const {
   return( std::distance( UB.data() ,
 			 static_cast< const LB0Constraint * >( cns ) ) );
   }
 
- inline int p2i_e_s( Constraint * const cns ) const
- {
+ int p2i_e_s( const Constraint * cns ) const {
   return( std::distance( E.data() ,
 			 static_cast< const FRowConstraint * >( cns ) ) );
   }
 
- inline LinearFunction * get_lfo( void )
- {
+ LinearFunction * get_lfo( void ) {
   #ifdef NDEBUG
    return( static_cast<LinearFunction *>( c.get_function() ) );
   #else
@@ -2160,12 +2223,12 @@ public:
   #endif
   }
 
- inline LinearFunction * get_lfc( FRowConstraint * cnsti )
+ LinearFunction * get_lfc( FRowConstraint * cnsti )
  {
   #ifdef NDEBUG
-   return( static_cast<LinearFunction *>( cnsti->get_function() ) );
+   return( static_cast< LinearFunction * >( cnsti->get_function() ) );
   #else
-   auto lfc = dynamic_cast<LinearFunction *>( cnsti->get_function() );
+   auto lfc = dynamic_cast< LinearFunction * >( cnsti->get_function() );
    assert( lfc );
    return( lfc );
   #endif
@@ -2176,10 +2239,6 @@ public:
  void guts_of_add_Modification( p_Mod mod , ChnlName chnl );
 
  void compute_conditional_bounds( void );
-
- ModParam make_amod_param( ModParam issueAMod , Index num );
-
- void unmake_amod_param( ModParam oldiAM , ModParam newiAM , Index num );
 
 /*--------------------------------------------------------------------------*/
 
@@ -2193,19 +2252,19 @@ public:
 /*---------------------------- PRIVATE FIELDS ------------------------------*/
 /*--------------------------------------------------------------------------*/
 
- SMSpp_insert_in_factory_h;        // insert MCFBlock in the Block factory
+ SMSpp_insert_in_factory_h;  // insert MCFBlock in the Block factory
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-};  // end( class( MCFBlock ) )
+ };  // end( class( MCFBlock ) )
 
 /*--------------------------------------------------------------------------*/
 /*-------------------------- CLASS MCFBlockMod -----------------------------*/
 /*--------------------------------------------------------------------------*/
 /// derived class from Modification for modifications to a MCFBlock
 /** Derived class from Modification to describe modifications to a MCFBlock.
- *  This is acutally "sort of abstract", since it does not say exactly what
+ *  This is actually "sort of abstract", since it does not say exactly what
  *  is changed, this being demanded to derived classes (which do this in
  *  different ways). Note that it is derived from Modification rather than,
  *  say, BlockMod (which has the same structure) because this is a class of
@@ -2239,7 +2298,7 @@ class MCFBlockMod : public Modification
 
  /// constructor: takes the MCFBlock and the type
 
- MCFBlockMod( MCFBlock * const fblock , const int type )
+ MCFBlockMod( MCFBlock * fblock , int type )
   : f_Block( fblock ) , f_type( type ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -2255,7 +2314,7 @@ class MCFBlockMod : public Modification
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
  /// accessor to the type of modification
 
- int type( void ) { return( f_type ); }
+ int type( void ) const { return( f_type ); }
 
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2282,7 +2341,7 @@ class MCFBlockMod : public Modification
  MCFBlock *f_Block;
                ///< pointer to the MCFBlock to which the MCFBlockMod refers
 
- int f_type;   ///< type of modification
+ int f_type;   ///< type of Modification
 
 /*--------------------------------------------------------------------------*/
 
@@ -2306,8 +2365,7 @@ class MCFBlockRngdMod : public MCFBlockMod
 
  /// constructor: takes the MCFBlock, the type, and the range
 
- MCFBlockRngdMod( MCFBlock * const fblock , const int type ,
-		  Block::Range rng )
+ MCFBlockRngdMod( MCFBlock * fblock , int type , Block::Range rng )
   : MCFBlockMod( fblock , type ) , f_rng( rng ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -2318,7 +2376,7 @@ class MCFBlockRngdMod : public MCFBlockMod
 
  /// accessor to the range
 
- Block::c_Range & rng( void ) { return( f_rng ); }
+ Block::c_Range & rng( void ) const { return( f_rng ); }
  
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2360,10 +2418,13 @@ class MCFBlockSbstMod : public MCFBlockMod
  ///< constructor: takes the MCFBlock, the type, and the subset
  /**< Constructor: takes the MCFBlock, the type, and the subset. As the the
   * && tells, nms is "consumed" by the constructor and its resources become
-  * property of the MCFBlockSbstMod object. */
+  * property of the MCFBlockSbstMod object.
+  *
+  *   NOTE THAT nms IS REQUIRED TO BE ORDERED IN INCREASING SENSE
+  *
+  * although this is not checked by the class. */
 
- MCFBlockSbstMod( MCFBlock * const fblock , const int type ,
-		  Block::Subset && nms )
+ MCFBlockSbstMod( MCFBlock * fblock , int type , Block::Subset && nms )
   : MCFBlockMod( fblock , type ) , f_nms( std::move( nms ) ) {}
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -2374,7 +2435,7 @@ class MCFBlockSbstMod : public MCFBlockMod
 
  /// accessor to the subset
 
- Block::c_Subset & nms( void ) { return( f_nms ); }
+ Block::c_Subset & nms( void ) const { return( f_nms ); }
 
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 
@@ -2415,10 +2476,16 @@ class MCFBlockSbstMod : public MCFBlockMod
  *       THE REDUCED COSTS ARE NOT EXPLICITLY SAVED
  *
  * This is OK for feasible dual solutions, as the dual variables of the bound
- * constraints (a.k.a. Reduced Costs) can be cheapily computed out of the
+ * constraints (a.k.a. Reduced Costs) can be cheaply computed out of the
  * potentials. This may not be appropriate in all cases, as one may want to
  * deal with unfeasible dual solutions; if this will ever be the case, the
  * MCFSolution class will have to be changed accordingly.
+ *
+ * Note that the vectors are (in principle, both) optional: a MCFSolution
+ * may have them empty, according to how it is created by a call to
+ * MCFBlock::get_Solution(). If a vector is empty it is never read() or
+ * write()-n from/to the MCFBlock. There is no support for changing this
+ * during the life of the MCFSolution.
  *
  * It is useful to remark that some special cases of MCF would actually have
  * "special" solutions ("less general" ones in the parlance of Solution). In
@@ -2466,9 +2533,9 @@ class MCFSolution : public Solution {
 
 /*------------- METHODS DESCRIBING THE BEHAVIOR OF A MCFSolution -----------*/
 
- void read( const Block * const block ) override final;
+ void read( const Block * block ) override final;
 
- void write( Block * const block ) override final;
+ void write( Block * block ) override final;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// serialize a MCFSolution into a netCDF::NcGroup

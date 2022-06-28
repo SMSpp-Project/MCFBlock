@@ -2,6 +2,10 @@
 test/MCFBlock_test
 tools/dmx2nc4
 
+### data directories
+data/dmx/*.dmx
+data/nc4
+
 ### C/C++ template
 # Prerequisites
 *.d

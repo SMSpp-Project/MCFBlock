@@ -11,12 +11,7 @@
  * template over the underlying :MCFClass object, which implies that most of
  * the code is in the header file.
  *
- * \version 1.12
- *
- * \date 27 - 02 - 2020
- *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
@@ -34,7 +29,9 @@
 /*--------------------------------------------------------------------------*/
 
 #include "CDASolver.h"
+
 #include "MCFBlock.h"
+
 #include "MCFClass.h"
 
 /*--------------------------------------------------------------------------*/
@@ -152,10 +149,36 @@ public:
  */
 
 /*--------------------------------------------------------------------------*/
+ /// public enum "extending" int_par_type_CDAS to MCFSolver
 
-// typedef double OFValue;
+ enum int_par_type_MCFS {
+  kReopt = intLastParCDAS ,  ///< whether or not to reoptimize
+  intLastParMCF    ///< first allowed parameter value for derived classes
+                   /**< convenience value for easily allow derived classes
+                    * to further extend the set of types of return codes */
+  };             // end( int_par_type_MCFS )
 
-/**@} ----------------------------------------------------------------------*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// public enum "extending" dbl_par_type_CDAS to MCFSolver
+
+ enum dbl_par_type_MCFS {
+  dblLastParMCF = dblLastParCDAS
+                   ///< first allowed parameter value for derived classes
+                   /**< convenience value for easily allow derived classes
+                    * to further extend the set of types of return codes */
+  };             // end( dbl_par_type_MCFS )
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// public enum "extending" str_par_type_CDAS to MCFSolver
+
+ enum str_par_type_MCFS {
+  strDMXFile = strLastParCDAS ,  ///< DMX filename to output the instance
+  strLastParMCF    ///< first allowed parameter value for derived classes
+                   /**< convenience value for easily allow derived classes
+                    * to further extend the set of types of return codes */
+  };             // end( dbl_par_type_MCFS )
+
+/** @} ---------------------------------------------------------------------*/
 /*----------------- CONSTRUCTING AND DESTRUCTING MCFSolver -----------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Constructing and destructing MCFSolver
@@ -175,7 +198,7 @@ public:
 
  virtual ~MCFSolver() { }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------------------- OTHER INITIALIZATIONS -------------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Other initializations
@@ -216,7 +239,7 @@ public:
  *
  * intLastParCDAS ==> kReopt             whether or not to reoptimize
  *
- * and any other paramater of specific :MCFClass following. This is done
+ * and any other parameter of specific :MCFClass following. This is done
  * via the two const static arrays Solver_2_MCFClass_int and
  * Solver_2_MCFClass_dbl, with a negative entry meaning "there is no such
  * parameter in MCFSolver".
@@ -274,19 +297,26 @@ public:
 
 /*--------------------------------------------------------------------------*/
 
- void set_par( const idx_type par , const int value ) override {
+ void set_par( idx_type par , int value ) override {
   if( Solver_2_MCFClass_int[ par ] >= 0 )
-   this->MCFC::SetPar( Solver_2_MCFClass_int[ par ] , value );
+   MCFC::SetPar( Solver_2_MCFClass_int[ par ] , int( value ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- void set_par( const idx_type par , const double value ) override {
+ void set_par( idx_type par , double value ) override {
   if( Solver_2_MCFClass_dbl[ par ] >= 0 )
-   this->MCFC::SetPar( Solver_2_MCFClass_dbl[ par ] , value );
+   MCFC::SetPar( Solver_2_MCFClass_dbl[ par ] , double( value ) );
   }
 
-/**@} ----------------------------------------------------------------------*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ void set_par( idx_type par , const std::string & value ) override {
+  if( par == strDMXFile )
+   f_dmx_file = value;
+  }
+
+/** @} ---------------------------------------------------------------------*/
 /*--------------------- METHODS FOR SOLVING THE Block ----------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Solving the MCF encoded by the current MCFBlock
@@ -296,10 +326,12 @@ public:
 
  int compute( bool changedvars = true ) override
  {
-  const static std::vector< int > MCFstatus_2_sol_type = {
+  const static std::array< int , 6 > MCFstatus_2_sol_type = {
    kUnEval , Solver::kOK , kStopTime , kInfeasible , Solver::kUnbounded ,
    Solver::kError };
 
+  lock();  // first of all, acquire self-lock
+  
   if( ! f_Block )           // there is no [MCFBlock] to solve
    return( kBlockLocked );  // return error 
 
@@ -310,6 +342,16 @@ public:
   // while [read_]locked, process any outstanding Modification
   process_outstanding_Modification();
 
+  if( ! f_dmx_file.empty() ) {  // if so required
+   // output the current instance (after the changes) to a DMX file
+   std::ofstream ProbFile( f_dmx_file , ios_base::out | ios_base::trunc );
+   if( ! ProbFile.is_open() )
+    throw( std::logic_error( "cannot open DMX file " + f_dmx_file ) );
+
+   WriteMCF( ProbFile );
+   ProbFile.close();
+   }
+
   if( ! owned )             // if the [MCF]Block was actually read_locked
    f_Block->read_unlock();  // read_unlock it
 
@@ -319,13 +361,15 @@ public:
   // then (try to) solve the MCF
   this->MCFC::SolveMCF();
 
+  unlock();  // release self-lock
+  
   // now give out the result: note that the vector MCFstatus_2_sol_type[]
   // starts from 0 whereas the first value of MCFStatus is -1 (= kUnSolved),
   // hence the returned status has to be shifted by + 1
   return( MCFstatus_2_sol_type[ this->MCFC::MCFGetStatus() + 1 ] );
   }
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*---------------------- METHODS FOR READING RESULTS -----------------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Accessing the found solutions (if any)
@@ -379,7 +423,7 @@ public:
   * done*, since the Configuration is meant to say "only save/map the dual
   * solution". In all other cases, the flow solution is saved. */
 
- void get_var_solution( Configuration *solc = nullptr ) override
+ void get_var_solution( Configuration * solc = nullptr ) override
  {
   if( ! f_Block )  // no [MCF]Block to write to
    return;         // cowardly and silently return
@@ -391,7 +435,7 @@ public:
   auto MCFB = static_cast< MCFBlock * >( f_Block );
   MCFBlock::Vec_FNumber X( MCFB->get_NArcs() );
   this->MCFGetX( X.data() );
-  MCFB->set_x( X.begin() , X.end() );
+  MCFB->set_x( X.begin() );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -406,7 +450,7 @@ public:
   * done*, since the Configuration is meant to say "only save/map the primal
   * solution". In all other cases, the flow solution is saved. */
 
- void get_dual_solution( Configuration *solc = nullptr ) override
+ void get_dual_solution( Configuration * solc = nullptr ) override
  {
   if( ! f_Block )  // no [MCF]Block to write to
    return;         // cowardly and silently return
@@ -418,11 +462,11 @@ public:
   auto MCFB = static_cast< MCFBlock * >( f_Block );
   MCFBlock::Vec_CNumber Pi( MCFB->get_NNodes() );
   this->MCFGetPi( Pi.data() );
-  MCFB->set_pi( Pi.begin() , Pi.end() );
+  MCFB->set_pi( Pi.begin() );
   
   MCFBlock::Vec_FNumber RC( MCFB->get_NArcs() );
   this->MCFGetRC( RC.data() );
-  MCFB->set_rc( RC.begin() , RC.end() );
+  MCFB->set_rc( RC.begin() );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -459,7 +503,7 @@ public:
   *
   * Or, rather, THIS SHOULD BE DONE, BUT THE METHOD IS NOT IMPLEMENTED yet. */
 
- void get_var_direction( Configuration *dirc = nullptr ) override
+ void get_var_direction( Configuration * dirc = nullptr ) override
  {
   auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( dirc );
   if( tsolc && ( tsolc->f_value == 2 ) )
@@ -487,7 +531,7 @@ public:
   *
   * Or, rather, THIS SHOULD BE DONE, BUT THE METHOD IS NOT IMPLEMENTED yet. */
 
- void get_dual_direction( Configuration *dirc = nullptr ) override
+ void get_dual_direction( Configuration * dirc = nullptr ) override
  {
   auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( dirc );
   if( tsolc && ( tsolc->f_value == 1 ) )
@@ -506,7 +550,7 @@ public:
 
  virtual bool new_dual_direction( void ) override{ return( false ); }
 */
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*-------------- METHODS FOR READING THE DATA OF THE Solver ----------------*/
 /*--------------------------------------------------------------------------*/
 
@@ -543,19 +587,25 @@ public:
  * "there is no such parameter in MCFSolver".
  *  @{ */
 
- idx_type get_num_int_par( void ) const override {
+ [[nodiscard]] idx_type get_num_int_par( void ) const override {
   return( CDASolver::get_num_int_par() + 1 );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- idx_type get_num_dbl_par( void ) const override {
+ [[nodiscard]] idx_type get_num_dbl_par( void ) const override {
   return( CDASolver::get_num_dbl_par() );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ [[nodiscard]] idx_type get_num_str_par( void ) const override {
+  return( CDASolver::get_num_str_par() + 1 );
   }
 
 /*--------------------------------------------------------------------------*/
  
- int get_dflt_int_par( idx_type par ) const override {
+ [[nodiscard]] int get_dflt_int_par( idx_type par ) const override {
   if( par == intLastParCDAS )
    return( MCFClass::kYes );
 
@@ -564,13 +614,24 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  
- double get_dflt_dbl_par( idx_type par ) const override {
+ [[nodiscard]] double get_dflt_dbl_par( idx_type par ) const override {
   return( CDASolver::get_dflt_dbl_par( par ) );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ [[nodiscard]] const std::string & get_dflt_str_par( idx_type par )
+  const override {
+  static const std::string _empty;
+  if( par == strLastParCDAS )
+   return( _empty );
+
+  return( CDASolver::get_dflt_str_par( par ) );
   }
 
 /*--------------------------------------------------------------------------*/
  
- int get_int_par( idx_type par ) const override {
+ [[nodiscard]] int get_int_par( idx_type par ) const override {
   if( Solver_2_MCFClass_int[ par ] >= 0 ) {
    int val;
    this->GetPar( Solver_2_MCFClass_int[ par ] , val );
@@ -582,7 +643,7 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  
- double get_dbl_par( idx_type par ) const override {
+ [[nodiscard]] double get_dbl_par( idx_type par ) const override {
   if( Solver_2_MCFClass_dbl[ par ] >= 0 ) {
    double val;
    this->GetPar( Solver_2_MCFClass_dbl[ par ] , val );
@@ -592,24 +653,47 @@ public:
   return( get_dflt_dbl_par( par ) );
   }
 
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ 
+ [[nodiscard]] const std::string & get_str_par( idx_type par )
+  const override {
+  if( par == strDMXFile )
+   return( f_dmx_file );
+
+  return( get_dflt_str_par( par ) );
+  }
+
 /*--------------------------------------------------------------------------*/
 
- idx_type int_par_str2idx( const std::string & name ) const override {
+ [[nodiscard]] idx_type int_par_str2idx( const std::string & name )
+  const override {
   if( name == "kReopt" )
-   return( intLastParCDAS );
+   return( kReopt );
 
   return( CDASolver::int_par_str2idx( name ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- idx_type dbl_par_str2idx( const std::string & name ) const override {
+ [[nodiscard]] idx_type dbl_par_str2idx( const std::string & name )
+  const override {
   return( CDASolver::dbl_par_str2idx( name ) );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ [[nodiscard]] idx_type str_par_str2idx( const std::string & name )
+  const override {
+  if( name == "strDMXFile" )
+   return( strDMXFile );
+
+  return( CDASolver::str_par_str2idx( name ) );
   }
 
 /*--------------------------------------------------------------------------*/
 
- const std::string & int_par_idx2str( idx_type idx ) const override {
+ [[nodiscard]] const std::string & int_par_idx2str( idx_type idx )
+  const override {
   static const std::string my_name = "kReopt";
 
   if( idx == intLastParCDAS )
@@ -620,17 +704,30 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- const std::string & dbl_par_idx2str( idx_type idx ) const override {
+ [[nodiscard]] const std::string & dbl_par_idx2str( idx_type idx )
+  const override {
   return( CDASolver::dbl_par_idx2str( idx ) );
   }
 
-/**@} ----------------------------------------------------------------------*/
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+
+ [[nodiscard]] const std::string & str_par_idx2str( idx_type idx )
+  const override {
+  static const std::string my_name = "strDMXFile";
+
+  if( idx == strDMXFile )
+   return( my_name );
+
+  return( CDASolver::str_par_idx2str( idx ) );
+  }
+
+/** @} ---------------------------------------------------------------------*/
 /*------------ METHODS FOR HANDLING THE State OF THE MCFSolver -------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Handling the State of the MCFSolver
  *  @{ */
 
- State * get_State( void ) const override;
+ [[nodiscard]] State * get_State( void ) const override;
 
 /*--------------------------------------------------------------------------*/
 
@@ -640,7 +737,7 @@ public:
 
  void put_State( State && state ) override;
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
 /** @name Changing the data of the model
@@ -668,9 +765,8 @@ public:
   * MCFBlock: then, this MCFBlock may be copied from a MCFBlock that has
   * closed or deleted arcs and this method would not work. */
 
- void add_Modification( sp_Mod &mod ) override
- {
-  if( const auto tmod = std::dynamic_pointer_cast<NBModification>( mod ) ) {
+ void add_Modification( sp_Mod &mod ) override {
+  if( std::dynamic_pointer_cast< const NBModification >( mod ) ) {
    // this is the "nuclear option": the MCFBlock has been re-loaded, so
    // the MCFClass solver also has to (immediately)
    auto MCFB = static_cast< MCFBlock * >( f_Block );
@@ -689,10 +785,10 @@ public:
    //       care to make this work (or maybe not).
    // MCFC::PreProcess();
    // besides, any outstanding modification makes no sense any longer
-   v_mod.clear();
+   mod_clear();
    }
   else
-   v_mod.push_back( mod );
+   push_back( mod );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -701,21 +797,19 @@ public:
 
  friend class MCFSolverState;  // make MCFSolverState friend
 
-/**@} ----------------------------------------------------------------------*/
+/** @} ---------------------------------------------------------------------*/
 /*--------------------- PROTECTED PART OF THE CLASS ------------------------*/
 /*--------------------------------------------------------------------------*/
 
 protected:
 
 /*--------------------------------------------------------------------------*/
-/*--------------------------- PROTECTED TYPES ------------------------------*/
-/*--------------------------------------------------------------------------*/
-
-/*--------------------------------------------------------------------------*/
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 /*--------------------------------------------------------------------------*/
 
  void process_outstanding_Modification( void );
+
+ void guts_of_poM( c_p_Mod mod );
 
 /*--------------------------------------------------------------------------*/
 /*---------------------------- PROTECTED FIELDS  ---------------------------*/
@@ -726,6 +820,8 @@ protected:
 
  const static std::vector<int> Solver_2_MCFClass_dbl;
  // the (static const) map between Solver int parameters and MCFClass ones
+
+ std::string f_dmx_file;  // string for DMX file output
 
 /*--------------------------------------------------------------------------*/
 /*--------------------- PRIVATE PART OF THE CLASS --------------------------*/
@@ -751,8 +847,8 @@ protected:
  *  i.e., a MCFClass::MCFState (*). Since MCFClass::MCFState does not allow
  *  serialization, all that part does not work.  */
 
-class MCFSolverState : public State {
-
+class MCFSolverState : public State
+{
 /*----------------------- PUBLIC PART OF THE CLASS -------------------------*/
 
  public:
@@ -829,7 +925,7 @@ class MCFSolverState : public State {
 
  };  // end( class( MCFSolverState ) )
 
-/**@} end( group( MCFSolver_CLASSES ) ) */
+/** @} end( group( MCFSolver_CLASSES ) ) */
 /*--------------------------------------------------------------------------*/
 /*------------------- inline methods implementation ------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -865,164 +961,202 @@ template< class MCFC >
 void MCFSolver< MCFC >::process_outstanding_Modification( void )
 {
  // no-frills loop: do them in order, with no attempt at optimizing
+ // note that NBModification have already been dealt with and therefore need
+ // not be considered here
 
- for( auto mod = front() ; mod ; mod = front() ) {
-  /* Use a Lambda to define a "guts" of the method that can be called
-     recursively. Note the trick of defining the std::function object and
-     "passing" it to the lambda, which allows recursive calls. Note the need
-     to explicitly capture "this" to use fields/methods of the class. */
+ for( ; ; ) {
+  auto mod = pop();
+  if( ! mod )
+   break;
 
-  auto MCFB = static_cast< MCFBlock * >( f_Block );
+  guts_of_poM( mod.get() );
+  }
+ }  // end( MCFSolver::process_outstanding_Modification )
 
-  std::function< void( c_p_Mod )> guts_of_poM;
-  guts_of_poM = [ this , & guts_of_poM , MCFB ]( c_p_Mod mod ) {
-   // process Modification - - - - - - - - - - - - - - - - - - - - - - - - - -
-   //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   /* This requires to patiently sift through the possible Modification types
-      to find what this Modification exactly is, and call the appropriate
-      method of MCFClass. */
+/*--------------------------------------------------------------------------*/
 
-   // GroupModification- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   if( const auto tmod = dynamic_cast< GroupModification * const >( mod ) ) {
-    for( const auto & submod : tmod->sub_Modifications() )
-     guts_of_poM( submod.get() );
+template< class MCFC >
+void MCFSolver< MCFC >::guts_of_poM( c_p_Mod mod )
+{
+ auto MCFB = static_cast< MCFBlock * >( f_Block );
 
-    return;
-    }
+ // process Modification - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ /* This requires to patiently sift through the possible Modification types
+  * to find what this Modification exactly is, and call the appropriate
+  * method of MCFClass. */
 
+ // GroupModification- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ if( auto tmod = dynamic_cast< const GroupModification * >( mod ) ) {
+  for( const auto & submod : tmod->sub_Modifications() )
+   guts_of_poM( submod.get() );
 
-   // MCFBlockRngdMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   /* Note: in the following we can assume that C, B and U are nonempty. This
-      is because they can be empty only if they are so when the object is
-      loaded. But if a Modification has been issued they are no longer empty
-      (a Modification changin nothing from the "empty" state is not issued).
-      */
-   if( const auto tmod = dynamic_cast< MCFBlockRngdMod * const >( mod ) ) {
-    switch( tmod->type() ) {
-     case( MCFBlockMod::eChgCost ):
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFC::ChgCost( tmod->rng().first , MCFB->get_C( tmod->rng().first ) );
-      else
-       MCFC::ChgCosts( MCFB->get_C().data() + tmod->rng().first , nullptr,
-		       tmod->rng().first , tmod->rng().second );
-      break;
+  return;
+  }
 
-     case( MCFBlockMod::eChgCaps ):
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFC::ChgUCap( tmod->rng().first , MCFB->get_U( tmod->rng().first ) );
-      else
-       MCFC::ChgUCaps( MCFB->get_U().data() + tmod->rng().first , nullptr,
-		       tmod->rng().first , tmod->rng().second );
-      break;
+ // MCFBlockRngdMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ /* Note: in the following we can assume that C, B and U are nonempty. This
+  * is because they can be empty only if they are so when the object is
+  * loaded. But if a Modification has been issued they are no longer empty (a
+  * Modification changin nothing from the "empty" state is not issued). */
 
-     case( MCFBlockMod::eChgDfct ):
-      if( tmod->rng().second == tmod->rng().first + 1 )
-       MCFC::ChgDfct( tmod->rng().first , MCFB->get_B( tmod->rng().first ) );
-      else
-       MCFC::ChgDfcts( MCFB->get_B().data() + tmod->rng().first , nullptr,
-		       tmod->rng().first , tmod->rng().second );
-      break;
+ if( auto tmod = dynamic_cast< const MCFBlockRngdMod * >( mod ) ) {
+  auto rng = tmod->rng();
 
-     case( MCFBlockMod::eOpenArc ):
-      for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
-       MCFC::OpenArc( arc++ );
-      break;
+  switch( tmod->type() ) {
+   case( MCFBlockMod::eChgCost ):
+    if( rng.second == rng.first + 1 ) {
+     if( ! MCFB->is_deleted( rng.first ) )
+      MCFC::ChgCost( rng.first , MCFB->get_C( rng.first ) );
+     }
+    else {
+     if( std::any_of( MCFB->get_C().data() + rng.first ,
+		      MCFB->get_C().data() + rng.second ,
+		      []( auto ci ) { return( std::isnan( ci ) ); } ) ) {
+      MCFBlock::Vec_CNumber NCost( MCFB->get_C().data() + rng.first ,
+				   MCFB->get_C().data() + rng.second );
+      for( auto & ci : NCost )
+       if( std::isnan( ci ) )
+	ci = 0;
 
-     case( MCFBlockMod::eCloseArc ):
-      for( auto arc = tmod->rng().first ; arc < tmod->rng().second ; )
-       MCFC::CloseArc( arc++ );
-      break;
-
-     case( MCFBlockMod::eAddArc ): {
-      auto arc = MCFC::AddArc( MCFB->get_SN( tmod->rng().first ) ,
-			       MCFB->get_EN( tmod->rng().first ) ,
-			       MCFB->get_U( tmod->rng().first ) ,
-			       MCFB->get_C( tmod->rng().first ) );
-      if( arc != tmod->rng().first )
-       throw( std::logic_error( "name mismatch in AddArc()" ) );
-      break;
+      MCFC::ChgCosts( NCost.data() , nullptr , rng.first , rng.second );
       }
-     case( MCFBlockMod::eRmvArc ):
-      MCFC::DelArc( tmod->rng().second - 1 );
-      break;
-
-     default:
-      throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
+     else
+      MCFC::ChgCosts( MCFB->get_C().data() + rng.first , nullptr ,
+		      rng.first , rng.second );
      }
+    return;
 
+   case( MCFBlockMod::eChgCaps ):
+    if( rng.second == rng.first + 1 ) {
+     if( ! MCFB->is_deleted( rng.first ) )
+      MCFC::ChgUCap( rng.first , MCFB->get_U( rng.first ) );
+     }
+    else
+     MCFC::ChgUCaps( MCFB->get_U().data() + rng.first , nullptr ,
+		     rng.first , rng.second );
+    return;
+
+   case( MCFBlockMod::eChgDfct ):
+    if( rng.second == rng.first + 1 )
+     MCFC::ChgDfct( rng.first , MCFB->get_B( rng.first ) );
+    else
+     MCFC::ChgDfcts( MCFB->get_B().data() + rng.first , nullptr ,
+		     rng.first , rng.second );
+    return;
+
+   case( MCFBlockMod::eOpenArc ):
+    for( ; rng.first < rng.second ; ++rng.first )
+     if( ( ! MCFB->is_deleted( rng.first ) ) &&
+	 ( ! MCFC::IsDeletedArc( rng.first ) ) )
+      MCFC::OpenArc( rng.first );
+    return;
+
+   case( MCFBlockMod::eCloseArc ):
+    for( ; rng.first < rng.second ; ++rng.first )
+     if( ( ! MCFB->is_deleted( rng.first ) ) &&
+	 ( ! MCFC::IsDeletedArc( rng.first ) ) )
+      MCFC::CloseArc( rng.first );
+    return;
+
+   case( MCFBlockMod::eAddArc ): {
+    auto ca = MCFB->get_C( rng.first );
+    auto arc = MCFC::AddArc( MCFB->get_SN( rng.first ) ,
+			     MCFB->get_EN( rng.first ) ,
+			     MCFB->get_U( rng.first ) ,
+			     std::isnan( ca ) ? 0 : ca );
+    if( arc != rng.first )
+     throw( std::logic_error( "name mismatch in AddArc()" ) );
     return;
     }
 
-   // MCFBlockSbstMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   if( const auto tmod = dynamic_cast< MCFBlockSbstMod * const >( mod ) ) {
-    switch( tmod->type() ) {
-     case( MCFBlockMod::eOpenArc ):
-      for( auto arc : tmod->nms() )
-       MCFC::OpenArc( arc );
-      return;
+   case( MCFBlockMod::eRmvArc ):
+    MCFC::DelArc( rng.second - 1 );
+    return;
 
-     case( MCFBlockMod::eCloseArc ):
-      for( auto arc : tmod->nms() )
-       MCFC::CloseArc( arc );
-      return;
-     }
+   default: throw( std::invalid_argument( "unknown MCFBlockRngdMod type" ) );
+   }
+  }
 
-    // have to InINF-terminate the vector of indices (damn!)
+ // MCFBlockSbstMod- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ if( auto tmod = dynamic_cast< const MCFBlockSbstMod * >( mod ) ) {
+  switch( tmod->type() ) {
+   case( MCFBlockMod::eOpenArc ):
+    for( auto arc : tmod->nms() )
+     if( ( ! MCFB->is_deleted( arc ) ) &&
+	 ( ! MCFC::IsDeletedArc( arc ) ) )
+      MCFC::OpenArc( arc );
+    return;
+
+   case( MCFBlockMod::eCloseArc ):
+    for( auto arc : tmod->nms() )
+     if( ( ! MCFB->is_deleted( arc ) ) &&
+	 ( ! MCFC::IsDeletedArc( arc ) ) )
+      MCFC::CloseArc( arc );
+    return;
+    }
+
+  // have to InINF-terminate the vector of indices (damn!)
+  // meanwhile, when appropriate remove the indices of deleted
+  // arcs for which the operations make no sense;
+                                                     ;
+  switch( tmod->type() ) {
+   case( MCFBlockMod::eChgCost ): {
+    MCFBlock::Subset nmsI;
+    nmsI.reserve( tmod->nms().size() + 1 );
+    MCFBlock::Vec_CNumber NCost;
+    NCost.reserve( tmod->nms().size() );
+    auto & C = MCFB->get_C();
+    for( auto i : tmod->nms() )
+     if( auto ci = C[ i ] ; ! std::isnan( ci ) ) {
+      NCost.push_back( ci );
+      nmsI.push_back( i );
+      }
+    nmsI.push_back( Inf< MCFBlock::Index >() );
+
+    MCFC::ChgCosts( NCost.data() , nmsI.data() );
+    return;
+    }
+
+   case( MCFBlockMod::eChgCaps ): {
+    MCFBlock::Subset nmsI;
+    nmsI.reserve( tmod->nms().size() + 1 );
+    MCFBlock::Vec_FNumber NCap;
+    NCap.reserve( tmod->nms().size() );
+    auto & C = MCFB->get_C();
+    auto & U = MCFB->get_U();
+    for( auto i : tmod->nms() )
+     if( ! std::isnan( C[ i ] ) ) {
+      NCap.push_back( U[ i ] );
+      nmsI.push_back( i );
+      }
+    nmsI.push_back( Inf< MCFBlock::Index >() );
+
+    MCFC::ChgUCaps( NCap.data() , nmsI.data() );
+    return;
+    }
+
+   case( MCFBlockMod::eChgDfct ): {
+    MCFBlock::Vec_FNumber NDfct( tmod->nms().size() );
     MCFBlock::Subset nmsI( tmod->nms().size() + 1 );
     *copy( tmod->nms().begin() , tmod->nms().end() , nmsI.begin() ) =
-                                                       Inf<MCFBlock::Index>();
-    switch( tmod->type() ) {
-     case( MCFBlockMod::eChgCost ): {
-      MCFBlock::Vec_CNumber NCost( tmod->nms().size() );
-      auto C = MCFB->get_C();
-      for( MCFBlock::Index i = 0 ; i < NCost.size() ; i++ )
-       NCost[ i ] = C[ nmsI[ i ] ];
+                                                   Inf< MCFBlock::Index >();
+    auto B = MCFB->get_B();
+    for( MCFBlock::Index i = 0 ; i < NDfct.size() ; i++ )
+     NDfct[ i ] = B[ nmsI[ i ] ];
 
-      MCFC::ChgCosts( NCost.data() , nmsI.data() );
-      break;
-      }
-
-     case( MCFBlockMod::eChgCaps ): {
-      MCFBlock::Vec_FNumber NCap( tmod->nms().size() );
-      auto U = MCFB->get_U();
-      for( MCFBlock::Index i = 0 ; i < NCap.size() ; i++ )
-       NCap[ i ] = U[ nmsI[ i ] ];
-
-      MCFC::ChgUCaps( NCap.data() , nmsI.data() );
-      break;
-      }
-
-     case( MCFBlockMod::eChgDfct ): {
-      MCFBlock::Vec_FNumber NDfct( tmod->nms().size() );
-      auto B = MCFB->get_B();
-      for( MCFBlock::Index i = 0 ; i < NDfct.size() ; i++ )
-       NDfct[ i ] = B[ nmsI[ i ] ];
-
-      MCFC::ChgDfcts( NDfct.data() , nmsI.data() );
-      break;
-      }
-
-     default:
-      throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
-     }
-
+    MCFC::ChgDfcts( NDfct.data() , nmsI.data() );
     return;
     }
 
-   // any remaining Modification is plainly ignored, since it must be an
-   // "abstract" Modification, which this Solver does not need to look at
+   default: throw( std::invalid_argument( "unknown MCFBlockSbstMod type" ) );
+   }
+  }
 
-   };  // end( guts_of_poM ) - - - - - - - - - - - - - - - - - - - - - - - - -
-       //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ // any remaining Modification is plainly ignored, since it must be an
+ // "abstract" Modification, which this Solver does not need to look at
 
-  // finally, call the "guts of" - - - - - - - - - - - - - - - - - - - - - - -
-
-  guts_of_poM( mod.get() );  // now the actual call
-
-  pop_front();   // now the Modification is processed: remove it
-  
-  }  // end( while( there are Modification ) )
- }  // end( MCFSolver::process_outstanding_Modification )
+ }  // end( guts_of_poM )
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/

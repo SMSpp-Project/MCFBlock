@@ -41,31 +41,22 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # This creates an ENABLE_TESTING option (default: ON) and enables the testing
 # using the ctest executable.
 # See: https://cmake.org/cmake/help/latest/manual/ctest.1.html
-include(CTest)
+#include(CTest)
 
 # Sets the default build type (if none was specified).
 # See: https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html
 include(BuildType)
 
-# This will set an user-settable cache variable.
-# The value of the variable is propagated to consuming libraries via the
-# *Config.cmake file.
-set(MCFBlock_SOLVER "relax" CACHE STRING "Solver used by ${modName}.")
-set_property(CACHE MCFBlock_SOLVER PROPERTY STRINGS relax cplex mfsmx sptree)
-
-if (MCFBlock_SOLVER STREQUAL "relax")
-    message(STATUS "${modName}: using RelaxIV solver")
-    add_compile_definitions(HAVE_RELAX)
-elseif (MCFBlock_SOLVER STREQUAL "cplex")
-    message(STATUS "${modName}: using CPLEX solver")
-    add_compile_definitions(HAVE_CPLEX)
-elseif (MCFBlock_SOLVER STREQUAL "mfsmx")
-    message(STATUS "${modName}: using Simplex solver")
-    add_compile_definitions(HAVE_MFSMX)
-elseif (MCFBlock_SOLVER STREQUAL "sptree")
-    message(STATUS "${modName}: using Shortest Path Tree solver")
-    add_compile_definitions(HAVE_SPTRE)
+# uncomment all of the following for which the corresponding
+# MCFSolver< :MCFClass > must be defined
+#add_compile_definitions(HAVE_RELAX)
+add_compile_definitions(HAVE_CPLEX)
+if (NOT MCFClass_USE_CPLEX)
+    message(FATAL_ERROR "HAVE_CPLEX defined but MCFCplex was not built")
 endif ()
+add_compile_definitions(HAVE_MFSMX)
+#add_compile_definitions(HAVE_SPTRE)
+
 
 # ----- Requirements -------------------------------------------------------- #
 # If it's not being called by the umbrella, we need to
@@ -75,9 +66,9 @@ if (NOT hasParent)
     find_package(MCFClass REQUIRED)
 endif ()
 
-if (MCFBlock_SOLVER STREQUAL "cplex" AND NOT MCFClass_USE_CPLEX)
-    message(FATAL_ERROR "${modName} solver is \"CPLEX\" but MCFCplex was not built")
-endif ()
+#if (MCFBlock_SOLVER STREQUAL "cplex" AND NOT MCFClass_USE_CPLEX)
+#    message(FATAL_ERROR "${modName} solver is \"CPLEX\" but MCFCplex was not built")
+#endif ()
 
 # ----- Configuration header ------------------------------------------------ #
 # This will generate a *Config.h header in the build directory.
