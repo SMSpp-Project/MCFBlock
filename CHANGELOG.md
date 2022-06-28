@@ -13,11 +13,25 @@ Mainly a fix release after much improved testing
 
 ### Added
 
+- added support for RelaxIV
+
 - added un\_ModBlock and get\_objective_value()
 
 - added MCFBlock::set\_*( Subset )
 
 ### Changed
+
+- completely reworked arc deletion in the middle: the arc is no longer
+  immediately removed from the existing flow conservation constraints;
+  this only happens (if necessary) when a new arc is added in its place.
+  this required several changes in the logic (arc being deleted in now
+  C[ arc ] == NaN) that brought several changes, hopefully leading to
+  less work by not changing stuff related to deleted arcs (which is
+  useless)
+
+- improved tester
+
+- completely reworked selection of :MCFClass in MCFSolver
 
 - adapted to new channel management
 
@@ -26,6 +40,21 @@ Mainly a fix release after much improved testing
 - reworked signature of get\_* and set\_* methods in MCFBlock
 
 ### Fixed 
+
+- fixed another stoopid bug in MCFBlock::open_arcs( Range )
+
+- caught a logic error: a user may try to un-fix a variable corresponding
+  to a deleted arc, which would succeed in the abstract representation but
+  not in the physical one: this is now found out and exception is thrown
+
+- fixed issues about open/close-ing deleted arcs: both in MCFBlock and
+  MCFSolver, since an arc that is currently not deleted in MCFBlock can
+  still be "seen" as deleted in a MCFSolver if the Modification re-adding
+  it has not been processed yet
+
+- fixed blunder in new logic for open/close_arc( Range )
+
+- fixed minor (but significant) bug
 
 - fixed stupid bug in set\_*( range )
 
