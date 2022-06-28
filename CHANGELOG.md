@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2022-06-28
+
+Mainly a fix release after much improved testing
+
+### Added
+
+- added un\_ModBlock and get\_objective_value()
+
+- added MCFBlock::set\_*( Subset )
+
+### Changed
+
+- adapted to new channel management
+
+- adapted to new load/print interface
+
+- reworked signature of get\_* and set\_* methods in MCFBlock
+
+### Fixed 
+
+- fixed stupid bug in set\_*( range )
+
+- corrected blunder in map\_forward\_Modification
+
+- added proper lock() and unlock() in MCFSolver
+
+- fixed flaw in MCFSolution
+
 ## [0.4.1] - 2021-12-07
 
 Minor point release to avoid the master branch to become too stale:
@@ -66,7 +94,8 @@ Minor point release to avoid the master branch to become too stale:
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.1...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.2...develop
+[0.4.2]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.1...0.4.2
 [0.4.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.0...0.4.1
 [0.4.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.3.1...0.4.0
 [0.3.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.3.0...0.3.1
