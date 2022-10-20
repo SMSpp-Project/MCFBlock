@@ -760,15 +760,32 @@ void MCFBlock::generate_objective( Configuration *objc )
 /*--------------------- Methods for checking the Block ---------------------*/
 /*--------------------------------------------------------------------------*/
 
+template< template< class ... > class C , class T >
+static std::enable_if_t< std::is_base_of_v< RowConstraint , T > , bool >
+is_feasible( C< T > & constraints , double tolerance ) {
+ for( auto & constraint : constraints ) {
+  if( constraint.is_relaxed() )
+   continue;
+  if( auto ret = constraint.compute() ;
+      ( ret <= Constraint::kUnEval ) || ( ret > Constraint::kOK ) )
+   return( false );
+  if( constraint.rel_viol() > tolerance )
+   return( false );
+  }
+ return( true );
+ }
+
+/*--------------------------------------------------------------------------*/
+
 bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
 {
  if( useabstract && ( AR & HasFlw ) ) {
   // do it using the abstract representation, if possible - - - - - - - - - -
 
-  if( ! Constraint::is_feasible( E , feps ) )   // static part
+  if( ! ::is_feasible( E , feps ) )   // static part
    return( false );
 
-  if( ! Constraint::is_feasible( dE , feps ) )  // dynamic part
+  if( ! ::is_feasible( dE , feps ) )  // dynamic part
    return( false );
   }
  else {
@@ -821,7 +838,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
      return( false );
     }
    else
-    if( ! Constraint::is_feasible( UB , feps ) )
+    if( ! ::is_feasible( UB , feps ) )
      return( false );
    }
 
@@ -832,7 +849,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
      return( false );
     }
    else
-    if( ! Constraint::is_feasible( dUB , feps ) )
+    if( ! ::is_feasible( dUB , feps ) )
      return( false );
    }
   }
