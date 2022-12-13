@@ -765,10 +765,10 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
  if( useabstract && ( AR & HasFlw ) ) {
   // do it using the abstract representation, if possible - - - - - - - - - -
 
-  if( ! Constraint::is_feasible( E , feps ) )   // static part
+  if( ! RowConstraint::is_feasible( E , feps ) )   // static part
    return( false );
 
-  if( ! Constraint::is_feasible( dE , feps ) )  // dynamic part
+  if( ! RowConstraint::is_feasible( dE , feps ) )  // dynamic part
    return( false );
   }
  else {
@@ -821,7 +821,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
      return( false );
     }
    else
-    if( ! Constraint::is_feasible( UB , feps ) )
+    if( ! RowConstraint::is_feasible( UB , feps ) )
      return( false );
    }
 
@@ -832,7 +832,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
      return( false );
     }
    else
-    if( ! Constraint::is_feasible( dUB , feps ) )
+    if( ! RowConstraint::is_feasible( dUB , feps ) )
      return( false );
    }
   }
