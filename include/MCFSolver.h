@@ -750,7 +750,7 @@ public:
   * that if arcs/nodes are added/deleted after the NBModification is issued
   * but before it is processed, then the number of nodes/arcs at the moment
   * in which the NBModification is processed is different from that at the
-  * moment in which is is issued, which may break the "naming convention"
+  * moment in which is issued, which may break the "naming convention"
   * (because the name of, say, a newly created arc depends on the current
   * state and/or number of the arcs).
   *
