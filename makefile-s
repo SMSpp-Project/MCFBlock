@@ -1,9 +1,9 @@
 ##############################################################################
 ################################ makefile-s ##################################
 ##############################################################################
-#									                                         #
+#                                                                            #
 #   makefile of MCFBlock / MCFSolver and its dependencies, excluding SMS++   #
-#									                                         #
+#                                                                            #
 #   The makefile defines internally all external libraries required by       #
 #   MCFBlock / MCFSolver, excluding the SMS++ core ones whose symbols are    #
 #   assumed to have been defined already (typically by including             #
@@ -25,7 +25,7 @@
 #                              Antonio Frangioni                             #
 #                         Dipartimento di Informatica                        #
 #                             Universita' di Pisa                            #
-#									                                         #
+#                                                                            #
 ##############################################################################
 
 # define & include the necessary modules- - - - - - - - - - - - - - - - - - -
