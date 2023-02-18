@@ -1,9 +1,9 @@
 ##############################################################################
 ################################ makefile-c ##################################
 ##############################################################################
-#									     #
+#									                                         #
 #   complete makefile of MCFBlock / MCFSolver                                #
-#									     #
+#									                                         #
 #   The makefile defines internally all external libraries (comprised the    #
 #   SMS++ one) required by MCFBlock / MCFSolver. Accordingly, all necessary  #
 #   OBJ, H, -I directives, external libraries + -L<libdirs> are added to the #
@@ -21,7 +21,7 @@
 #                              Antonio Frangioni                             #
 #                         Dipartimento di Informatica                        #
 #                             Universita' di Pisa                            #
-#									     #
+#									                                         #
 ##############################################################################
 
 # define & include the necessary modules- - - - - - - - - - - - - - - - - - -
