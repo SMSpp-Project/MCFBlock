@@ -1126,7 +1126,7 @@ bool MCFBlock::is_feasible( bool useabstract , Configuration *fsbc )
  return( flow_feasible( eps , useabstract ) &&
 	 bound_feasible( eps , useabstract ) );
 
- }  //  end( MCFBlock::is_feasible )
+ }  // end( MCFBlock::is_feasible )
 
 /*--------------------------------------------------------------------------*/
 
