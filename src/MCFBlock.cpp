@@ -2837,6 +2837,9 @@ void MCFBlock::chg_dfct( FNumber NDfct , Index nde ,
  if( nde >= get_NNodes() )
   throw( std::invalid_argument( "invalid node name" ) );
 
+ if( B.empty() && !NDfct )
+  return;
+
  if( B.empty() && NDfct )
   B.assign( get_NNodes() , 0 );
 
