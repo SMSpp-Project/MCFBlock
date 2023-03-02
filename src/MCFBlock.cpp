@@ -2611,8 +2611,12 @@ void MCFBlock::chg_ucap( FNumber NCap , Index arc ,
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
- if( U.empty() && ( NCap < Inf<FNumber>() ) )
-  U.assign( get_MaxNArcs() , Inf<FNumber>() );
+ if( U.empty() ) {
+  if( NCap < Inf< FNumber >() )
+   return;
+
+  U.assign( get_MaxNArcs() , Inf< FNumber >() );
+  }
 
  if( U[ arc ] == NCap )
   return;
@@ -2837,11 +2841,12 @@ void MCFBlock::chg_dfct( FNumber NDfct , Index nde ,
  if( nde >= get_NNodes() )
   throw( std::invalid_argument( "invalid node name" ) );
 
- if( B.empty() && !NDfct )
-  return;
+ if( B.empty() ) {
+  if( ! NDfct )
+   return;
 
- if( B.empty() && NDfct )
   B.assign( get_NNodes() , 0 );
+  }
 
  if( B[ nde ] == NDfct )
   return;
