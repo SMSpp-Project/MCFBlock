@@ -4,13 +4,7 @@
 #                                                                            #
 #   makefile of dmx2nc4                                                      #
 #                                                                            #
-#                                VERSION 1.00                                #
-#                               25 - 10 - 2020                               #
-#                                                                            #
-#                              Implementation by:                            #
-#                                                                            #
 #                              Antonio Frangioni                             #
-#                           Operations Research Group                        #
 #                          Dipartimento di Informatica                       #
 #                              Universita' di Pisa                           #
 #                                                                            #
