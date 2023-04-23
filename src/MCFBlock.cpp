@@ -3639,7 +3639,7 @@ void MCFBlock::compute_conditional_bounds( void )
 
   if( *tC < 0 ) {
    if( *tU == Inf< FNumber >() ) {
-    f_cond_lower = - Inf< double >();
+    f_cond_lower = -Inf< double >();
     break;
     }
    else
@@ -3654,11 +3654,11 @@ void MCFBlock::compute_conditional_bounds( void )
     f_cond_upper += *tC * (*tU);
    }
 
- if( f_cond_lower > - Inf< double >() ) {
+ if( f_cond_lower > -Inf< double >() ) {
   for( ; tC < C.end() ; ++tC , ++tU )
    if( *tC < 0 ) {
     if( *tU == Inf< FNumber >() ) {
-     f_cond_lower = - Inf< double >();
+     f_cond_lower = -Inf< double >();
      break;
      }
     else
