@@ -259,7 +259,7 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
   }
 
  if( std::any_of( pU.begin() , pU.begin() + m ,
-		  []( c_FNumber ui ) { return( ui < Inf<FNumber>() ); } ) ) {
+		  []( c_FNumber ui ) { return( ui < Inf< FNumber >() ); } ) ) {
   U.resize( MaxNArcs );
   std::copy( pU.begin() , pU.begin() + m , U.begin() );
   }
@@ -328,7 +328,7 @@ void MCFBlock::load( std::istream & input , char frmt )
  SN.resize( NArcs );
  EN.resize( NArcs );
  C.assign( NArcs , 0 );
- U.assign( NArcs , Inf<FNumber>() );
+ U.assign( NArcs , Inf< FNumber >() );
  B.assign( NNodes , 0 );
 
  NStaticNodes = MaxNNodes = NNodes;
@@ -415,7 +415,7 @@ void MCFBlock::load( std::istream & input , char frmt )
   B.clear();
 
  if( std::all_of( U.begin() , U.end() ,
-		  []( c_FNumber ui ) { return( ui == Inf<FNumber>() ); } ) )
+		  []( c_FNumber ui ) { return( ui == Inf< FNumber >() ); } ) )
   U.clear();
  
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -516,7 +516,7 @@ void MCFBlock::deserialize( const netCDF::NcGroup & group )
   U.resize( MaxNArcs );
   cap.getVar( U.data() );
   if( std::all_of( U.begin() , U.begin() + NArcs ,
-		   []( c_FNumber ui ) { return( ui == Inf<FNumber>() ); } ) )
+		   []( c_FNumber ui ) { return( ui == Inf< FNumber >() ); } ) )
    U.clear();
   }
 
@@ -844,7 +844,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   for( ; i < get_NStaticArcs() ; ++i ) {
    c_FNumber Ui = get_U( i );
    c_FNumber xi = x[ i ].get_value();
-   if( Ui >= Inf<FNumber>() ) {
+   if( Ui >= Inf< FNumber >() ) {
     if( xi < - feps )
      return( false );
     }
@@ -862,7 +862,7 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
    for(  ; i < get_NArcs() ; ++i ) {
     c_FNumber Ui = get_U( i );
     c_FNumber xi = (*(dxi++)).get_value();
-    if( Ui >= Inf<FNumber>() ) {
+    if( Ui >= Inf< FNumber >() ) {
      if( xi < - feps )
       return( false );
      }
@@ -1091,7 +1091,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
       RCi /= C[ i ];
 
      c_FNumber Ui = get_U( i );
-     if( Ui >= Inf<FNumber>() ) {
+     if( Ui >= Inf< FNumber >() ) {
       if( ( dxiv > feps ) && ( RCi < - ceps ) )
        return( false );
       }
@@ -3246,7 +3246,7 @@ MCFBlock::Index MCFBlock::add_arc( Index sn , Index en ,
    if( AR & HasObj )
     get_lfo()->add_variable( nx , cst , ampar );
 
-   if( ( cap < Inf<FNumber>() ) && ( AR & HasFlw ) && ( ! ( AR & HasBnd ) ) )
+   if( ( cap < Inf< FNumber >() ) && ( AR & HasFlw ) && ( ! ( AR & HasBnd ) ) )
     throw( std::logic_error( "cannot set finite capacity" ) );
 
    if( AR & HasBnd ) {  // construct new arc capacity constraint
@@ -3638,27 +3638,27 @@ void MCFBlock::compute_conditional_bounds( void )
    continue;
 
   if( *tC < 0 ) {
-   if( *tU == Inf<FNumber>() ) {
-    f_cond_lower = - Inf<double>();
+   if( *tU == Inf< FNumber >() ) {
+    f_cond_lower = - Inf< double >();
     break;
     }
    else
     f_cond_lower += *tC * (*tU);
    }
   else
-   if( *tU == Inf<FNumber>() ) {
-    f_cond_upper = Inf<double>();
+   if( *tU == Inf< FNumber >() ) {
+    f_cond_upper = Inf< double >();
     break;
     }
    else
     f_cond_upper += *tC * (*tU);
    }
 
- if( f_cond_lower > - Inf<double>() ) {
+ if( f_cond_lower > - Inf< double >() ) {
   for( ; tC < C.end() ; ++tC , ++tU )
    if( *tC < 0 ) {
-    if( *tU == Inf<FNumber>() ) {
-     f_cond_lower = - Inf<double>();
+    if( *tU == Inf< FNumber >() ) {
+     f_cond_lower = - Inf< double >();
      break;
      }
     else
@@ -3666,11 +3666,11 @@ void MCFBlock::compute_conditional_bounds( void )
     }
   }
 
- if( f_cond_upper < Inf<double>() ) {
+ if( f_cond_upper < Inf< double >() ) {
   for( ; tC < C.end() ; ++tC , ++tU )
    if( *tC > 0 ) {
-    if( *tU == Inf<FNumber>() ) {
-     f_cond_upper = Inf<double>();
+    if( *tU == Inf< FNumber >() ) {
+     f_cond_upper = Inf< double >();
      break;
      }
     else
