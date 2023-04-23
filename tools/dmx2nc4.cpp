@@ -11,12 +11,7 @@
  * arcs (remember that all nodes and arcs loaded out of a DIMACS file are
  * treated as static ones).
  *
- * \version 0.10
- *
- * \date 11 - 04 - 2019
- *
  * \author Antonio Frangioni \n
- *         Operations Research Group \n
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
