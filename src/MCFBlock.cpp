@@ -389,7 +389,7 @@ void MCFBlock::load( std::istream & input , char frmt )
      throw( std::invalid_argument( "lower bound > upper bound" ) );
 
     if( LB > 0 ) {
-     if( U[ i ] < Inf<MCFBlock::FNumber>() )
+     if( U[ i ] < Inf< MCFBlock::FNumber >() )
       U[ i ] -= LB;
      B[ SN[ i ] - 1 ] += LB;
      B[ EN[ i ] - 1 ] -= LB;
@@ -996,7 +996,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
       RCi /= Ci;
      c_FNumber xiv = x[ i ].get_value();
      c_FNumber UBi = UB[ i ].get_rhs();
-     if( UBi >= Inf<RowConstraint::RHSValue>() ) {
+     if( UBi >= Inf< RowConstraint::RHSValue >() ) {
       if( ( xiv > feps ) && ( RCi < - ceps ) )
        return( false );
       }

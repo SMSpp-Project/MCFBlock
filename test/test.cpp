@@ -763,7 +763,7 @@ int main( int argc , char **argv )
      }
     else {
      Subset nms( GenerateRand( m , tochange ) );
-     nms.push_back( OPTtypes_di_unipi_it::Inf<MCFClass::Index>() );
+     nms.push_back( OPTtypes_di_unipi_it::Inf< MCFClass::Index >() );
 
      mcf->ChgCosts( newcsts.data() , nms.data() );
      nms.resize( tochange );
@@ -859,7 +859,7 @@ int main( int argc , char **argv )
      for( auto i : nms )
       *(ncit++) = mcf->MCFUCap( i ) * rndfctr();
 
-     nms.push_back( OPTtypes_di_unipi_it::Inf<MCFClass::Index>() );
+     nms.push_back( OPTtypes_di_unipi_it::Inf< MCFClass::Index >() );
      mcf->ChgUCaps( newcaps.data() , nms.data() );
      nms.resize( tochange );
 
