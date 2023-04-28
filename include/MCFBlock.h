@@ -53,7 +53,7 @@ namespace SMSpp_di_unipi_it
 
  using p_MCFBlock = MCFBlock *;  ///< a pointer to MCFBlock
 
- using Vec_MCFBlock = std::vector<p_MCFBlock>;
+ using Vec_MCFBlock = std::vector< p_MCFBlock>;
  ///< a vector of pointers to MCFBlock
 
  using Vec_MCFBlock_it = Vec_MCFBlock::iterator;
@@ -236,7 +236,7 @@ public:
  typedef double FNumber;                     ///< type of arc flow / deficit
  typedef const FNumber c_FNumber;            ///< a read-only FNumber
 
- typedef std::vector<FNumber> Vec_FNumber;   ///< a vector of FNumber
+ typedef std::vector< FNumber > Vec_FNumber; ///< a vector of FNumber
  typedef const Vec_FNumber c_Vec_FNumber;    ///< a const vector of FNumber
 
  typedef Vec_FNumber::iterator Vec_FNumber_it;   ///< iterator in Vec_FNumber
@@ -248,8 +248,8 @@ public:
  typedef double CNumber;                     ///< type of arc cost / potential
  typedef const CNumber c_CNumber;            ///< a read-only CNumber
 
- typedef std::vector<CNumber> Vec_CNumber;   ///< a vector of CNumber
- typedef const Vec_CNumber c_Vec_CNumber;    ///< a const vector of CNumber
+ typedef std::vector< CNumber > Vec_CNumber;  ///< a vector of CNumber
+ typedef const Vec_CNumber c_Vec_CNumber;     ///< a const vector of CNumber
 
  typedef Vec_CNumber::iterator Vec_CNumber_it;   ///< iterator in Vec_CNumber
  typedef Vec_CNumber::const_iterator c_Vec_CNumber_it;
@@ -261,10 +261,10 @@ public:
  /**< type of the objective function: has to hold sums of products of
     FNumber(s) by CNumber(s) */
 
- typedef const FONumber c_FONumber;            ///< a read-only FONumber
+ typedef const FONumber c_FONumber;             ///< a read-only FONumber
 
- typedef std::vector<FONumber> Vec_FONumber;   ///< a vector of FONumber
- typedef const Vec_FONumber c_Vec_FONumber;    ///< a const vector of FONumber
+ typedef std::vector< FONumber > Vec_FONumber;  ///< a vector of FONumber
+ typedef const Vec_FONumber c_Vec_FONumber;     ///< a const vector of FONumber
 
 /** @} ---------------------------------------------------------------------*/
 /*------------------------------- FRIENDS ----------------------------------*/
@@ -541,13 +541,13 @@ public:
   *
   * - all the RHS are +Infty;
   *
-  * - either stcc is not nullptr and it is a SimpleConfiguration<int>;
+  * - either stcc is not nullptr and it is a SimpleConfiguration< int >;
   *
   * - or f_BlockConfig is not nullptr,
   *   f_BlockConfig->f_static_constraints_Configuration is not nullptr,
-  *   and it is a SimpleConfiguration<int>;
+  *   and it is a SimpleConfiguration< int >;
   *
-  * - the f_value of the SimpleConfiguration<int> is != 0
+  * - the f_value of the SimpleConfiguration< int > is != 0
   *
   * the bound constraints are not implemented. Note that this *makes it
   * impossible to change any RHS*; the lower bound of 0 should not be changed
@@ -579,13 +579,13 @@ public:
   * to be made about it, i.e., whether it is represented as a "sparse"
   * LinearFunction or a "dense" one. This is governed by objc: if
   *
-  * - either objc is not nullptr and it is a SimpleConfiguration<double>;
+  * - either objc is not nullptr and it is a SimpleConfiguration< double >;
   *
   * - or f_BlockConfig is not nullptr,
   *   f_BlockConfig->f_objective_Configuration is not nullptr,
-  *   and it is a SimpleConfiguration<double>;
+  *   and it is a SimpleConfiguration< double >;
   *
-  * then the f_value of the SimpleConfiguration<int> is taken as the "sparsity
+  * then the f_value of the SimpleConfiguration< int > is taken as the "sparsity
   * parameter" (sprs) of the objective function; otherwise, sprs == 0. The
   * parameter is used as follows: if the number of nonzero arc cost
   * coefficients (at the time in which the method is called) is >=
@@ -1040,12 +1040,12 @@ public:
   * satisfaction of both flow conservation constraint and flow upper/lower
   * bounds. This value is to be found as:
   *
-  * - if fsbc is not nullptr and it is a SimpleConfiguration<FNumber>, then it
+  * - if fsbc is not nullptr and it is a SimpleConfiguration< FNumber >, then it
   *   if fsbc->f_value;
   *
   * - otherwise, if f_BlockConfig is not nullptr,
   *   f_BlockConfig->f_is_feasible_Configuration is not nullptr and it
-  *   is a SimpleConfiguration<FNumber>, then it is
+  *   is a SimpleConfiguration< FNumber >, then it is
   *   f_BlockConfig->f_is_feasible_Configuration->f_value;
   *
   * - otherwise, it is 0. */
@@ -1070,17 +1070,17 @@ public:
   * complementary_slackness(). These are found as follows:
   *
   * - if optc is not nullptr and it is a 
-  *   SimpleConfiguration< std::pair<CNumber,FNumber> >, then
+  *   SimpleConfiguration< std::pair< CNumber , FNumber > >, then
   *   ceps = optc->f_value.first and feps = optc->f_value.second;
   *
-  * - if optc is not nullptr and it is a SimpleConfiguration<CNumber>, then
+  * - if optc is not nullptr and it is a SimpleConfiguration< CNumber >, then
   *   ceps = optc->f_value, while feps is taken out of
   *   f_BlockConfig->f_is_feasible_Configuration as in is_feasible();
   *
   * - otherwise, if f_BlockConfig is not nullptr, then feps is taken
   *   out of f_BlockConfig->f_is_feasible_Configuration, while ceps
   *   is taken out of f_BlockConfig->f_is_optimal_Configuration
-  *   assuming the latter is a SimpleConfiguration<CNumber>;
+  *   assuming the latter is a SimpleConfiguration< CNumber >;
   *
   * - otherwise, ceps == feps == 0. */
  
@@ -1110,7 +1110,7 @@ public:
   * parameter r3bc is useless (has to be nullptr). The parameter solc decides
   * which part of the solution is mapped:
   *
-  * - if solc != nullptr and it is a SimpleConfiguration<int>, then it
+  * - if solc != nullptr and it is a SimpleConfiguration< int >, then it
   *   depends on solc->f_value:
   *
   *   = 1 means "only map the primal solution"
@@ -1121,7 +1121,7 @@ public:
   *
   * - if solc == nullptr, f_BlockConfig != nullptr,
   *   f_BlockConfig->f_solution_Configuration != nullptr and it
-  *   is a SimpleConfiguration<int>, then it depends on its f_value as in
+  *   is a SimpleConfiguration< int >, then it depends on its f_value as in
   *   the previous case;
   *
   * - otherwise, everything (both the primal and the dual solution) is
@@ -1145,7 +1145,7 @@ public:
   * parameter r3bc is useless (has to be nullptr). The parameter solc decides
   * which part of the solution is mapped:
   *
-  * - if solc != nullptr and it is a SimpleConfiguration<int>, then it
+  * - if solc != nullptr and it is a SimpleConfiguration< int >, then it
   *   depends on solc->f_value:
   *
   *   = 1 means "only map the primal solution"
@@ -1156,7 +1156,7 @@ public:
   *
   * - if solc == nullptr, f_BlockConfig != nullptr,
   *   f_BlockConfig->f_is_solution_Configuration != nullptr and it
-  *   is a SimpleConfiguration<int>, then it depends on its f_value as in
+  *   is a SimpleConfiguration< int >, then it depends on its f_value as in
   *   the previous case;
   *
   * - otherwise, everything (both the primal and the dual solution) is
@@ -2089,13 +2089,13 @@ public:
  double f_cond_lower;            ///< conditional lower bound, can be -INF
  double f_cond_upper;            ///< conditional upper bound, can be +INF
  
- std::vector<ColVariable> x;     ///< the static flow variables
- std::vector<FRowConstraint> E;  ///< the static flow conservation constrs.
- std::vector<LB0Constraint> UB;  ///< the static bound constraints
+ std::vector< ColVariable > x;     ///< the static flow variables
+ std::vector< FRowConstraint> E;   ///< the static flow conservation constrs.
+ std::vector< LB0Constraint > UB;  ///< the static bound constraints
  
- std::list<ColVariable> dx;      ///< the dynamic flow variables
- std::list<FRowConstraint> dE;   ///< the dynamic flow conservation constrs.
- std::list<LB0Constraint> dUB;   ///< the dynamic bound constraints
+ std::list< ColVariable > dx;      ///< the dynamic flow variables
+ std::list< FRowConstraint > dE;   ///< the dynamic flow conservation constrs.
+ std::list< LB0Constraint > dUB;   ///< the dynamic bound constraints
 
  FRealObjective c;               ///< the (linear) objective function
 
@@ -2215,9 +2215,9 @@ public:
 
  LinearFunction * get_lfo( void ) {
   #ifdef NDEBUG
-   return( static_cast<LinearFunction *>( c.get_function() ) );
+   return( static_cast< LinearFunction * >( c.get_function() ) );
   #else
-   auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
+   auto lfo = dynamic_cast< LinearFunction * >( c.get_function() );
    assert( lfo );
    return( lfo );
   #endif

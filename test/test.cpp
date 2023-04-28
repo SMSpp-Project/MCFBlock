@@ -123,8 +123,8 @@ using namespace MCFClass_di_unipi_it;
 using namespace SMSpp_di_unipi_it;
 
 // FIXME: Avoid these declarations
-template<> const std::vector<int> MCFSolver<MCFC>::Solver_2_MCFClass_int;
-template<> const std::vector<int> MCFSolver<MCFC>::Solver_2_MCFClass_dbl;
+template<> const std::vector< int > MCFSolver< MCFC >::Solver_2_MCFClass_int;
+template<> const std::vector< int > MCFSolver< MCFC >::Solver_2_MCFClass_dbl;
 
 /*--------------------------------------------------------------------------*/
 /*------------------------- TYPES & CONSTEXPRS -----------------------------*/
@@ -180,7 +180,7 @@ FNumber MaxU = 0;              // max absolute value of capacities / deficits
 /*------------------------------ FUNCTIONS ---------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-template<class T>
+template< class T >
 static void Str2Sthg( const char* const str , T &sthg )
 {
  istringstream( str ) >> sthg;
@@ -567,7 +567,7 @@ int main( int argc , char **argv )
  // if so instructed, construct the R3 MCFBlock = copy- - - - - - - - - - - -
 
  if( mode & 3u ) {
-  dMCFB = dynamic_cast<MCFBlock *>( oMCFB->get_R3_Block() );
+  dMCFB = dynamic_cast< MCFBlock * >( oMCFB->get_R3_Block() );
   assert( dMCFB );           // excess of caution (we know it is)
 
   if( ( mode & 8u ) && dMCFB ) {
