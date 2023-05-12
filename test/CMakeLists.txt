@@ -18,7 +18,7 @@
 # See: https://cmake.org/cmake/help/latest/policy/CMP0110.html
 if (POLICY CMP0110)
     cmake_policy(SET CMP0110 NEW)
-endif()
+endif ()
 
 # ----- MCFBlock_test ------------------------------------------------------- #
 add_executable(MCFBlock_test test.cpp)
