@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4] - 2023-05-23
+
 ### Changed
 
 - now using general RowConstraint::is_feasible()
@@ -49,7 +51,7 @@ Mainly a fix release after much improved testing
 
 - reworked signature of get\_* and set\_* methods in MCFBlock
 
-### Fixed 
+### Fixed
 
 - fixed another stoopid bug in MCFBlock::open_arcs( Range )
 
@@ -86,13 +88,13 @@ Minor point release to avoid the master branch to become too stale:
 
 ## [0.4.0] - 2021-02-05
 
-### Added 
+### Added
 
 - Managed vectors in Configurations.
 
 - Added some preprocess.
 
-### Fixed 
+### Fixed
 
 - Using proper eps in var.is_feasible.
 
@@ -133,7 +135,8 @@ Minor point release to avoid the master branch to become too stale:
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.3...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.4...develop
+[0.4.4]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.3...0.4.4
 [0.4.3]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.2...0.4.3
 [0.4.2]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.1...0.4.2
 [0.4.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.0...0.4.1

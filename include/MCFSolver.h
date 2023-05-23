@@ -15,7 +15,7 @@
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
- * Copyright &copy; by Antonio Frangioni
+ * \copyright &copy; by Antonio Frangioni
  */
 /*--------------------------------------------------------------------------*/
 /*----------------------------- DEFINITIONS --------------------------------*/
@@ -419,7 +419,7 @@ public:
   * the same format as MCFBlock::get_Solution() and
   * MCFBlock::map[forward/back]_Modification(), the Configuration *solc can
   * be used to "partly" save it. In particular, if solc != nullptr, it is
-  * a SimpleConfiguration<int>, and solc->f_value == 2, then *nothing is
+  * a SimpleConfiguration< int >, and solc->f_value == 2, then *nothing is
   * done*, since the Configuration is meant to say "only save/map the dual
   * solution". In all other cases, the flow solution is saved. */
 
@@ -428,7 +428,7 @@ public:
   if( ! f_Block )  // no [MCF]Block to write to
    return;         // cowardly and silently return
 
-  auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
+  auto tsolc = dynamic_cast< SimpleConfiguration< int > * >( solc );
   if( tsolc && ( tsolc->f_value == 2 ) )
    return;
 
@@ -446,7 +446,7 @@ public:
   * keep the same format as MCFBlock::get_Solution() and
   * MCFBlock::map[forward/back]_Modification(), the Configuration *solc can
   * be used to "partly" save it. In particular, if solc != nullptr, it is
-  * a SimpleConfiguration<int>, and solc->f_value == 1, then *nothing is
+  * a SimpleConfiguration< int >, and solc->f_value == 1, then *nothing is
   * done*, since the Configuration is meant to say "only save/map the primal
   * solution". In all other cases, the flow solution is saved. */
 
@@ -455,7 +455,7 @@ public:
   if( ! f_Block )  // no [MCF]Block to write to
    return;         // cowardly and silently return
 
-  auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
+  auto tsolc = dynamic_cast< SimpleConfiguration< int > * >( solc );
   if( tsolc && ( tsolc->f_value == 1 ) )
    return;
 
@@ -497,7 +497,7 @@ public:
   * MCFBlock. To keep the same format as MCFBlock::get_Solution() and
   * MCFBlock::map[forward/back]_Modification(), the Configuration *solc can
   * be used to "partly" save it. In particular, if solc != nullptr, it is
-  * a SimpleConfiguration<int>, and solc->f_value == 2, then *nothing is done*,
+  * a SimpleConfiguration< int >, and solc->f_value == 2, then *nothing is done*,
   * since the Configuration is meant to say "only save/map the dual
   * information". In all other cases, the direction (cycle) is saved.
   *
@@ -505,7 +505,7 @@ public:
 
  void get_var_direction( Configuration * dirc = nullptr ) override
  {
-  auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( dirc );
+  auto tsolc = dynamic_cast< SimpleConfiguration< int > * >( dirc );
   if( tsolc && ( tsolc->f_value == 2 ) )
    return;
 
@@ -524,7 +524,7 @@ public:
   * variables of the flow conservation ones. To keep the same format as
   * MCFBlock::get_Solution() and MCFBlock::map[forward/back]_Modification(),
   * the Configuration *solc can be used to "partly" save it. In particular, if
-  * solc != nullptr, it is a SimpleConfiguration<int>, and solc->f_value == 1,
+  * solc != nullptr, it is a SimpleConfiguration< int >, and solc->f_value == 1,
   * then *nothing is done*, since the Configuration is meant to say "only
   * save/map the primal information". In all other cases, the direction (cut)
   * is saved.
@@ -533,7 +533,7 @@ public:
 
  void get_dual_direction( Configuration * dirc = nullptr ) override
  {
-  auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( dirc );
+  auto tsolc = dynamic_cast< SimpleConfiguration< int > * >( dirc );
   if( tsolc && ( tsolc->f_value == 1 ) )
    return;
 
@@ -815,10 +815,10 @@ protected:
 /*---------------------------- PROTECTED FIELDS  ---------------------------*/
 /*--------------------------------------------------------------------------*/
 
- const static std::vector<int> Solver_2_MCFClass_int;
+ const static std::vector< int > Solver_2_MCFClass_int;
  // the (static const) map between Solver int parameters and MCFClass ones
 
- const static std::vector<int> Solver_2_MCFClass_dbl;
+ const static std::vector< int > Solver_2_MCFClass_dbl;
  // the (static const) map between Solver int parameters and MCFClass ones
 
  std::string f_dmx_file;  // string for DMX file output

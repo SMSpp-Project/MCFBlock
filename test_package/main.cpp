@@ -12,7 +12,7 @@
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
- * Copyright &copy by Antonio Frangioni
+ * \copyright &copy; by Antonio Frangioni
  */
 /*--------------------------------------------------------------------------*/
 /*------------------------------ INCLUDES ----------------------------------*/
@@ -51,7 +51,7 @@ int main( int argc , char **argv )
   }
 
  // load the MCFBlock from the file
- auto MCFB = dynamic_cast<MCFBlock *>( Block::new_Block( "MCFBlock" ) );
+ auto MCFB = dynamic_cast< MCFBlock * >( Block::new_Block( "MCFBlock" ) );
  ProbFile >> *MCFB;
  ProbFile.close();
 
@@ -89,7 +89,7 @@ int main( int argc , char **argv )
   return( 0 );
 
  // de-serialize the MCFBlock from the same file
- MCFB = dynamic_cast<MCFBlock *>(Block::deserialize( argv[ 3 ] ));
+ MCFB = dynamic_cast< MCFBlock * >( Block::deserialize( argv[ 3 ] ) );
 
  // now re-serialize it on a different netCDF BlockFile
  MCFB->Block::serialize( argv[ 4 ] , eBlockFile );

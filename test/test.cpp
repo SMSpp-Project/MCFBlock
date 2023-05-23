@@ -18,7 +18,7 @@
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
- * Copyright &copy by Antonio Frangioni
+ * \copyright &copy; by Antonio Frangioni
  */
 /*--------------------------------------------------------------------------*/
 /*------------------------------ DEFINES -----------------------------------*/
@@ -123,8 +123,8 @@ using namespace MCFClass_di_unipi_it;
 using namespace SMSpp_di_unipi_it;
 
 // FIXME: Avoid these declarations
-template<> const std::vector<int> MCFSolver<MCFC>::Solver_2_MCFClass_int;
-template<> const std::vector<int> MCFSolver<MCFC>::Solver_2_MCFClass_dbl;
+template<> const std::vector< int > MCFSolver< MCFC >::Solver_2_MCFClass_int;
+template<> const std::vector< int > MCFSolver< MCFC >::Solver_2_MCFClass_dbl;
 
 /*--------------------------------------------------------------------------*/
 /*------------------------- TYPES & CONSTEXPRS -----------------------------*/
@@ -180,7 +180,7 @@ FNumber MaxU = 0;              // max absolute value of capacities / deficits
 /*------------------------------ FUNCTIONS ---------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-template<class T>
+template< class T >
 static void Str2Sthg( const char* const str , T &sthg )
 {
  istringstream( str ) >> sthg;
@@ -567,7 +567,7 @@ int main( int argc , char **argv )
  // if so instructed, construct the R3 MCFBlock = copy- - - - - - - - - - - -
 
  if( mode & 3u ) {
-  dMCFB = dynamic_cast<MCFBlock *>( oMCFB->get_R3_Block() );
+  dMCFB = dynamic_cast< MCFBlock * >( oMCFB->get_R3_Block() );
   assert( dMCFB );           // excess of caution (we know it is)
 
   if( ( mode & 8u ) && dMCFB ) {
@@ -763,7 +763,7 @@ int main( int argc , char **argv )
      }
     else {
      Subset nms( GenerateRand( m , tochange ) );
-     nms.push_back( OPTtypes_di_unipi_it::Inf<MCFClass::Index>() );
+     nms.push_back( OPTtypes_di_unipi_it::Inf< MCFClass::Index >() );
 
      mcf->ChgCosts( newcsts.data() , nms.data() );
      nms.resize( tochange );
@@ -859,7 +859,7 @@ int main( int argc , char **argv )
      for( auto i : nms )
       *(ncit++) = mcf->MCFUCap( i ) * rndfctr();
 
-     nms.push_back( OPTtypes_di_unipi_it::Inf<MCFClass::Index>() );
+     nms.push_back( OPTtypes_di_unipi_it::Inf< MCFClass::Index >() );
      mcf->ChgUCaps( newcaps.data() , nms.data() );
      nms.resize( tochange );
 

@@ -15,7 +15,7 @@
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
- * Copyright &copy by Antonio Frangioni
+ * \copyright &copy; by Antonio Frangioni
  */
 /*--------------------------------------------------------------------------*/
 /*------------------------------ INCLUDES ----------------------------------*/
@@ -35,7 +35,7 @@ using namespace SMSpp_di_unipi_it;
 /*------------------------------ FUNCTIONS ---------------------------------*/
 /*--------------------------------------------------------------------------*/
 
-template<class T>
+template< class T >
 static inline void Str2Sthg( const char* const str , T &sthg )
 {
  std::istringstream( str ) >> sthg;

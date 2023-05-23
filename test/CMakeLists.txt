@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------------- #
-#    CMake file for unit tests                                                #
+#    CMake file for MCFBlock/test                                             #
 #                                                                             #
 #    In this file we define the unit tests for this library.                  #
 #    Tests that should be supported by ctest executable must be added         #
@@ -18,7 +18,7 @@
 # See: https://cmake.org/cmake/help/latest/policy/CMP0110.html
 if (POLICY CMP0110)
     cmake_policy(SET CMP0110 NEW)
-endif()
+endif ()
 
 # ----- MCFBlock_test ------------------------------------------------------- #
 add_executable(MCFBlock_test test.cpp)

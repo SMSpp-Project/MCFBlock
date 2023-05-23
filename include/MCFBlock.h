@@ -9,7 +9,7 @@
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
- * Copyright &copy; by Antonio Frangioni
+ * \copyright &copy; by Antonio Frangioni
  */
 /*--------------------------------------------------------------------------*/
 /*----------------------------- DEFINITIONS --------------------------------*/
@@ -53,7 +53,7 @@ namespace SMSpp_di_unipi_it
 
  using p_MCFBlock = MCFBlock *;  ///< a pointer to MCFBlock
 
- using Vec_MCFBlock = std::vector<p_MCFBlock>;
+ using Vec_MCFBlock = std::vector< p_MCFBlock>;
  ///< a vector of pointers to MCFBlock
 
  using Vec_MCFBlock_it = Vec_MCFBlock::iterator;
@@ -236,7 +236,7 @@ public:
  typedef double FNumber;                     ///< type of arc flow / deficit
  typedef const FNumber c_FNumber;            ///< a read-only FNumber
 
- typedef std::vector<FNumber> Vec_FNumber;   ///< a vector of FNumber
+ typedef std::vector< FNumber > Vec_FNumber; ///< a vector of FNumber
  typedef const Vec_FNumber c_Vec_FNumber;    ///< a const vector of FNumber
 
  typedef Vec_FNumber::iterator Vec_FNumber_it;   ///< iterator in Vec_FNumber
@@ -248,8 +248,8 @@ public:
  typedef double CNumber;                     ///< type of arc cost / potential
  typedef const CNumber c_CNumber;            ///< a read-only CNumber
 
- typedef std::vector<CNumber> Vec_CNumber;   ///< a vector of CNumber
- typedef const Vec_CNumber c_Vec_CNumber;    ///< a const vector of CNumber
+ typedef std::vector< CNumber > Vec_CNumber;  ///< a vector of CNumber
+ typedef const Vec_CNumber c_Vec_CNumber;     ///< a const vector of CNumber
 
  typedef Vec_CNumber::iterator Vec_CNumber_it;   ///< iterator in Vec_CNumber
  typedef Vec_CNumber::const_iterator c_Vec_CNumber_it;
@@ -261,10 +261,10 @@ public:
  /**< type of the objective function: has to hold sums of products of
     FNumber(s) by CNumber(s) */
 
- typedef const FONumber c_FONumber;            ///< a read-only FONumber
+ typedef const FONumber c_FONumber;             ///< a read-only FONumber
 
- typedef std::vector<FONumber> Vec_FONumber;   ///< a vector of FONumber
- typedef const Vec_FONumber c_Vec_FONumber;    ///< a const vector of FONumber
+ typedef std::vector< FONumber > Vec_FONumber;  ///< a vector of FONumber
+ typedef const Vec_FONumber c_Vec_FONumber;     ///< a const vector of FONumber
 
 /** @} ---------------------------------------------------------------------*/
 /*------------------------------- FRIENDS ----------------------------------*/
@@ -288,7 +288,7 @@ public:
  explicit MCFBlock( Block *father = nullptr )
   : Block( father ) , NNodes( 0 ) , NArcs( 0 ) , MaxNNodes( 0 ) ,
     NStaticNodes( 0 ) , NStaticArcs( 0 ) , AR( 0 ) ,
-    f_cond_lower( - Inf<double>() ) , f_cond_upper( - Inf<double>() ) { }
+    f_cond_lower( - Inf< double >() ) , f_cond_upper( - Inf< double >() ) { }
 
 /*--------------------------------------------------------------------------*/
  /// destructor of MCFBlock: deletes the abstract representation, if any
@@ -469,7 +469,7 @@ public:
   * DIMACS standard format, in that node and arc definitions can be mixed in
   * any order, while the DIMACS file requires all node information to appear
   * before all arc information. Also, capacities of arcs can be set to
-  * +Inf<FNumber>() by putting "INF", "Inf" or "inf" in the file (actually,
+  * +Inf< FNumber >() by putting "INF", "Inf" or "inf" in the file (actually,
   * any string starting with "I" or "i" where these would be expected).
   *
   * Note that the graph as provided by this method is considered to be
@@ -534,20 +534,20 @@ public:
   * happens.
   *
   * Regarding the bound constraints, these have fixed 0 LHS and a generic RHS,
-  * which can be Inf<Fnumber>(). If *all* the RHS are +Infty, it is possible
+  * which can be Inf< Fnumber >(). If *all* the RHS are +Infty, it is possible
   * to avoid creating the LB0Constraint entirely and just use the fact that
   * the ColVariable can be defined to be non-negative. The parameter stcc is
   * used to decide if this is done: if
   *
   * - all the RHS are +Infty;
   *
-  * - either stcc is not nullptr and it is a SimpleConfiguration<int>;
+  * - either stcc is not nullptr and it is a SimpleConfiguration< int >;
   *
   * - or f_BlockConfig is not nullptr,
   *   f_BlockConfig->f_static_constraints_Configuration is not nullptr,
-  *   and it is a SimpleConfiguration<int>;
+  *   and it is a SimpleConfiguration< int >;
   *
-  * - the f_value of the SimpleConfiguration<int> is != 0
+  * - the f_value of the SimpleConfiguration< int > is != 0
   *
   * the bound constraints are not implemented. Note that this *makes it
   * impossible to change any RHS*; the lower bound of 0 should not be changed
@@ -579,13 +579,13 @@ public:
   * to be made about it, i.e., whether it is represented as a "sparse"
   * LinearFunction or a "dense" one. This is governed by objc: if
   *
-  * - either objc is not nullptr and it is a SimpleConfiguration<double>;
+  * - either objc is not nullptr and it is a SimpleConfiguration< double >;
   *
   * - or f_BlockConfig is not nullptr,
   *   f_BlockConfig->f_objective_Configuration is not nullptr,
-  *   and it is a SimpleConfiguration<double>;
+  *   and it is a SimpleConfiguration< double >;
   *
-  * then the f_value of the SimpleConfiguration<int> is taken as the "sparsity
+  * then the f_value of the SimpleConfiguration< int > is taken as the "sparsity
   * parameter" (sprs) of the objective function; otherwise, sprs == 0. The
   * parameter is used as follows: if the number of nonzero arc cost
   * coefficients (at the time in which the method is called) is >=
@@ -660,7 +660,7 @@ public:
  [[nodiscard]] double get_valid_upper_bound( bool conditional = false )
   override {
   if( ! conditional )
-   return( + Inf<double>() );
+   return( + Inf< double >() );
    
   if( std::isnan( f_cond_upper ) )
    compute_conditional_bounds();
@@ -947,7 +947,7 @@ public:
  /// get the upper bound of arc i (0 <= i < get_NArcs())
 
  [[nodiscard]] FNumber get_U( Index i ) const {
-  return( U.empty() ? Inf<FNumber>() : U[ i ] );
+  return( U.empty() ? Inf< FNumber >() : U[ i ] );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -1040,12 +1040,12 @@ public:
   * satisfaction of both flow conservation constraint and flow upper/lower
   * bounds. This value is to be found as:
   *
-  * - if fsbc is not nullptr and it is a SimpleConfiguration<FNumber>, then it
+  * - if fsbc is not nullptr and it is a SimpleConfiguration< FNumber >, then it
   *   if fsbc->f_value;
   *
   * - otherwise, if f_BlockConfig is not nullptr,
   *   f_BlockConfig->f_is_feasible_Configuration is not nullptr and it
-  *   is a SimpleConfiguration<FNumber>, then it is
+  *   is a SimpleConfiguration< FNumber >, then it is
   *   f_BlockConfig->f_is_feasible_Configuration->f_value;
   *
   * - otherwise, it is 0. */
@@ -1070,17 +1070,17 @@ public:
   * complementary_slackness(). These are found as follows:
   *
   * - if optc is not nullptr and it is a 
-  *   SimpleConfiguration< std::pair<CNumber,FNumber> >, then
+  *   SimpleConfiguration< std::pair< CNumber , FNumber > >, then
   *   ceps = optc->f_value.first and feps = optc->f_value.second;
   *
-  * - if optc is not nullptr and it is a SimpleConfiguration<CNumber>, then
+  * - if optc is not nullptr and it is a SimpleConfiguration< CNumber >, then
   *   ceps = optc->f_value, while feps is taken out of
   *   f_BlockConfig->f_is_feasible_Configuration as in is_feasible();
   *
   * - otherwise, if f_BlockConfig is not nullptr, then feps is taken
   *   out of f_BlockConfig->f_is_feasible_Configuration, while ceps
   *   is taken out of f_BlockConfig->f_is_optimal_Configuration
-  *   assuming the latter is a SimpleConfiguration<CNumber>;
+  *   assuming the latter is a SimpleConfiguration< CNumber >;
   *
   * - otherwise, ceps == feps == 0. */
  
@@ -1110,7 +1110,7 @@ public:
   * parameter r3bc is useless (has to be nullptr). The parameter solc decides
   * which part of the solution is mapped:
   *
-  * - if solc != nullptr and it is a SimpleConfiguration<int>, then it
+  * - if solc != nullptr and it is a SimpleConfiguration< int >, then it
   *   depends on solc->f_value:
   *
   *   = 1 means "only map the primal solution"
@@ -1121,7 +1121,7 @@ public:
   *
   * - if solc == nullptr, f_BlockConfig != nullptr,
   *   f_BlockConfig->f_solution_Configuration != nullptr and it
-  *   is a SimpleConfiguration<int>, then it depends on its f_value as in
+  *   is a SimpleConfiguration< int >, then it depends on its f_value as in
   *   the previous case;
   *
   * - otherwise, everything (both the primal and the dual solution) is
@@ -1145,7 +1145,7 @@ public:
   * parameter r3bc is useless (has to be nullptr). The parameter solc decides
   * which part of the solution is mapped:
   *
-  * - if solc != nullptr and it is a SimpleConfiguration<int>, then it
+  * - if solc != nullptr and it is a SimpleConfiguration< int >, then it
   *   depends on solc->f_value:
   *
   *   = 1 means "only map the primal solution"
@@ -1156,7 +1156,7 @@ public:
   *
   * - if solc == nullptr, f_BlockConfig != nullptr,
   *   f_BlockConfig->f_is_solution_Configuration != nullptr and it
-  *   is a SimpleConfiguration<int>, then it depends on its f_value as in
+  *   is a SimpleConfiguration< int >, then it depends on its f_value as in
   *   the previous case;
   *
   * - otherwise, everything (both the primal and the dual solution) is
@@ -1300,7 +1300,7 @@ public:
   * Note that if the right extreme of the range is >= get_NArcs() it is
   * ignored. */
 
- void get_x( Vec_FNumber_it FSol , Range rng = Range( 0 , Inf<Index>() ) )
+ void get_x( Vec_FNumber_it FSol , Range rng = Range( 0 , Inf< Index >() ) )
   const;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -1335,7 +1335,7 @@ public:
   * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
   * "names" between 1 and get_NNodes(). */
 
- void get_pi( Vec_CNumber_it PSol , Range rng = Range( 0 , Inf<Index>() ) )
+ void get_pi( Vec_CNumber_it PSol , Range rng = Range( 0 , Inf< Index >() ) )
   const;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -1375,7 +1375,7 @@ public:
   * reduced cost for the i-th arc in \p rng is written into *( RC + i ). Note
   * that if the right extreme of the range is >= get_NArcs() it is ignored. */
 
- void get_rc( Vec_CNumber_it RC , Range rng = Range( 0 , Inf<Index>() ) )
+ void get_rc( Vec_CNumber_it RC , Range rng = Range( 0 , Inf< Index >() ) )
   const;
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -1950,7 +1950,7 @@ public:
   * < get_MaxNArcs() then the new arc gets "name" get_NArcs(), which is
   * returned by the method, and the value returned by get_NArcs() increases by
   * one. Otherwise the arc is not actually added, and the method returns
-  * Inf<FNumber>().
+  * Inf< FNumber >().
   *
   * Successfully adding a new arc causes the issuing of several Modification,
   * unless the issueMod and issueAMod parameters prevent this to happen:
@@ -1988,7 +1988,7 @@ public:
   *  corresponding part of the "abstract" representation is constructed. */
  
  Index add_arc( Index sn , Index en , CNumber cst = 0 ,
-		FNumber cap = Inf<FNumber>() ,
+		FNumber cap = Inf< FNumber >() ,
 		ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*--------------------------------------------------------------------------*/
@@ -2005,7 +2005,7 @@ public:
   * parts of the "abstract" representation (if constructed). Only, the
   * value of the flow Variable is changed to 0 and the Variable is fixed, as
   * when the arc is closed. Furthermore, its starting and ending nodes (as
-  * returned by get_SN() and get_EN()) are set to Inf<Index>(). This means
+  * returned by get_SN() and get_EN()) are set to Inf< Index >(). This means
   * that the value returned by get_NArcs() does *not* change.
   *
   * In the former case, the elimination of the arc is "physical": not only
@@ -2089,13 +2089,13 @@ public:
  double f_cond_lower;            ///< conditional lower bound, can be -INF
  double f_cond_upper;            ///< conditional upper bound, can be +INF
  
- std::vector<ColVariable> x;     ///< the static flow variables
- std::vector<FRowConstraint> E;  ///< the static flow conservation constrs.
- std::vector<LB0Constraint> UB;  ///< the static bound constraints
+ std::vector< ColVariable > x;     ///< the static flow variables
+ std::vector< FRowConstraint> E;   ///< the static flow conservation constrs.
+ std::vector< LB0Constraint > UB;  ///< the static bound constraints
  
- std::list<ColVariable> dx;      ///< the dynamic flow variables
- std::list<FRowConstraint> dE;   ///< the dynamic flow conservation constrs.
- std::list<LB0Constraint> dUB;   ///< the dynamic bound constraints
+ std::list< ColVariable > dx;      ///< the dynamic flow variables
+ std::list< FRowConstraint > dE;   ///< the dynamic flow conservation constrs.
+ std::list< LB0Constraint > dUB;   ///< the dynamic bound constraints
 
  FRealObjective c;               ///< the (linear) objective function
 
@@ -2215,9 +2215,9 @@ public:
 
  LinearFunction * get_lfo( void ) {
   #ifdef NDEBUG
-   return( static_cast<LinearFunction *>( c.get_function() ) );
+   return( static_cast< LinearFunction * >( c.get_function() ) );
   #else
-   auto lfo = dynamic_cast<LinearFunction *>( c.get_function() );
+   auto lfo = dynamic_cast< LinearFunction * >( c.get_function() );
    assert( lfo );
    return( lfo );
   #endif
@@ -2491,7 +2491,7 @@ class MCFBlockSbstMod : public MCFBlockMod
  * "special" solutions ("less general" ones in the parlance of Solution). In
  * particular:
  *
- * - if all capacities are Inf<FNumber>() and there is only one source or sink
+ * - if all capacities are Inf< FNumber >() and there is only one source or sink
  *   node, then the MCF problem is in fact a Shortest Path (sub-)Tree one, and
  *   its solutions can be represented by means of a predecessor function;
  *

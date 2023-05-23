@@ -8,7 +8,7 @@
  *         Dipartimento di Informatica \n
  *         Universita' di Pisa \n
  *
- * Copyright &copy; by Antonio Frangioni
+ * \copyright &copy; by Antonio Frangioni
  */
 /*--------------------------------------------------------------------------*/
 /*---------------------------- IMPLEMENTATION ------------------------------*/
@@ -72,8 +72,7 @@ static std::istream & eatDMXcomments( std::istream& is )
   is >> std::ws;  // skip whitespaces
   if( is.peek() == is.widen( 'c' ) )
    // a comment: skip the rest of line and move to next
-   is.ignore( std::numeric_limits<std::streamsize>::max() , is.widen( '\n' )
-	      );
+   is.ignore( std::numeric_limits< std::streamsize >::max() , is.widen( '\n' ) );
   else
    break;
   }
@@ -138,8 +137,8 @@ static Index countdiff( T beg , T end , T cmp )
 // vector and a subset of indices
 
 template< typename T >
-static bool is_equal( std::vector<T> & vec , c_Subset & nms ,
-		      typename std::vector<T>::const_iterator cmp ,
+static bool is_equal( std::vector< T > & vec , c_Subset & nms ,
+		      typename std::vector< T >::const_iterator cmp ,
 		      Index n_max )
 {
  for( auto nm : nms ) {
@@ -157,8 +156,8 @@ static bool is_equal( std::vector<T> & vec , c_Subset & nms ,
 // being given as a base vector and a subset of indices
 
 template< typename T >
-static Index countdiff( std::vector<T> & vec , c_Subset & nms ,
-			typename std::vector<T>::const_iterator cmp ,
+static Index countdiff( std::vector< T > & vec , c_Subset & nms ,
+			typename std::vector< T >::const_iterator cmp ,
 			Index n_max )
 {
  Index ndiff = 0;
@@ -389,7 +388,7 @@ void MCFBlock::load( std::istream & input , char frmt )
      throw( std::invalid_argument( "lower bound > upper bound" ) );
 
     if( LB > 0 ) {
-     if( U[ i ] < Inf<MCFBlock::FNumber>() )
+     if( U[ i ] < Inf< MCFBlock::FNumber >() )
       U[ i ] -= LB;
      B[ SN[ i ] - 1 ] += LB;
      B[ EN[ i ] - 1 ] -= LB;
@@ -435,7 +434,7 @@ void MCFBlock::load( std::istream & input , char frmt )
  // note: this is a NBModification, the "nuclear option"
 
  if( anyone_there() )
-  add_Modification( std::make_shared<NBModification>( this ) );
+  add_Modification( std::make_shared< NBModification >( this ) );
 
  }  // end( MCFBlock::load( istream ) )
 
@@ -523,7 +522,7 @@ void MCFBlock::deserialize( const netCDF::NcGroup & group )
  netCDF::NcVar dfc = group.getVar( "B" );
  if( ! dfc.isNull() ) {
   B.resize( MaxNNodes );
-  std::vector<size_t> countn = { NNodes };
+  std::vector< size_t > countn = { NNodes };
   dfc.getVar( B.data() );
   if( std::all_of( B.begin() , B.begin() + NNodes ,
 		   []( c_FNumber bi ) { return( bi == 0 ); } ) )
@@ -665,11 +664,11 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   // if upper bounds are not there and the Configuration says so, the
   // LB0Constraint are not constructed
 
-  auto tstcc = dynamic_cast<SimpleConfiguration<int> *>( stcc );
+  auto tstcc = dynamic_cast< SimpleConfiguration< int > * >( stcc );
 
   if( ( ! tstcc ) && f_BlockConfig &&
       f_BlockConfig->f_static_constraints_Configuration )
-   tstcc = dynamic_cast<SimpleConfiguration<int> *>(
+   tstcc = dynamic_cast< SimpleConfiguration< int > * >(
                          f_BlockConfig->f_static_constraints_Configuration );
   if( tstcc && ( tstcc->f_value != 0 ) )
    return;
@@ -967,7 +966,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
     "abstract representation not there in complementary_slackness(( , true )"
 			   ) );
 
-  auto obj = static_cast<FRealObjective *>( get_objective() );
+  auto obj = static_cast< FRealObjective * >( get_objective() );
   assert( obj );
   auto lfo = get_lfo();
   Index i = 0;
@@ -996,7 +995,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
       RCi /= Ci;
      c_FNumber xiv = x[ i ].get_value();
      c_FNumber UBi = UB[ i ].get_rhs();
-     if( UBi >= Inf<RowConstraint::RHSValue>() ) {
+     if( UBi >= Inf< RowConstraint::RHSValue >() ) {
       if( ( xiv > feps ) && ( RCi < - ceps ) )
        return( false );
       }
@@ -1114,11 +1113,11 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 bool MCFBlock::is_feasible( bool useabstract , Configuration *fsbc )
 {
  FNumber eps = 0;
- auto tfsbc = dynamic_cast<SimpleConfiguration<FNumber> *>( fsbc );
+ auto tfsbc = dynamic_cast< SimpleConfiguration< FNumber > * >( fsbc );
 
  if( ( ! tfsbc ) && f_BlockConfig &&
      f_BlockConfig->f_is_feasible_Configuration )
-  tfsbc = dynamic_cast<SimpleConfiguration<FNumber> *>(
+  tfsbc = dynamic_cast< SimpleConfiguration< FNumber > * >(
                         f_BlockConfig->f_is_feasible_Configuration );
  if( tfsbc )
   eps = tfsbc->f_value;
@@ -1167,7 +1166,7 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
      ceps = csbc->f_value;
 
    if( f_BlockConfig->f_is_feasible_Configuration )
-    if( auto fsbc = dynamic_cast< SimpleConfiguration<FNumber > * >(
+    if( auto fsbc = dynamic_cast< SimpleConfiguration< FNumber > * >(
                               f_BlockConfig->f_is_feasible_Configuration ) )
      feps = fsbc->f_value;
    }
@@ -1216,17 +1215,17 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
  // process Configuration - - - - - - - - - - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- auto MCFB = dynamic_cast<MCFBlock *>( R3B );
+ auto MCFB = dynamic_cast< MCFBlock * >( R3B );
  if( ! MCFB )
   throw( std::invalid_argument( "R3B is not a MCFBlock" ) );
  if( r3bc != nullptr )
   throw( std::invalid_argument( "non-nullptr R3B Configuration" ) );
 
  int wsol = 0;
- auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
+ auto tsolc = dynamic_cast< SimpleConfiguration< int > * >( solc );
 
  if( ( ! tsolc ) && f_BlockConfig && f_BlockConfig->f_solution_Configuration )
-   tsolc = dynamic_cast<SimpleConfiguration<int> *>(
+   tsolc = dynamic_cast< SimpleConfiguration< int > * >(
                                     f_BlockConfig->f_solution_Configuration );
  if( tsolc )
   wsol = tsolc->f_value;
@@ -1336,17 +1335,17 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  // process Configuration - - - - - - - - - - - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- auto MCFB = dynamic_cast<MCFBlock *>( R3B );
+ auto MCFB = dynamic_cast< MCFBlock * >( R3B );
  if( ! MCFB )
   throw( std::invalid_argument( "R3B is not a MCFBlock" ) );
  if( r3bc != nullptr )
   throw( std::invalid_argument( "non-nullptr R3B Configuration" ) );
 
  int wsol = 0;
- auto tsolc = dynamic_cast<SimpleConfiguration<int> *>( solc );
+ auto tsolc = dynamic_cast< SimpleConfiguration< int > * >( solc );
 
  if( ( ! tsolc ) && f_BlockConfig && f_BlockConfig->f_solution_Configuration )
-  tsolc = dynamic_cast<SimpleConfiguration<int> *>(
+  tsolc = dynamic_cast< SimpleConfiguration< int > * >(
                                     f_BlockConfig->f_solution_Configuration );
  if( tsolc )
   wsol = tsolc->f_value;
@@ -1737,7 +1736,7 @@ bool MCFBlock::map_back_Modification( Block *R3B , c_p_Mod mod ,
   * back a Modification to this from R3B is the same as mapping forward a
   * Modification from R3B to this. */
 
- auto MCFB = dynamic_cast<MCFBlock *>( R3B );
+ auto MCFB = dynamic_cast< MCFBlock * >( R3B );
  if( ! MCFB )
   throw( std::invalid_argument( "R3B is not a MCFBlock" ) );
 
@@ -2355,7 +2354,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
  f_cond_lower = dNAN;  // reset conditional bounds
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
-  Block::add_Modification( std::make_shared<MCFBlockSbstMod>( this ,
+  Block::add_Modification( std::make_shared< MCFBlockSbstMod >( this ,
                                   MCFBlockMod::eChgCost , std::move( nms ) ) ,
 			   Observer::par2chnl( issueMod ) );
  #if CHECK_DS
@@ -3521,7 +3520,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
    throw( std::invalid_argument( "Modification to non-constructed Objective"
 				 ) );
 
-  auto lfo = static_cast<LinearFunction * const>( tmod->function() );
+  auto lfo = static_cast< LinearFunction * const >( tmod->function() );
   if( static_cast< LinearFunction * const >( c.get_function() ) != lfo )
    throw( std::invalid_argument( "Modification to non-Objective" ) );
 
@@ -3552,7 +3551,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
    throw( std::invalid_argument( "Modification to non-constructed Objective"
 				 ) );
 
-  auto lfo = static_cast<LinearFunction * const>( tmod->function() );
+  auto lfo = static_cast< LinearFunction * const >( tmod->function() );
   if( static_cast< LinearFunction * const >( c.get_function() ) != lfo )
    throw( std::invalid_argument( "Modification to non-Objective" ) );
 
@@ -3588,7 +3587,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
    }
 
   if( tmod->type() == RowConstraintMod::eChgBTS ) {
-   auto cp = static_cast<FRowConstraint * const>( tmod->constraint() );
+   auto cp = static_cast< FRowConstraint * const >( tmod->constraint() );
    if( ! cp )
     throw( std::invalid_argument( "invalid Modification to Constraint" ) );
 
@@ -3991,12 +3990,12 @@ void MCFSolution::serialize( netCDF::NcGroup & group ) const
  // always call the method of the base class first
  Solution::serialize( group );
 
- std::vector<size_t> startp = { 0 };
+ std::vector< size_t > startp = { 0 };
 
  if( ! v_x.empty() ) {
   netCDF::NcDim na = group.addDim( "NumArcs" , v_x.size() );
 
-  std::vector<size_t> countpa = { v_x.size() };
+  std::vector< size_t > countpa = { v_x.size() };
 
   ( group.addVar( "FlowSolution" , netCDF::NcDouble() , na ) ).putVar(
 					      startp , countpa , v_x.data() );
@@ -4006,7 +4005,7 @@ void MCFSolution::serialize( netCDF::NcGroup & group ) const
   return;
 
  netCDF::NcDim nn = group.addDim( "NumNodes" ,  v_pi.size() );
- std::vector<size_t> countpn = { v_pi.size() };
+ std::vector< size_t > countpn = { v_pi.size() };
  ( group.addVar( "Potentials" , netCDF::NcDouble() , nn ) ).putVar(
 					     startp , countpn , v_pi.data() );
  
