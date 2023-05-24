@@ -218,7 +218,7 @@ static void CreateProb( unsigned int Optns )
  Optns /= 2;
 
  mcf = nullptr;  // unknown solver, or the required solver is not
-                 // available due to the macroes settings
+                 // available due to the macros settings
 
  #if WHICH_MCF == 0  //- - - - - - - - - - - - - - - - - - - - - - - - - - -
 
