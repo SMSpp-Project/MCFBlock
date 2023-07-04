@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/usr/bin/env bash
 
 for what in goto net; do
 
