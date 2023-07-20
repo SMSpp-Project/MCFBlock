@@ -96,7 +96,7 @@ int main( int argc , char **argv )
   std::string dmx( ".dmx" );
 
   if( std::equal( sffx.begin() , sffx.end() , dmx.begin() ,
-		  []( auto a , auto b ){
+		  []( auto a , auto b ) {
 		   return( std::tolower( a ) == std::tolower( b ) ); } ) )
    name.erase( name.size() - 4 , 4 );
   }

@@ -558,7 +558,7 @@ int main( int argc , char **argv )
   std::string nc4( ".nc4" );
 
   isnc4 = std::equal( sffx.begin() , sffx.end() , nc4.begin() ,
-		      []( auto a , auto b ){
+		      []( auto a , auto b ) {
 		       return( std::tolower( a ) == std::tolower( b ) ); } );
   }
 
