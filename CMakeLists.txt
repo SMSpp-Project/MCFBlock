@@ -57,7 +57,6 @@ endif ()
 add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_SPTRE)
 
-
 # ----- Requirements -------------------------------------------------------- #
 # If it's not being called by the umbrella, we need to
 # look for the system-installed libraries.
@@ -119,6 +118,18 @@ target_link_libraries(${modName} PUBLIC
 add_library(${modNamespace}::${modName} ALIAS ${modName})
 
 # ----- Subdirectories ------------------------------------------------------ #
+
+# MCFClass library, required by MCFBlock.
+# Requires CPLEX.
+set(MCFClass_READ_PATHS OFF CACHE BOOL
+                        "Whether MCFClass will read locations for
+		                dependencies or not." FORCE)
+add_subdirectory(MCFClass)
+# Add the binary directory to RPATH, so executables that use
+# dynamic loading will look into it.
+set(SMSPP_BUILD_RPATH
+    "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
+
 add_subdirectory(tools)
 
 if (BUILD_TESTING)
