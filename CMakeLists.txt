@@ -47,6 +47,27 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # See: https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html
 include(BuildType)
 
+# ----- Requirements -------------------------------------------------------- #
+
+if (NOT hasParent)
+    # If it's not being called by the umbrella, we need to
+    # look for the system-installed libraries.
+    find_package(SMS++ REQUIRED)
+    find_package(MCFClass REQUIRED)
+else ()
+    # MCFClass library, required by MCFBlock.
+    # Requires CPLEX.
+    set(MCFClass_READ_PATHS OFF CACHE BOOL
+                            "Whether MCFClass will read locations for
+		                    dependencies or not." FORCE)
+    add_subdirectory(MCFClass)
+
+    # Add the binary directory to RPATH, so executables that use
+    # dynamic loading will look into it.
+    set(SMSPP_BUILD_RPATH
+        "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
+endif ()
+
 # uncomment all of the following for which the corresponding
 # MCFSolver< :MCFClass > must be defined
 #add_compile_definitions(HAVE_RELAX)
@@ -56,14 +77,6 @@ if (NOT MCFClass_USE_CPLEX)
 endif ()
 add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_SPTRE)
-
-# ----- Requirements -------------------------------------------------------- #
-# If it's not being called by the umbrella, we need to
-# look for the system-installed libraries.
-if (NOT hasParent)
-    find_package(SMS++ REQUIRED)
-    find_package(MCFClass REQUIRED)
-endif ()
 
 #if (MCFBlock_SOLVER STREQUAL "cplex" AND NOT MCFClass_USE_CPLEX)
 #    message(FATAL_ERROR "${modName} solver is \"CPLEX\" but MCFCplex was not built")
@@ -118,17 +131,6 @@ target_link_libraries(${modName} PUBLIC
 add_library(${modNamespace}::${modName} ALIAS ${modName})
 
 # ----- Subdirectories ------------------------------------------------------ #
-
-# MCFClass library, required by MCFBlock.
-# Requires CPLEX.
-set(MCFClass_READ_PATHS OFF CACHE BOOL
-                        "Whether MCFClass will read locations for
-		                dependencies or not." FORCE)
-add_subdirectory(MCFClass)
-# Add the binary directory to RPATH, so executables that use
-# dynamic loading will look into it.
-set(SMSPP_BUILD_RPATH
-    "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
 
 add_subdirectory(tools)
 
