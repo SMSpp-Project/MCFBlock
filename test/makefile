@@ -28,12 +28,12 @@ CC = clang++
 
 # default target- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-default: $(NAME)
+default: $(DIR)/$(NAME)
 
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 clean::
-	rm -f $(DIR)/*.o $(DIR)/*~ $(NAME)
+	rm -f $(DIR)/*.o $(DIR)/*~ $(DIR)/$(NAME)
 
 # define & include the necessary modules- - - - - - - - - - - - - - - - - - -
 # if a module is not used in the current configuration, just comment out the
@@ -56,8 +56,8 @@ MOBJ =  $(MCFBkOBJ)
 # libraries
 MLIB =  $(MCFBkLIB)
 
-$(NAME): $(MOBJ) $(DIR)/test.o
-	$(CC) -o $(DIR)$(NAME) $^ $(MLIB) $(SW)
+$(DIR)/$(NAME): $(MOBJ) $(DIR)/test.o
+	$(CC) -o $(DIR)/$(NAME) $^ $(MLIB) $(SW)
 
 # dependencies: every .o from its .C + every recursively included .h- - - - -
 

@@ -8,8 +8,8 @@
 #   MCFBlock / MCFSolver, excluding the SMS++ core ones whose symbols are    #
 #   assumed to have been defined already (typically by including             #
 #   SMS++/lib/makefile). Accordingly, all necessary OBJ, H, -I directives,   #
-#   external libraries  + -L<libdirs> are added to the corresponding MCFBk*  #
-#   macros.                                                                  #
+#   external libraries  + -L< libdirs > are added to the corresponding       #
+#   MCFBk* macros.                                                           #
 #                                                                            #
 #   Input:  $(CC)       = compiler command                                   #
 #           $(SW)       = compiler options                                   #
@@ -37,7 +37,10 @@
 # *INC is the -I< include directories >
 
 # define input macros for libMCFCl complete makefile, then include it
-libMCFClDIR = $(MCFBkSDR)/../MCFClass
+# signal that *_ROOT values for external libraries need not be read by
+# the MCFClass makefiles since they are defined already by SMS++
+MCFC_NO_PATHS = 0
+libMCFClDIR = $(MCFBkSDR)/MCFClass
 include $(libMCFClDIR)/lib/makefile-inc
 
 # include the makefile requiring all external modules in input

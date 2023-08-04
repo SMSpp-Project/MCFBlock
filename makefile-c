@@ -41,7 +41,7 @@ include $(SMS++SDR)/lib/makefile-inc
 # signal that *_ROOT values for external libraries need not be read by
 # the MCFClass makefiles since they are defined already by SMS++
 MCFC_NO_PATHS = 0
-libMCFClDIR = $(MCFBkSDR)/../MCFClass
+libMCFClDIR = $(MCFBkSDR)/MCFClass
 include $(libMCFClDIR)/lib/makefile-inc
 
 # include the makefile requiring all external modules in input
@@ -54,7 +54,7 @@ include $(MCFBkSDR)/makefile
 MCFBkOBJ := $(MCFBkOBJ) $(libMCFClOBJ) $(SMS++OBJ)
 MCFBkINC := $(MCFBkINC) $(SMS++INC) $(libMCFClINC)
 
-# external libreries for MCFBlock
+# external libraries for MCFBlock
 MCFBkLIB = $(SMS++LIB) $(libMCFClLIB)
 
 ############################ End of makefile #################################
