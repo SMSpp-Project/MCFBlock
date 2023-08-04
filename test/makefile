@@ -11,12 +11,10 @@
 ##############################################################################
 
 # module name
-# NAME can be main, test and dmx2nc4:, the corresponding .cpp is compiled
-# and the final executable named $(NAME) is constructed 
 NAME = MCFBlock_test
 
 # basic directory
-DIR = ./
+DIR = .
 
 # debug switches
 #SW = -g -glldb -fno-inline -std=c++17 -ferror-limit=1
@@ -35,30 +33,30 @@ default: $(NAME)
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 clean::
-	rm -f $(DIR)*.o $(DIR)*~ $(NAME)
+	rm -f $(DIR)/*.o $(DIR)/*~ $(NAME)
 
 # define & include the necessary modules- - - - - - - - - - - - - - - - - - -
 # if a module is not used in the current configuration, just comment out the
 # corresponding include line
 # each module outputs some macros to be used here:
 # *OBJ is the final object(s) / library
-# *LIB is the external libreries + -L<libdirs>
+# *LIB is the external libraries + -L< libdirs >
 # *H   is the list of all include files
-# *INC is the -I<include directories>
+# *INC is the -I< include directories >
 
 # MCFBlock
-MCFBkSDR = ../
-include $(MCFBkSDR)makefile-c
+MCFBkSDR = ..
+include $(MCFBkSDR)/makefile-c
 
 # main module (linking phase) - - - - - - - - - - - - - - - - - - - - - - - -
 
 # object files
 MOBJ =  $(MCFBkOBJ)
 
-# libreries
+# libraries
 MLIB =  $(MCFBkLIB)
 
-$(NAME): $(MOBJ) $(DIR)test.o
+$(NAME): $(MOBJ) $(DIR)/test.o
 	$(CC) -o $(DIR)$(NAME) $^ $(MLIB) $(SW)
 
 # dependencies: every .o from its .C + every recursively included .h- - - - -
@@ -71,7 +69,7 @@ MH =    $(MCFBkH)
 
 # compile command
 
-$(DIR)test.o: $(DIR)test.cpp $(MH)
+$(DIR)/test.o: $(DIR)/test.cpp $(MH)
 	$(CC) -c $*.cpp -o $@ $(MINC) $(SW)
 
 ############################ End of makefile #################################
