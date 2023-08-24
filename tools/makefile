@@ -51,9 +51,9 @@ clean::
 # corresponding include line
 # each module outputs some macros to be used here:
 # *OBJ is the final object(s) / library
-# *LIB is the external libreries + -L<libdirs>
+# *LIB is the external libraries + -L< libdirs >
 # *H   is the list of all include files
-# *INC is the -I<include directories>
+# *INC is the -I< include directories >
 
 # MCFBlock
 MCFBkSDR = ../
@@ -64,7 +64,7 @@ include $(MCFBkSDR)makefile-c
 # object files
 MOBJ =  $(MCFBkOBJ)
 
-# libreries
+# libraries
 MLIB =  $(MCFBkLIB)
 
 $(NAME): $(MOBJ) $(DIR)$(NAME).o
