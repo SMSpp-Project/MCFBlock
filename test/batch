@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-what=data/N3-5-5-2-2.nc4
+what=./data/N3-5-5-2-2.nc4
 #wchg=127
 
 for mode in 0 1 2 12 13 14 20 29 30; do
