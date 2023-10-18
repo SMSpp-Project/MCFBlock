@@ -21,7 +21,7 @@ for what in goto net; do
   done
 
   # 12 - 16*
-  for i in 12 14 16; do
+  for i in 12 14; do
     for j in 8; do
       for h in 1 2 3 4 5; do
 
@@ -32,4 +32,5 @@ for what in goto net; do
   done
 done
 
+mkdir -p ../data/nc4
 mv ../data/dmx/*.nc4 ../data/nc4
