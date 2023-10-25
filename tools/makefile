@@ -56,8 +56,8 @@ clean::
 # *INC is the -I< include directories >
 
 # MCFBlock
-MCFBkSDR = ../
-include $(MCFBkSDR)makefile-c
+MCFBkSDR = ..
+include $(MCFBkSDR)/makefile-c
 
 # main module (linking phase) - - - - - - - - - - - - - - - - - - - - - - - -
 
