@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added 
+
+### Changed 
+
+### Fixed 
+
+## [0.5.0] - 2024-02-28
+
+### Changed 
+
+- adapted to new CMake / makefile organisation
+
+- MCFClass is now a submodule of MCBlock rather than having to be a
+  submodule of the umbrella (i.e., it is now found in ./MCFClass
+  rather than in ../MCFClass)
+
 ## [0.4.4] - 2023-05-23
 
 ### Changed
