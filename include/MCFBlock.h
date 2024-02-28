@@ -1040,8 +1040,8 @@ public:
   * satisfaction of both flow conservation constraint and flow upper/lower
   * bounds. This value is to be found as:
   *
-  * - if fsbc is not nullptr and it is a SimpleConfiguration< FNumber >, then it
-  *   if fsbc->f_value;
+  * - if fsbc is not nullptr and it is a SimpleConfiguration< FNumber >, then
+  *   it is fsbc->f_value;
   *
   * - otherwise, if f_BlockConfig is not nullptr,
   *   f_BlockConfig->f_is_feasible_Configuration is not nullptr and it

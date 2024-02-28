@@ -16,7 +16,7 @@
 NAME = dmx2nc4
 
 # basic directory
-DIR = ./
+DIR = .
 
 # switch to select the :MCFClass solver, supported values are
 # -DHAVE_CSCL2      for the CS2 class
@@ -44,31 +44,31 @@ default: $(NAME)
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 clean::
-	rm -f $(DIR)*.o $(DIR)*~ $(NAME)
+	rm -f $(DIR)/*.o $(DIR)/*~ $(NAME)
 
 # define & include the necessary modules- - - - - - - - - - - - - - - - - - -
 # if a module is not used in the current configuration, just comment out the
 # corresponding include line
 # each module outputs some macros to be used here:
 # *OBJ is the final object(s) / library
-# *LIB is the external libreries + -L<libdirs>
+# *LIB is the external libraries + -L< libdirs >
 # *H   is the list of all include files
-# *INC is the -I<include directories>
+# *INC is the -I< include directories >
 
 # MCFBlock
-MCFBkSDR = ../
-include $(MCFBkSDR)makefile-c
+MCFBkSDR = ..
+include $(MCFBkSDR)/makefile-c
 
 # main module (linking phase) - - - - - - - - - - - - - - - - - - - - - - - -
 
 # object files
 MOBJ =  $(MCFBkOBJ)
 
-# libreries
+# libraries
 MLIB =  $(MCFBkLIB)
 
-$(NAME): $(MOBJ) $(DIR)$(NAME).o
-	$(CC) -o $(NAME) $(DIR)$(NAME).o $(MOBJ) $(MLIB) $(SW)
+$(NAME): $(MOBJ) $(DIR)/$(NAME).o
+	$(CC) -o $(NAME) $(DIR)/$(NAME).o $(MOBJ) $(MLIB) $(SW)
 
 # dependencies: every .o from its .C + every recursively included .h- - - - -
 
@@ -80,7 +80,7 @@ MH =    $(MCFBkH)
 
 # compile command
 
-$(DIR)$(NAME).o: $(DIR)$(NAME).cpp $(MH)
+$(DIR)/$(NAME).o: $(DIR)/$(NAME).cpp $(MH)
 	$(CC) -c $*.cpp -o $@ $(MINC) $(SW)
 
 ############################ End of makefile #################################

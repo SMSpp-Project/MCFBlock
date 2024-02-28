@@ -218,7 +218,7 @@ static void CreateProb( unsigned int Optns )
  Optns /= 2;
 
  mcf = nullptr;  // unknown solver, or the required solver is not
-                 // available due to the macroes settings
+                 // available due to the macros settings
 
  #if WHICH_MCF == 0  //- - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -558,7 +558,7 @@ int main( int argc , char **argv )
   std::string nc4( ".nc4" );
 
   isnc4 = std::equal( sffx.begin() , sffx.end() , nc4.begin() ,
-		      []( auto a , auto b ){
+		      []( auto a , auto b ) {
 		       return( std::tolower( a ) == std::tolower( b ) ); } );
   }
 

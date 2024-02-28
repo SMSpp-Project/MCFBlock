@@ -45,29 +45,29 @@
 MCFClssSlvr = -DHAVE_MFSMX -DHAVE_CPLEX -DHAVE_RELAX
 # -DHAVE_CSCL2 -DHAVE_MFZIB -DHAVE_SPTRE
 
-# macroes to be exported- - - - - - - - - - - - - - - - - - - - - - - - - - -
+# macros to be exported - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-MCFBkOBJ = $(MCFBkSDR)obj/MCFBlock.o $(MCFBkSDR)obj/MCFSolver.o
+MCFBkOBJ = $(MCFBkSDR)/obj/MCFBlock.o $(MCFBkSDR)/obj/MCFSolver.o
 
-MCFBkINC = -I$(MCFBkSDR)include
+MCFBkINC = -I$(MCFBkSDR)/include
 
-MCFBkH   = $(MCFBkSDR)include/MCFBlock.h $(MCFBkSDR)include/MCFSolver.h
+MCFBkH   = $(MCFBkSDR)/include/MCFBlock.h $(MCFBkSDR)/include/MCFSolver.h
 
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 clean::
-	rm -f $(MCFBkOBJ) $(MCFBkSDR)*~
+	rm -f $(MCFBkOBJ) $(MCFBkSDR)/*~
 
 # dependencies: every .o from its .cpp + every recursively included .h- - - -
 
-$(MCFBkSDR)obj/MCFBlock.o: $(MCFBkSDR)src/MCFBlock.cpp \
-	$(MCFBkSDR)include/MCFBlock.h $(SMS++OBJ)
-	$(CC) -c $(MCFBkSDR)src/MCFBlock.cpp -o $@ \
+$(MCFBkSDR)/obj/MCFBlock.o: $(MCFBkSDR)/src/MCFBlock.cpp \
+	$(MCFBkSDR)/include/MCFBlock.h $(SMS++OBJ)
+	$(CC) -c $(MCFBkSDR)/src/MCFBlock.cpp -o $@ \
 	$(MCFBkINC) $(SMS++INC) $(SW)
 
-$(MCFBkSDR)obj/MCFSolver.o: $(MCFBkSDR)src/MCFSolver.cpp $(MCFBkH) \
+$(MCFBkSDR)/obj/MCFSolver.o: $(MCFBkSDR)/src/MCFSolver.cpp $(MCFBkH) \
 	$(SMS++OBJ) $(libMCFClOBJ) 
-	$(CC) -c $(MCFBkSDR)src/MCFSolver.cpp -o $@ \
+	$(CC) -c $(MCFBkSDR)/src/MCFSolver.cpp -o $@ \
 	$(MCFBkINC) $(SMS++INC) $(libMCFClINC) $(MCFClssSlvr) $(SW)
 
 ########################## End of makefile ###################################

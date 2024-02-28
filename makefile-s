@@ -8,8 +8,8 @@
 #   MCFBlock / MCFSolver, excluding the SMS++ core ones whose symbols are    #
 #   assumed to have been defined already (typically by including             #
 #   SMS++/lib/makefile). Accordingly, all necessary OBJ, H, -I directives,   #
-#   external libraries  + -L<libdirs> are added to the corresponding MCFBk*  #
-#   macros.                                                                  #
+#   external libraries  + -L< libdirs > are added to the corresponding       #
+#   MCFBk* macros.                                                           #
 #                                                                            #
 #   Input:  $(CC)       = compiler command                                   #
 #           $(SW)       = compiler options                                   #
@@ -18,7 +18,7 @@
 #           $(MCFBkSDR) = the directory where MCFBlock / MCFSolver source is #
 #                                                                            #
 #   Output: $(MCFBkOBJ) = the final object(s) / library                      #
-#           $(MCFBkLIB) = external libraries + -L<libdirs>                   #
+#           $(MCFBkLIB) = external libraries + -L< libdirs >                 #
 #           $(MCFBkH)   = the .h files to include for MCFBlock / MCFSolver   #
 #           $(MCFBkINC) = the -I$( MCFBlock / MCFSolver directory )          #
 #                                                                            #
@@ -34,23 +34,26 @@
 # each module outputs some macros to be used here:
 # *OBJ is the final object/library
 # *H   is the list of all include files
-# *INC is the -I<include directories>
+# *INC is the -I< include directories >
 
 # define input macros for libMCFCl complete makefile, then include it
-libMCFClDIR = $(MCFBkSDR)../MCFClass/
-include $(libMCFClDIR)lib/makefile-inc
+# signal that *_ROOT values for external libraries need not be read by
+# the MCFClass makefiles since they are defined already by SMS++
+MCFC_NO_PATHS = 0
+libMCFClDIR = $(MCFBkSDR)/MCFClass
+include $(libMCFClDIR)/lib/makefile-inc
 
 # include the makefile requiring all external modules in input
-include $(MCFBkSDR)makefile
+include $(MCFBkSDR)/makefile
 
-# macroes to be exported- - - - - - - - - - - - - - - - - - - - - - - - - - -
+# macros to be exported - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # append external -I directives to MCFBkINC, MCFBkOBJ and MCFBkH as defined
 # by the makefile, thus the := assignment has to be used (use GNU make)
 MCFBkOBJ := $(MCFBkOBJ) $(libMCFClOBJ)
 MCFBkINC := $(MCFBkINC) $(libMCFClINC)
 
-# external libreries for MCFBlock
+# external libraries for MCFBlock
 MCFBkLIB = $(libMCFClLIB)
 
 ########################### End of makefile-s ################################
