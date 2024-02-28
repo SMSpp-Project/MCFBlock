@@ -65,75 +65,40 @@ is then repeatedly solved with several changes in costs/capacities/deficits,
 arcs openings/closures and arcs additions/deletions. The same operations are
 performed on the two solvers, and the results are compared.
 
-The test can be run manually, using the provided batch file,
-or using `ctest` from the build directory.
-
 
 ### Build and install with makefiles
 
 Carefully hand-crafted makefiles have also been developed for those unwilling
-to use CMake. General instructions are:
+to use CMake. Makefiles build the executable in-source (in the same directory
+tree where the code is) as opposed to out-of-source (in the copy of the
+directory tree constructed in the build/ folder) and therefore it is more
+convenient when having to recompile often, such as when developing/debugging
+a new module, as opposed to the compile-and-forget usage envisioned by CMake.
 
-- The arrangements of folders must be that envisioned by the
-  [Umbrella SMS++ Project](https://gitlab.com/smspp/smspp-project)
+Each executable using `MCFBlock` has to include a "main makefile" of the
+module, which typically is either [makefile-c](makefile-c) including all
+necessary libraries comprised the "core SMS++" one, or
+[makefile-s](makefile-s) including all necessary libraries but not the "core
+SMS++" one (for the common case in which this is used together with other
+modules that already include them). One relevant case is the
+[tester comparing MCFBlock + MCFSolver with direct usage of the
+original :MCFClass solver](test/test.cpp) alluded to in the previous section.
+The makefiles in turn recursively include all the required other makefiles,
+hence one should only need to edit the "main makefile" for compilation type
+(C++ compiler and its options) and it all should be good to go. In case some
+of the external libraries are not at their default location, it should only be
+necessary to create the `../extlib/makefile-paths` out of the
+`extlib/makefile-default-paths-*` for your OS `*` and edit the relevant bits
+(commenting out all the rest).
 
-- The main step is to edit the makefiles into ../extlib/. There is one for
-  each of the external libraries that any module requires, starting with
+Check the [SMS++ installation wiki](https://gitlab.com/smspp/smspp-project/-/wikis/Customize-the-configuration#location-of-required-libraries)
+for further details.
 
-  = [Boost](https://www.boost.org)
+Note thar the [MCFClass
+project](https://github.com/frangio68/Min-Cost-Flow-Class) has a similar
+arrangement with its own extlib/ folder, but due to some magic it is noy
+necessary to that must be independently edit it in an analogous way.
 
-  = [Eigen](http://eigen.tuxfamily.org)
-
-  = [netCDF-C++](https://www.unidata.ucar.edu/software/netcdf)
-
-  that are required by the "core" SMS++ library and therefore by everyone.
-  Setting the
-
-```make
-lib*INC = -I< paths to include files directories >
-lib*LIB = -L< paths to lib files directories > -l< libs >
-```
-
-  in each allows one to set any non-standard path if the library is not
-  installed in the system (or leave them empty if they are).
-
-- The "core" SMS++ classes have a makefile for building the corresponding
-  library in
-
-```sh
-SMS++/lib/makefile-lib
-```
-
-  The makefile allow to choose the compiler name and the optimization/debug.
-  This builds the lib/libSMS++.a that can be linked upon. Also, the
-
-```sh
-SMS++/lib/makefile-inc
-```
-
-  file is provided for allowing external makefiles to ensure that the library
-  is up-to-date (useful in case one is actually developing it). The simplest
-  way to learn how to use it is to check the makefiles of the tester
-
-```sh
-MCFBlock/test/makefile
-```
-
-  Note that the "basic" makefile macros
-
-```make
-CC =
-SW =
-```
-
-  for setting the C++ compiler and its options are "automatically forwarded"
-  from the makefile to these of the other SMS++ components, and therefore
-  (possibly at the cost of a make clean) ensure consistency during the
-  building process.
-
-- The [MCFClass project](https://github.com/frangio68/Min-Cost-Flow-Class)
-  has a similar arrangement with its own extlib/ folder that must be
-  independently edited in an analogous way.
 
 ## Tools
 
@@ -143,12 +108,13 @@ change the number of static and dynamic nodes and arcs, as well as the
 maximum number of nodes and arcs.
 
 You can run the tool from the `<build-dir>/tools` directory or install it
-with the library (see above).
-Run the tool without arguments for info on its usage:
+with the library (see above). Run the tool without arguments for info on
+its usage:
 
 ```sh
 dmx2nc4
 ```
+
 
 ## Data
 
@@ -156,7 +122,8 @@ We provide a small sample of small-to-mid-size MCF problems in the
 [data](data) folder. The instances comes compressed in the `dmx.tgz` file
 in [data/dmx](data/dmx). Once this is decompressed and `data/nc4` is
 created, the netCDF versions of the instances can be created in there by
-running the `batch` file in the `tools` folded.
+running the `batch` file in the `tools` folder.
+
 
 ## Tests
 
@@ -175,15 +142,18 @@ instance but in many different configurations (there can actually be two
 combinations) and repeatedly, while the `batch-l` tests only the simplest
 case but on several different problems of the [data](data) folder.
 
+
 ## Getting help
 
 If you need support, you want to submit bugs or propose a new feature, you can
 [open a new issue](https://gitlab.com/smspp/mcfblock/-/issues/new).
 
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of
 conduct, and the process for submitting merge requests to us.
+
 
 ## Authors
 
@@ -201,6 +171,7 @@ conduct, and the process for submitting merge requests to us.
 This code is provided free of charge under the [GNU Lesser General Public
 License version 3.0](https://opensource.org/licenses/lgpl-3.0.html) -
 see the [LICENSE](LICENSE) file for details.
+
 
 ## Disclaimer
 
