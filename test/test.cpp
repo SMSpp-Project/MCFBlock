@@ -45,7 +45,9 @@
  * - 5      for the SPTree class; note that SPTree cannot solve
  *          most MCF instances, except those with SPT structure */
 
-#define WHICH_MCF 1
+#ifndef WHICH_MCF
+ #define WHICH_MCF 1
+#endif
 
 #if( LOG_LEVEL >= 1 )
 #define LOG1( x ) cout << x
