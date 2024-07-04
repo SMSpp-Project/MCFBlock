@@ -121,6 +121,9 @@ add_library(${modNamespace}::${modName} ALIAS ${modName})
 add_subdirectory(tools)
 
 if (BUILD_TESTING)
+    if (NOT HAVE_CPLEX)
+        add_compile_definitions(WHICH_MCF=2) # i.e., use MCFSimplex class
+    endif ()
     add_subdirectory(test)
 endif ()
 
