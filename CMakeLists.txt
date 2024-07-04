@@ -72,7 +72,7 @@ endif ()
 # MCFSolver< :MCFClass > must be defined
 #add_compile_definitions(HAVE_RELAX)
 if (NOT MCFClass_USE_CPLEX)
-    add_compile_definitions(HAVE_CPLEX=0FF)
+    add_compile_definitions(HAVE_CPLEX=OFF)
 endif ()
 add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_SPTRE)
