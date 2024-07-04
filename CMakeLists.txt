@@ -50,9 +50,8 @@ include(BuildType)
 # uncomment all of the following for which the corresponding
 # MCFSolver< :MCFClass > must be defined
 #add_compile_definitions(HAVE_RELAX)
-add_compile_definitions(HAVE_CPLEX)
 if (NOT MCFClass_USE_CPLEX)
-    message(FATAL_ERROR "HAVE_CPLEX defined but MCFCplex was not built")
+    add_compile_definitions(HAVE_CPLEX=0FF)
 endif ()
 add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_SPTRE)
