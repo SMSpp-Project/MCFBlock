@@ -131,37 +131,47 @@ SMSpp_insert_in_factory_cpp_0( MCFSolverState );
 /*--------------------------------------------------------------------------*/
 
 template<>
-const std::vector< int > MCFSolver< MCFSimplex >::Solver_2_MCFClass_int = {
- MCFClass::kMaxIter ,        // intMaxIter
- -1 ,                        // intMaxThread
- -1 ,                        // intEverykIt
- -1 ,                        // intMaxSol
- -1 ,                        // intLogVerb
- -1 ,                        // intMaxDSol
- MCFClass::kReopt ,          // intLastParCDAS
- MCFSimplex::kAlgPrimal ,
- MCFSimplex::kAlgPricing ,
- MCFSimplex::kNumCandList ,
- MCFSimplex::kHotListSize
- };
+int MCFSolver< MCFSimplex >::Solver_2_MCFClass_int( idx_type par ) const
+{
+ static const std::array< int , 11 > _val = {
+  MCFClass::kMaxIter ,        // intMaxIter
+  -1 ,                        // intMaxThread
+  -1 ,                        // intEverykIt
+  -1 ,                        // intMaxSol
+  -1 ,                        // intLogVerb
+  -1 ,                        // intMaxDSol
+  MCFClass::kReopt ,          // intLastParCDAS
+  MCFSimplex::kAlgPrimal ,
+  MCFSimplex::kAlgPricing ,
+  MCFSimplex::kNumCandList ,
+  MCFSimplex::kHotListSize
+  };
+
+ return( _val[ par ] );
+ }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
 template<>
-const std::vector< int > MCFSolver< MCFSimplex >::Solver_2_MCFClass_dbl = {
- MCFClass::kMaxTime ,       // dblMaxTime
- -1 ,                       // dblEveryTTm
- -1 ,                       // dblRelAcc
- MCFClass::kEpsFlw ,        // dblAbsAcc
- -1 ,                       // dblUpCutOff
- -1 ,                       // dblLwCutOff
- -1 ,                       // dblRAccSol
- -1 ,                       // dblAAccSol
- -1 ,                       // dblFAccSol
- -1 ,                       // dblRAccDSol
- MCFClass::kEpsCst ,        // dblAAccDSol
- -1                         // dblFAccDSol
- };
+int MCFSolver< MCFSimplex >::Solver_2_MCFClass_dbl( idx_type par ) const
+{
+ static const std::array< int , 12 > _val = {
+  MCFClass::kMaxTime ,       // dblMaxTime
+  -1 ,                       // dblEveryTTm
+  -1 ,                       // dblRelAcc
+  MCFClass::kEpsFlw ,        // dblAbsAcc
+  -1 ,                       // dblUpCutOff
+  -1 ,                       // dblLwCutOff
+  -1 ,                       // dblRAccSol
+  -1 ,                       // dblAAccSol
+  -1 ,                       // dblFAccSol
+  -1 ,                       // dblRAccDSol
+  MCFClass::kEpsCst ,        // dblAAccDSol
+  -1                         // dblFAccDSol
+  };
+
+ return( _val[ par ] );
+ }
 
 /*--------------------------------------------------------------------------*/
 
@@ -257,34 +267,44 @@ const std::string & MCFSolver< MCFSimplex >::dbl_par_idx2str( idx_type idx )
 /*--------------------------------------------------------------------------*/
 
 template<>
-const std::vector< int > MCFSolver< RelaxIV >::Solver_2_MCFClass_int = {
- MCFClass::kMaxIter ,        // intMaxIter
- -1 ,                        // intMaxThread
- -1 ,                        // intEverykIt
- -1 ,                        // intMaxSol
- -1 ,                        // intLogVerb
- -1 ,                        // intMaxDSol
- MCFClass::kReopt ,          // intLastParCDAS
- RelaxIV::kAuction
- };
+int MCFSolver< RelaxIV >::Solver_2_MCFClass_int( idx_type par ) const
+{
+ static const std::array< int , 8 > _val = {
+  MCFClass::kMaxIter ,        // intMaxIter
+  -1 ,                        // intMaxThread
+  -1 ,                        // intEverykIt
+  -1 ,                        // intMaxSol
+  -1 ,                        // intLogVerb
+  -1 ,                        // intMaxDSol
+  MCFClass::kReopt ,          // intLastParCDAS
+  RelaxIV::kAuction
+  };
+
+ return( _val[ par ] );
+ }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
 template<>
-const std::vector< int > MCFSolver< RelaxIV >::Solver_2_MCFClass_dbl = {
- MCFClass::kMaxTime ,       // dblMaxTime
- -1 ,                       // dblEveryTTm
- -1 ,                       // dblRelAcc
- MCFClass::kEpsFlw ,        // dblAbsAcc
- -1 ,                       // dblUpCutOff
- -1 ,                       // dblLwCutOff
- -1 ,                       // dblRAccSol
- -1 ,                       // dblAAccSol
- -1 ,                       // dblFAccSol
- -1 ,                       // dblRAccDSol
- MCFClass::kEpsCst ,        // dblAAccDSol
- -1                         // dblFAccDSol
- };
+int MCFSolver< RelaxIV >::Solver_2_MCFClass_dbl( idx_type par ) const
+{
+ static const std::array< int , 12 > _val = {
+  MCFClass::kMaxTime ,       // dblMaxTime
+  -1 ,                       // dblEveryTTm
+  -1 ,                       // dblRelAcc
+  MCFClass::kEpsFlw ,        // dblAbsAcc
+  -1 ,                       // dblUpCutOff
+  -1 ,                       // dblLwCutOff
+  -1 ,                       // dblRAccSol
+  -1 ,                       // dblAAccSol
+  -1 ,                       // dblFAccSol
+  -1 ,                       // dblRAccDSol
+  MCFClass::kEpsCst ,        // dblAAccDSol
+  -1                         // dblFAccDSol
+  };
+
+ return( _val[ par ] );
+ }
 
 /*--------------------------------------------------------------------------*/
 
@@ -365,35 +385,44 @@ const std::string & MCFSolver< RelaxIV >::dbl_par_idx2str( idx_type idx )
 /*--------------------------------------------------------------------------*/
 
 template<>
-const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_int = {
- MCFClass::kMaxIter ,        // intMaxIter
- -1 ,                        // intMaxThread
- -1 ,                        // intEverykIt
- -1 ,                        // intMaxSol
- -1 ,                        // intLogVerb
- -1 ,                        // intMaxDSol
- MCFClass::kReopt ,          // intLastParCDAS
- MCFCplex::kQPMethod
- };
+int MCFSolver< MCFCplex >::Solver_2_MCFClass_int( idx_type par ) const
+{
+ static const std::array< int , 8 > _val = {
+  MCFClass::kMaxIter ,        // intMaxIter
+  -1 ,                        // intMaxThread
+  -1 ,                        // intEverykIt
+  -1 ,                        // intMaxSol
+  -1 ,                        // intLogVerb
+  -1 ,                        // intMaxDSol
+  MCFClass::kReopt ,          // intLastParCDAS
+  MCFCplex::kQPMethod
+  };
+
+ return( _val[ par ] );
+ }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
 template<>
-const std::vector< int > MCFSolver< MCFCplex >::Solver_2_MCFClass_dbl =
+int MCFSolver< MCFCplex >::Solver_2_MCFClass_dbl( idx_type par ) const
 {
- MCFClass::kMaxTime ,       // dblMaxTime
- -1 ,                       // dblEveryTTm
- -1 ,                       // dblRelAcc
- MCFClass::kEpsFlw ,        // dblAbsAcc
- -1 ,                       // dblUpCutOff
- -1 ,                       // dblLwCutOff
- -1 ,                       // dblRAccSol
- -1 ,                       // dblAAccSol
- -1 ,                       // dblFAccSol
- -1 ,                       // dblRAccDSol
- MCFClass::kEpsCst ,        // dblAAccDSol
- -1                         // dblFAccDSol
- };
+ static const std::array< int , 12 > _val = {
+  MCFClass::kMaxTime ,       // dblMaxTime
+  -1 ,                       // dblEveryTTm
+  -1 ,                       // dblRelAcc
+  MCFClass::kEpsFlw ,        // dblAbsAcc
+  -1 ,                       // dblUpCutOff
+  -1 ,                       // dblLwCutOff
+  -1 ,                       // dblRAccSol
+  -1 ,                       // dblAAccSol
+  -1 ,                       // dblFAccSol
+  -1 ,                       // dblRAccDSol
+  MCFClass::kEpsCst ,        // dblAAccDSol
+  -1                         // dblFAccDSol
+  };
+
+ return( _val[ par ] );
+ }
 
 /*--------------------------------------------------------------------------*/
 
@@ -471,30 +500,40 @@ const std::string & MCFSolver< MCFCplex >::dbl_par_idx2str( idx_type idx )
 /*--------------------------------------------------------------------------*/
 
 template<>
-const std::vector< int > MCFSolver< SPTree >::Solver_2_MCFClass_int = {
- MCFClass::kMaxIter,        // intMaxIter
- -1,                        // intMaxSol
- -1,                        // intLogVerb
- -1,                        // intMaxDSol
- MCFClass::kReopt,          // intLastParCDAS
- };
+int MCFSolver< SPTree >::Solver_2_MCFClass_int( idx_type par ) const
+{
+ static const std::array< int , 5 > Solver_2_MCFClass_int = {
+  MCFClass::kMaxIter,        // intMaxIter
+  -1,                        // intMaxSol
+  -1,                        // intLogVerb
+  -1,                        // intMaxDSol
+  MCFClass::kReopt,          // intLastParCDAS
+  };
+
+ return( _val[ par ] );
+ }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
 template<>
-const std::vector< int > MCFSolver< SPTree >::Solver_2_MCFClass_dbl = {
- MCFClass::kMaxTime,        // dblMaxTime
- -1,                        // dblRelAcc
- MCFClass::kEpsFlw,         // dblAbsAcc
- -1,                        // dblUpCutOff
- -1,                        // dblLwCutOff
- -1,                        // dblRAccSol
- -1,                        // dblAAccSol
- -1,                        // dblFAccSol
- -1,                        // dblRAccDSol
- MCFClass::kEpsCst,         // dblAAccDSol
- -1                         // dblFAccDSol
- };
+int MCFSolver< SPTree >::Solver_2_MCFClass_dbl( idx_type par ) const
+{
+ static const std::array< int , 11 > _val = {
+  MCFClass::kMaxTime,        // dblMaxTime
+  -1,                        // dblRelAcc
+  MCFClass::kEpsFlw,         // dblAbsAcc
+  -1,                        // dblUpCutOff
+  -1,                        // dblLwCutOff
+  -1,                        // dblRAccSol
+  -1,                        // dblAAccSol
+  -1,                        // dblFAccSol
+  -1,                        // dblRAccDSol
+  MCFClass::kEpsCst,         // dblAAccDSol
+  -1                         // dblFAccDSol
+  };
+
+ return( _val[ par ] );
+ }
 
 /*--------------------------------------------------------------------------*/
 
