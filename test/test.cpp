@@ -124,10 +124,6 @@
 using namespace MCFClass_di_unipi_it;
 using namespace SMSpp_di_unipi_it;
 
-// FIXME: Avoid these declarations
-template<> const std::vector< int > MCFSolver< MCFC >::Solver_2_MCFClass_int;
-template<> const std::vector< int > MCFSolver< MCFC >::Solver_2_MCFClass_dbl;
-
 /*--------------------------------------------------------------------------*/
 /*------------------------- TYPES & CONSTEXPRS -----------------------------*/
 /*--------------------------------------------------------------------------*/
