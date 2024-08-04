@@ -126,7 +126,6 @@ target_link_libraries(${modName} PUBLIC
 add_library(${modNamespace}::${modName} ALIAS ${modName})
 
 # ----- Subdirectories ------------------------------------------------------ #
-
 add_subdirectory(tools)
 
 if (BUILD_TESTING)
