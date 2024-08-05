@@ -4,6 +4,7 @@ tools/dmx2nc4
 
 ### data directories
 data/dmx/*.dmx
+data/dmx/.extracted
 data/nc4
 
 ### C/C++ template

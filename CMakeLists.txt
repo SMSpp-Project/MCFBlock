@@ -58,14 +58,14 @@ else ()
     # MCFClass library, required by MCFBlock.
     # Requires CPLEX.
     set(MCFClass_READ_PATHS OFF CACHE BOOL
-                            "Whether MCFClass will read locations for
+            "Whether MCFClass will read locations for
 		                    dependencies or not." FORCE)
     add_subdirectory(MCFClass)
 
     # Add the binary directory to RPATH, so executables that use
     # dynamic loading will look into it.
     set(SMSPP_BUILD_RPATH
-        "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
+            "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
 endif ()
 
 # uncomment all of the following for which the corresponding
@@ -94,8 +94,8 @@ target_compile_features(${modName} PUBLIC cxx_std_20)
 # but should be added to anything that links to it.
 # Note: do not GLOB files here.
 target_sources(${modName} PRIVATE
-               src/MCFSolver.cpp
-               src/MCFBlock.cpp)
+        src/MCFSolver.cpp
+        src/MCFBlock.cpp)
 
 # When using target_include_directories(), PUBLIC means that any targets
 # that link to this target also need that include directory.
@@ -118,8 +118,8 @@ target_include_directories(
 # library, INTERFACE means they will be linked only to the targets that depend
 # on this library.
 target_link_libraries(${modName} PUBLIC
-                      ${modNamespace}::SMS++
-                      MCFClass::MCFClass)
+        ${modNamespace}::SMS++
+        MCFClass::MCFClass)
 
 # This alias is defined so that executables in this same project can use
 # the library with this notation.
@@ -134,6 +134,70 @@ if (BUILD_TESTING)
     endif ()
     add_subdirectory(test)
 endif ()
+
+# ----- Custom commands and targets ----------------------------------------- #
+
+# Custom command to extract the dmx.tgz archive if the .extracted file does not exist
+if (UNIX)
+    add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+            COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
+            COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
+            COMMENT "Extracting dmx.tgz"
+            VERBATIM
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
+    )
+elseif (WIN32)
+    add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+            COMMAND powershell -Command "
+            if (!(Test-Path -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx' -PathType Container)) {
+                New-Item -ItemType Directory -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx'
+            }
+            if (-Not (Get-ChildItem -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx' -Recurse | Measure-Object).Count) {
+                Expand-Archive -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz' -DestinationPath '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx'
+                New-Item -ItemType File -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted'
+            }"
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
+            COMMENT "Extracting dmx.tgz"
+            VERBATIM
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
+    )
+endif ()
+
+# Create custom targets to run the dmx extraction
+add_custom_target(extract_dmx ALL
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+)
+
+# Custom command to run tools/batch with the dmx2nc4 exe if the .generated file does not exist
+if (UNIX)
+    add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tools/batch ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4
+            COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
+            COMMENT "Generating nc4 files"
+            VERBATIM
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+    )
+elseif (WIN32)
+    add_custom_command(
+            OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated"
+            COMMAND powershell -Command "& '${CMAKE_CURRENT_SOURCE_DIR}/tools/batch' '${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4.exe'"
+            COMMAND New-Item -ItemType File -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated'
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools"
+            COMMENT "Generating nc4 files"
+            VERBATIM
+            DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4.exe" "${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted"
+    )
+endif ()
+
+# Create custom targets to run the nc4 generation
+add_custom_target(run_dmx2nc4 ALL
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+)
 
 # ----- Install instructions ------------------------------------------------ #
 # The following commands are used when installing the library
@@ -194,8 +258,8 @@ install(FILES
 # dynamic loading will look into it.
 if (hasParent)
     set(SMSPP_BUILD_RPATH
-        "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}"
-        PARENT_SCOPE)
+            "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}"
+            PARENT_SCOPE)
 endif ()
 
 # ----- Packaging support --------------------------------------------------- #
@@ -210,9 +274,9 @@ if (NOT hasParent)
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_LIST_DIR}/LICENSE")
     set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_LIST_DIR}/README.md")
     set(CPACK_SOURCE_IGNORE_FILES
-        \\\\.git/
-        \\\\.gitignore$
-        \\\\.gitattributes$)
+            \\\\.git/
+            \\\\.gitignore$
+            \\\\.gitattributes$)
     include(CPack)
 endif ()
 
