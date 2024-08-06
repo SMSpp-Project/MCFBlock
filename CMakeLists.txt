@@ -178,7 +178,7 @@ if (UNIX)
             COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tools/batch ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4
             COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
-            COMMENT "Generating nc4 files"
+            COMMENT "Generating nc4 files from dmx"
             VERBATIM
             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
     )
@@ -188,7 +188,7 @@ elseif (WIN32)
             COMMAND powershell -Command "& '${CMAKE_CURRENT_SOURCE_DIR}/tools/batch' '${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4.exe'"
             COMMAND New-Item -ItemType File -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated'
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools"
-            COMMENT "Generating nc4 files"
+            COMMENT "Generating nc4 files from dmx"
             VERBATIM
             DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4.exe" "${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted"
     )
