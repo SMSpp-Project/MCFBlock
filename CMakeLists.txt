@@ -138,33 +138,15 @@ endif ()
 # ----- Custom commands and targets ----------------------------------------- #
 
 # Custom command to extract the dmx.tgz archive if the .extracted file does not exist
-if (UNIX)
-    add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
-            COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
-            COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
-            COMMENT "Extracting dmx.tgz"
-            VERBATIM
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
-    )
-elseif (WIN32)
-    add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
-            COMMAND powershell -Command "
-            if (-not (Test-Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx' -PathType Container)) {
-                New-Item -ItemType Directory -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx'
-            }
-            if (-not (Get-ChildItem -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx' -Recurse | Measure-Object).Count) {
-                Expand-Archive -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz' -DestinationPath '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx'
-                New-Item -ItemType File -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted'
-            }"
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
-            COMMENT "Extracting dmx.tgz"
-            VERBATIM
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
-    )
-endif ()
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+        COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
+        COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
+        COMMENT "Extracting dmx.tgz"
+        VERBATIM
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
+)
 
 # Create custom targets to run the dmx extraction
 add_custom_target(extract_dmx ALL
@@ -178,19 +160,20 @@ if (UNIX)
             COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tools/batch ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4
             COMMAND touch ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
-            COMMENT "Generating nc4 files from dmx"
+            COMMENT "Running dmx2nc4"
             VERBATIM
             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
     )
 elseif (WIN32)
     add_custom_command(
-            OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated"
-            COMMAND powershell -Command "& '${CMAKE_CURRENT_SOURCE_DIR}/tools/batch' '${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4.exe'"
-            COMMAND New-Item -ItemType File -Path '${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated'
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools"
-            COMMENT "Generating nc4 files from dmx"
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            COMMAND "C:/Program Files/Git/bin/bash.exe" -c  # using Git for Windows that includes Git Bash
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch ${CMAKE_CURRENT_BINARY_DIR}/tools/${CMAKE_BUILD_TYPE}/dmx2nc4.exe"
+            COMMAND echo. > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
+            COMMENT "Running dmx2nc4"
             VERBATIM
-            DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4.exe" "${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted"
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/${CMAKE_BUILD_TYPE}/dmx2nc4.exe ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
     )
 endif ()
 
@@ -198,6 +181,9 @@ endif ()
 add_custom_target(run_dmx2nc4 ALL
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
 )
+
+# Ensure that run_dmx2nc4 is executed after the build
+add_dependencies(run_dmx2nc4 dmx2nc4)
 
 # ----- Install instructions ------------------------------------------------ #
 # The following commands are used when installing the library
