@@ -2231,8 +2231,8 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 
  // check to see how many of the initial arcs are either deleted or not
  // really changing the costs
- while( ( std::isnan( C[ rng.first ] ) || ( *NCost == C[ rng.first ] ) )
-	&& ( rng.first < rng.second ) ) {
+ while( ( rng.first < rng.second ) &&
+	( std::isnan( C[ rng.first ] ) || ( *NCost == C[ rng.first ] ) ) ) {
   ++rng.first;
   ++NCost;
   }
@@ -2418,8 +2418,8 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
 
  // check to see how many of the initial arcs are either deleted or not
  // really changing the capacity
- while( ( std::isnan( C[ rng.first ] ) || ( *NCap == U[ rng.first ] ) )
-	&& ( rng.first < rng.second ) ) {
+ while( ( rng.first < rng.second ) &&
+	( std::isnan( C[ rng.first ] ) || ( *NCap == U[ rng.first ] ) ) ) {
   ++rng.first;
   ++NCap;
   }
