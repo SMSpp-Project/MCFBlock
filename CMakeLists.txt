@@ -58,8 +58,7 @@ else ()
     # MCFClass library, required by MCFBlock.
     # Requires CPLEX.
     set(MCFClass_READ_PATHS OFF CACHE BOOL
-            "Whether MCFClass will read locations for
-		                    dependencies or not." FORCE)
+        "Whether MCFClass will read locations for dependencies or not." FORCE)
     add_subdirectory(MCFClass)
 
     # Add the binary directory to RPATH, so executables that use
@@ -94,8 +93,8 @@ target_compile_features(${modName} PUBLIC cxx_std_20)
 # but should be added to anything that links to it.
 # Note: do not GLOB files here.
 target_sources(${modName} PRIVATE
-        src/MCFSolver.cpp
-        src/MCFBlock.cpp)
+               src/MCFSolver.cpp
+               src/MCFBlock.cpp)
 
 # When using target_include_directories(), PUBLIC means that any targets
 # that link to this target also need that include directory.
@@ -118,8 +117,8 @@ target_include_directories(
 # library, INTERFACE means they will be linked only to the targets that depend
 # on this library.
 target_link_libraries(${modName} PUBLIC
-        ${modNamespace}::SMS++
-        MCFClass::MCFClass)
+                      ${modNamespace}::SMS++
+                      MCFClass::MCFClass)
 
 # This alias is defined so that executables in this same project can use
 # the library with this notation.
