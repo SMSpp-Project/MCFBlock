@@ -69,9 +69,11 @@ endif ()
 
 # uncomment all of the following for which the corresponding
 # MCFSolver< :MCFClass > must be defined
-#add_compile_definitions(HAVE_RELAX)
+add_compile_definitions(HAVE_RELAX)
 if (NOT MCFClass_USE_CPLEX)
     add_compile_definitions(HAVE_CPLEX=OFF)
+else ()
+    add_compile_definitions(HAVE_CPLEX)
 endif ()
 add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_SPTRE)

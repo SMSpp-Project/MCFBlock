@@ -18,7 +18,7 @@ NAME = dmx2nc4
 # basic directory
 DIR = .
 
-# switch to select the :MCFClass solver, supported values are
+# switch to select the :MCFClass solver, supported values are:
 # -DHAVE_CSCL2      for the CS2 class
 # -DHAVE_CPLEX      for the MCFCplex class
 # -DHAVE_MFSMX      for the MCFSimplex class
