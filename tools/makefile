@@ -29,22 +29,39 @@ DIR = .
 #                   most MCF instances, except those with SPT structure
 MCFCS = -DHAVE_MFSMX
 
+# common flags
+COMMON_SW = -std=c++17 $(MCFCS)
+
 # debug switches
-#SW = -g -glldb -fno-inline -std=c++17 -ferror-limit=1 $(MCFCS)
+SW_DEBUG = -g -glldb -fno-inline $(COMMON_SW)
 # production switches
-SW = -O3 -std=c++17 -DNDEBUG $(MCFCS)
+SW_RELEASE = -O3 $(COMMON_SW) -DNDEBUG
 
 # compiler
 CC = clang++
 
 # default target- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-default: $(NAME)
+BUILD_MODE = release
 
-# clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+default: $(BUILD_MODE)
+
+# debug target- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+debug: SW = $(SW_DEBUG)
+debug: BUILD_MODE = debug
+debug: $(DIR)/$(NAME)
+
+# release target- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+release: SW = $(SW_RELEASE)
+release: BUILD_MODE = release
+release: $(DIR)/$(NAME)
+
+# clean target- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 clean::
-	rm -f $(DIR)/*.o $(DIR)/*~ $(NAME)
+	rm -f $(DIR)/*.o $(DIR)/*~ $(DIR)/$(NAME)
 
 # define & include the necessary modules- - - - - - - - - - - - - - - - - - -
 # if a module is not used in the current configuration, just comment out the
@@ -67,10 +84,10 @@ MOBJ =  $(MCFBkOBJ)
 # libraries
 MLIB =  $(MCFBkLIB)
 
-$(NAME): $(MOBJ) $(DIR)/$(NAME).o
-	$(CC) -o $(NAME) $(DIR)/$(NAME).o $(MOBJ) $(MLIB) $(SW)
+$(DIR)/$(NAME): $(MOBJ) $(DIR)/$(NAME).o
+	$(CC) -o $(DIR)/$(NAME) $(DIR)/$(NAME).o $(MOBJ) $(MLIB) $(SW)
 
-# dependencies: every .o from its .C + every recursively included .h- - - - -
+# dependencies: every .o from its .cpp + every recursively included .h- - - -
 
 # include directives
 MINC =  $(MCFBkINC)
@@ -82,5 +99,24 @@ MH =    $(MCFBkH)
 
 $(DIR)/$(NAME).o: $(DIR)/$(NAME).cpp $(MH)
 	$(CC) -c $*.cpp -o $@ $(MINC) $(SW)
+
+# install/uninstall - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+prefix = /opt/smspp-project
+bindir = $(prefix)/$(BUILD_MODE)/bin
+
+install: $(DIR)/$(NAME)
+	install -s -D $(DIR)/$(NAME) $(DESTDIR)$(bindir)/$(NAME)
+
+uninstall:
+	rm -f $(DESTDIR)$(bindir)/$(NAME)
+
+# distclean target- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+distclean: clean
+
+# phony targets - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+.PHONY: debug release install uninstall clean distclean
 
 ############################ End of makefile #################################
