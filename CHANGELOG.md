@@ -151,7 +151,8 @@ Minor point release to avoid the master branch to become too stale:
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.4...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.0...develop
+[0.5.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.4...0.5.0
 [0.4.4]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.3...0.4.4
 [0.4.3]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.2...0.4.3
 [0.4.2]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.1...0.4.2
