@@ -48,6 +48,9 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # See: https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html
 include(BuildType)
 
+# An option is an ON/OFF user-settable cache variable
+option(RUN_dmx2nc4 "Whether ${modName} will run dmx2nc4 or not." ON)
+
 # ----- Requirements -------------------------------------------------------- #
 if (NOT hasParent)
     # If it's not being called by the umbrella, we need to
@@ -138,54 +141,56 @@ endif ()
 
 # ----- Custom commands and targets ----------------------------------------- #
 
-# Custom command to extract the dmx.tgz archive if the .extracted file does not exist
-add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
-        COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
-        COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
-        COMMENT "Extracting dmx.tgz"
-        VERBATIM
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
-)
-
-# Create custom targets to run the dmx extraction
-add_custom_target(extract_dmx ALL
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
-)
-
-# Custom command to run tools/batch with the dmx2nc4 exe if the .generated file does not exist
-if (UNIX)
+if (RUN_dmx2nc4)
+    # Custom command to extract the dmx.tgz archive if the .extracted file does not exist
     add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
-            COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tools/batch ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4
-            COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
-            COMMENT "Running dmx2nc4"
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+            COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
+            COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
+            COMMENT "Extracting dmx.tgz"
             VERBATIM
-            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
     )
-elseif (WIN32)
-    add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
-            # using Git for Windows that includes Git Bash
-            COMMAND "C:/Program Files/Git/bin/bash.exe"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch" "$<TARGET_FILE:dmx2nc4>"
-            COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
-            COMMENT "Running dmx2nc4"
-            VERBATIM
-            DEPENDS $<TARGET_FILE:dmx2nc4> ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+
+    # Create custom targets to run the dmx extraction
+    add_custom_target(extract_dmx ALL
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
     )
+
+    # Custom command to run tools/batch with the dmx2nc4 exe if the .generated file does not exist
+    if (UNIX)
+        add_custom_command(
+                OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+                COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tools/batch ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4
+                COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
+                COMMENT "Running dmx2nc4"
+                VERBATIM
+                DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+        )
+    elseif (WIN32)
+        add_custom_command(
+                OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+                # using Git for Windows that includes Git Bash
+                COMMAND "C:/Program Files/Git/bin/bash.exe"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch" "$<TARGET_FILE:dmx2nc4>"
+                COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
+                COMMENT "Running dmx2nc4"
+                VERBATIM
+                DEPENDS $<TARGET_FILE:dmx2nc4> ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+        )
+    endif ()
+
+    # Create custom targets to run the nc4 generation
+    add_custom_target(run_dmx2nc4 ALL
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+    )
+
+    # Ensure that run_dmx2nc4 is executed after the build
+    add_dependencies(run_dmx2nc4 dmx2nc4)
 endif ()
-
-# Create custom targets to run the nc4 generation
-add_custom_target(run_dmx2nc4 ALL
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
-)
-
-# Ensure that run_dmx2nc4 is executed after the build
-add_dependencies(run_dmx2nc4 dmx2nc4)
 
 # ----- Install instructions ------------------------------------------------ #
 # The following commands are used when installing the library
