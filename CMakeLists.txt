@@ -49,7 +49,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(BuildType)
 
 # An option is an ON/OFF user-settable cache variable
-option(RUN_dmx2nc4 "Whether ${modName} will run dmx2nc4 or not." ON)
+option(RUN_dmx2nc4 "Whether ${modName} will run dmx2nc4 or not." OFF)
 
 # ----- Requirements -------------------------------------------------------- #
 if (NOT hasParent)
