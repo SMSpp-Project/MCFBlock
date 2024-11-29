@@ -1182,7 +1182,7 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
 
-Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base  ,
+Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base ,
 				Block * father )
 {
  if( r3bc != nullptr )
@@ -2288,7 +2288,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
-			  bool ordered  ,
+			  bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )  // nothing to change
@@ -2493,7 +2493,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
-			  bool ordered  ,
+			  bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  if( U.empty() ) {
@@ -2936,7 +2936,7 @@ void MCFBlock::close_arcs( Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
+void MCFBlock::close_arcs( Subset && nms , bool ordered ,
 			   ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )
@@ -3100,7 +3100,7 @@ void MCFBlock::open_arcs( Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
+void MCFBlock::open_arcs( Subset && nms , bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )
