@@ -3512,7 +3512,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
   *   NO COMPLICATED OPERATIONS (Variable AND/OR Constraint BEING
   *   ADDED/REMOVED ...) CAN HAVE BEEN PERFORMED IN THE MEANTIME
   *
-  * This assumption drastically simplifies some of the logic here.*/
+  * This assumption drastically simplifies some of the logic here. */
 
  // C05FunctionModLinRngd - - - - - - - - - - - - - - - - - - - - - - - - - -
  if( const auto tmod = dynamic_cast< C05FunctionModLinRngd * >( mod ) ) {

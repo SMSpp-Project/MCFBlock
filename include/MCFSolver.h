@@ -894,7 +894,7 @@ class MCFSolverState : public State
  /// serialize a MCFSolverState into a netCDF::NcGroup
  /** The method should serialize the MCFSolverState into the provided
   * netCDF::NcGroup, so that it can later be read back by deserialize(), but
-  * in fact it does not work.*/
+  * in fact it does not work. */
 
  void serialize( netCDF::NcGroup & group ) const override {}
 
