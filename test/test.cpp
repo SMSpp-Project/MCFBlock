@@ -401,7 +401,7 @@ static bool SolveMCF( void )
   auto stat = mcf->MCFGetStatus();
 
   // solve the MCFBlock- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  Solver * slvr = (sMCFB->get_registered_solvers()).front();
+  Solver * slvr = ( sMCFB->get_registered_solvers() ).front();
   int rtrn = slvr->compute( false );
 
   if( ( stat == MCFClass::kOK ) &&
