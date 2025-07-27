@@ -3,6 +3,7 @@ test/MCFBlock_test
 tools/dmx2nc4
 
 ### data directories
+data/dmx/dmx.tgz
 data/dmx/*.dmx
 data/dmx/.extracted
 data/nc4

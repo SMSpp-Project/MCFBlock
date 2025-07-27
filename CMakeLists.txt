@@ -132,6 +132,26 @@ endif ()
 
 # ----- Custom commands and targets ----------------------------------------- #
 
+# Download dmx.tgz from GitLab Package Registry if it doesn't exist
+set(DMX_URL "https://gitlab.com/api/v4/projects/14857645/packages/generic/dmx/latest/dmx.tgz")
+set(DMX_ARCHIVE ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz)
+set(DMX_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/download_dmx.cmake)
+
+file(WRITE ${DMX_SCRIPT} "
+file(DOWNLOAD \"${DMX_URL}\" \"${DMX_ARCHIVE}\" SHOW_PROGRESS)
+")
+
+add_custom_command(
+        OUTPUT ${DMX_ARCHIVE}
+        COMMAND ${CMAKE_COMMAND} -E echo "Downloading dmx.tgz from GitLab Package Registry..."
+        COMMAND ${CMAKE_COMMAND} -P ${DMX_SCRIPT}
+        COMMENT "Downloading dmx.tgz"
+        VERBATIM
+)
+
+add_custom_target(download_dmx
+        DEPENDS ${DMX_ARCHIVE})
+
 # Custom command to extract the dmx.tgz archive if the .extracted file does not exist
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
@@ -140,11 +160,14 @@ add_custom_command(
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
         COMMENT "Extracting dmx.tgz"
         VERBATIM
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz)
+        DEPENDS download_dmx)
 
 # Create custom targets to run the dmx extraction
 add_custom_target(extract_dmx
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted)
+
+# Ensure that run_dmx is executed after the download
+add_dependencies(extract_dmx download_dmx)
 
 # Custom command to run tools/batch with the dmx2nc4 exe if the .generated file does not exist
 if (UNIX)
