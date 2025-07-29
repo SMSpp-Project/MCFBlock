@@ -157,7 +157,7 @@ add_custom_command(
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted
         COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx.tgz
         COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data
         COMMENT "Extracting dmx.tgz"
         VERBATIM
         DEPENDS download_dmx)
