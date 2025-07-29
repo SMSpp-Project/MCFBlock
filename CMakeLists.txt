@@ -134,7 +134,7 @@ endif ()
 
 # Download dmx.tgz from GitLab Package Registry if it doesn't exist
 set(DMX_URL "https://gitlab.com/api/v4/projects/14857645/packages/generic/dmx/latest/dmx.tgz")
-set(DMX_ARCHIVE ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz)
+set(DMX_ARCHIVE ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx.tgz)
 set(DMX_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/download_dmx.cmake)
 
 file(WRITE ${DMX_SCRIPT} "
@@ -154,9 +154,9 @@ add_custom_target(download_dmx
 
 # Custom command to extract the dmx.tgz archive if the .extracted file does not exist
 add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
-        COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/dmx.tgz
-        COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted
+        COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx.tgz
+        COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx
         COMMENT "Extracting dmx.tgz"
         VERBATIM
@@ -164,7 +164,7 @@ add_custom_command(
 
 # Create custom targets to run the dmx extraction
 add_custom_target(extract_dmx
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted)
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
 
 # Ensure that run_dmx is executed after the download
 add_dependencies(extract_dmx download_dmx)
@@ -178,7 +178,7 @@ if (UNIX)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
             COMMENT "Running dmx2nc4"
             VERBATIM
-            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted)
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
 elseif (WIN32)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
@@ -189,7 +189,7 @@ elseif (WIN32)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
             COMMENT "Running dmx2nc4"
             VERBATIM
-            DEPENDS $<TARGET_FILE:dmx2nc4> ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx/.extracted)
+            DEPENDS $<TARGET_FILE:dmx2nc4> ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
 endif ()
 
 # Create custom targets to run the nc4 generation

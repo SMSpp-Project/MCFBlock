@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 cd ../..
-bash upload-to-package-registry MCFBlock/data/dmx/dmx.tgz
+bash upload-to-package-registry MCFBlock/data/dmx.tgz
