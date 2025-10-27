@@ -2530,7 +2530,7 @@ class MCFSolution : public Solution {
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- ~MCFSolution() = default;  ///< destructor: it is virtual, and empty
+ ~MCFSolution() override = default;  ///< destructor: it is virtual, and empty
 
 /*------------- METHODS DESCRIBING THE BEHAVIOR OF A MCFSolution -----------*/
 
