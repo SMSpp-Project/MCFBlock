@@ -298,15 +298,17 @@ public:
 /*--------------------------------------------------------------------------*/
 
  void set_par( idx_type par , int value ) override {
-  if( Solver_2_MCFClass_int[ par ] >= 0 )
-   MCFC::SetPar( Solver_2_MCFClass_int[ par ] , int( value ) );
+  auto idx = Solver_2_MCFClass_int( par );
+  if( idx  >= 0 )
+   MCFC::SetPar( idx , int( value ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
  void set_par( idx_type par , double value ) override {
-  if( Solver_2_MCFClass_dbl[ par ] >= 0 )
-   MCFC::SetPar( Solver_2_MCFClass_dbl[ par ] , double( value ) );
+  auto idx = Solver_2_MCFClass_dbl( par );
+  if( idx >= 0 )
+   MCFC::SetPar( idx , double( value ) );
   }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
@@ -632,9 +634,10 @@ public:
 /*--------------------------------------------------------------------------*/
  
  [[nodiscard]] int get_int_par( idx_type par ) const override {
-  if( Solver_2_MCFClass_int[ par ] >= 0 ) {
+  auto idx = Solver_2_MCFClass_int( par );
+  if( idx >= 0 ) {
    int val;
-   this->GetPar( Solver_2_MCFClass_int[ par ] , val );
+   this->GetPar( idx , val );
    return( val );
    }
 
@@ -644,9 +647,10 @@ public:
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  
  [[nodiscard]] double get_dbl_par( idx_type par ) const override {
-  if( Solver_2_MCFClass_dbl[ par ] >= 0 ) {
+  auto idx = Solver_2_MCFClass_dbl( par );
+  if( idx >= 0 ) {
    double val;
-   this->GetPar( Solver_2_MCFClass_dbl[ par ] , val );
+   this->GetPar( idx , val );
    return( val );
    }
 
@@ -812,14 +816,14 @@ protected:
  void guts_of_poM( c_p_Mod mod );
 
 /*--------------------------------------------------------------------------*/
+
+ int Solver_2_MCFClass_int( idx_type par ) const;
+
+ int Solver_2_MCFClass_dbl( idx_type par ) const;
+
+/*--------------------------------------------------------------------------*/
 /*---------------------------- PROTECTED FIELDS  ---------------------------*/
 /*--------------------------------------------------------------------------*/
-
- const static std::vector< int > Solver_2_MCFClass_int;
- // the (static const) map between Solver int parameters and MCFClass ones
-
- const static std::vector< int > Solver_2_MCFClass_dbl;
- // the (static const) map between Solver int parameters and MCFClass ones
 
  std::string f_dmx_file;  // string for DMX file output
 
@@ -890,7 +894,7 @@ class MCFSolverState : public State
  /// serialize a MCFSolverState into a netCDF::NcGroup
  /** The method should serialize the MCFSolverState into the provided
   * netCDF::NcGroup, so that it can later be read back by deserialize(), but
-  * in fact it does not work.*/
+  * in fact it does not work. */
 
  void serialize( netCDF::NcGroup & group ) const override {}
 

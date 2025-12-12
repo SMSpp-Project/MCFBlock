@@ -11,18 +11,14 @@
 #                                                                             #
 #        $ cmake --build <build-path> --target install                        #
 #                                                                             #
-#    Note: this file tries to respect the principles of Modern CMake,         #
-#          keep it in mind when editing it.                                   #
-#                                                                             #
-#                              Niccolo' Iardella                              #
 #                                Donato Meoli                                 #
 #                         Dipartimento di Informatica                         #
 #                             Universita' di Pisa                             #
 # --------------------------------------------------------------------------- #
-cmake_minimum_required(VERSION 3.19)
-cmake_policy(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
+cmake_policy(VERSION 3.15)
 project(MCFBlock
-        VERSION 0.4.4
+        VERSION 0.5.1
         DESCRIPTION "SMS++ MCFBlock module"
         HOMEPAGE_URL https://gitlab.com/smspp/mcfblock
         LANGUAGES C CXX)
@@ -58,28 +54,23 @@ else ()
     # MCFClass library, required by MCFBlock.
     # Requires CPLEX.
     set(MCFClass_READ_PATHS OFF CACHE BOOL
-                            "Whether MCFClass will read locations for
-		                    dependencies or not." FORCE)
+        "Whether MCFClass will read locations for dependencies or not." FORCE)
     add_subdirectory(MCFClass)
 
     # Add the binary directory to RPATH, so executables that use
     # dynamic loading will look into it.
     set(SMSPP_BUILD_RPATH
-        "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
+            "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
 endif ()
 
 # uncomment all of the following for which the corresponding
 # MCFSolver< :MCFClass > must be defined
-#add_compile_definitions(HAVE_RELAX)
-if (NOT MCFClass_USE_CPLEX)
-    add_compile_definitions(HAVE_CPLEX=0FF)
+add_compile_definitions(HAVE_RELAX)
+if (MCFClass_USE_CPLEX)
+    add_compile_definitions(HAVE_CPLEX)
 endif ()
 add_compile_definitions(HAVE_MFSMX)
 #add_compile_definitions(HAVE_SPTRE)
-
-#if (MCFBlock_SOLVER STREQUAL "cplex" AND NOT MCFClass_USE_CPLEX)
-#    message(FATAL_ERROR "${modName} solver is \"CPLEX\" but MCFCplex was not built")
-#endif ()
 
 # ----- Configuration header ------------------------------------------------ #
 # This will generate a *Config.h header in the build directory.
@@ -89,7 +80,7 @@ configure_file(cmake/${modName}Config.h.in ${modName}Config.h)
 # With the BUILD_SHARED_LIBS variable we can specify if the library will
 # be STATIC or SHARED, so no reason to do it now.
 add_library(${modName})
-target_compile_features(${modName} PUBLIC cxx_std_17)
+target_compile_features(${modName} PUBLIC cxx_std_20)
 
 # When adding source files with target_sources(), PRIVATE means that the files
 # should only be added to this library, whereas PUBLIC means they should be
@@ -130,7 +121,6 @@ target_link_libraries(${modName} PUBLIC
 add_library(${modNamespace}::${modName} ALIAS ${modName})
 
 # ----- Subdirectories ------------------------------------------------------ #
-
 add_subdirectory(tools)
 
 if (BUILD_TESTING)
@@ -139,6 +129,75 @@ if (BUILD_TESTING)
     endif ()
     add_subdirectory(test)
 endif ()
+
+# ----- Custom commands and targets ----------------------------------------- #
+
+# Download dmx.tgz from GitLab Package Registry if it doesn't exist
+set(DMX_URL "https://gitlab.com/api/v4/projects/14857645/packages/generic/dmx/latest/dmx.tgz")
+set(DMX_ARCHIVE ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx.tgz)
+set(DMX_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/download_dmx.cmake)
+
+file(WRITE ${DMX_SCRIPT} "
+file(DOWNLOAD \"${DMX_URL}\" \"${DMX_ARCHIVE}\" SHOW_PROGRESS)
+")
+
+add_custom_command(
+        OUTPUT ${DMX_ARCHIVE}
+        COMMAND ${CMAKE_COMMAND} -E echo "Downloading dmx.tgz from GitLab Package Registry..."
+        COMMAND ${CMAKE_COMMAND} -P ${DMX_SCRIPT}
+        COMMENT "Downloading dmx.tgz"
+        VERBATIM
+)
+
+add_custom_target(download_dmx
+        DEPENDS ${DMX_ARCHIVE})
+
+# Custom command to extract the dmx.tgz archive if the .extracted file does not exist
+add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted
+        COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx.tgz
+        COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data
+        COMMENT "Extracting dmx.tgz"
+        VERBATIM
+        DEPENDS download_dmx)
+
+# Create custom targets to run the dmx extraction
+add_custom_target(extract_dmx
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
+
+# Ensure that run_dmx is executed after the download
+add_dependencies(extract_dmx download_dmx)
+
+# Custom command to run tools/batch with the dmx2nc4 exe if the .generated file does not exist
+if (UNIX)
+    add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tools/batch ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4
+            COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
+            COMMENT "Running dmx2nc4"
+            VERBATIM
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
+elseif (WIN32)
+    add_custom_command(
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            # using Git for Windows that includes Git Bash
+            COMMAND "C:/Program Files/Git/bin/bash.exe"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch" "$<TARGET_FILE:dmx2nc4>"
+            COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
+            COMMENT "Running dmx2nc4"
+            VERBATIM
+            DEPENDS $<TARGET_FILE:dmx2nc4> ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
+endif ()
+
+# Create custom targets to run the nc4 generation
+add_custom_target(run_dmx2nc4
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated)
+
+# Ensure that run_dmx2nc4 is executed after the build
+add_dependencies(run_dmx2nc4 dmx2nc4)
 
 # ----- Install instructions ------------------------------------------------ #
 # The following commands are used when installing the library
@@ -150,11 +209,12 @@ include(GNUInstallDirs)
 # Install the library
 install(TARGETS ${modName}
         EXPORT ${modName}Targets
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} # .dll
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} # .so .dylib
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}) # .lib
 
 # Install the headers
-install(DIRECTORY include
+install(DIRECTORY include/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${modNamespace})
 
 # Install the auto-generated configuration header (see above).
@@ -199,8 +259,8 @@ install(FILES
 # dynamic loading will look into it.
 if (hasParent)
     set(SMSPP_BUILD_RPATH
-        "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}"
-        PARENT_SCOPE)
+            "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}"
+            PARENT_SCOPE)
 endif ()
 
 # ----- Packaging support --------------------------------------------------- #
@@ -210,14 +270,14 @@ endif ()
 # Using this with the umbrella project is too messy.
 if (NOT hasParent)
     set(CPACK_PACKAGE_VENDOR "SMS++ Team")
-    set(CPACK_PACKAGE_CONTACT "Niccolo' Iardella")
+    set(CPACK_PACKAGE_CONTACT "Donato Meoli")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_LIST_DIR}/LICENSE")
     set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_LIST_DIR}/README.md")
     set(CPACK_SOURCE_IGNORE_FILES
-        \\\\.git/
-        \\\\.gitignore$
-        \\\\.gitattributes$)
+            \\\\.git/
+            \\\\.gitignore$
+            \\\\.gitattributes$)
     include(CPack)
 endif ()
 

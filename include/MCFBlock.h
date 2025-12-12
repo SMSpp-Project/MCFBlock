@@ -2491,9 +2491,10 @@ class MCFBlockSbstMod : public MCFBlockMod
  * "special" solutions ("less general" ones in the parlance of Solution). In
  * particular:
  *
- * - if all capacities are Inf< FNumber >() and there is only one source or sink
- *   node, then the MCF problem is in fact a Shortest Path (sub-)Tree one, and
- *   its solutions can be represented by means of a predecessor function;
+ * - if all capacities are Inf< FNumber >() and there is only one source or
+ *   sink node, then the MCF problem is in fact a Shortest Path (sub-)Tree
+ *   one, and its solutions can be represented by means of a predecessor
+ *   function;
  *
  * - if all (finite) capacities and node deficits are integer, then there
  *   always exist optimal flow solutions of MCF that are integer;
@@ -2529,7 +2530,7 @@ class MCFSolution : public Solution {
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
- ~MCFSolution() = default;  ///< destructor: it is virtual, and empty
+ ~MCFSolution() override = default;  ///< destructor: it is virtual, and empty
 
 /*------------- METHODS DESCRIBING THE BEHAVIOR OF A MCFSolution -----------*/
 

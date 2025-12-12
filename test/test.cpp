@@ -45,7 +45,9 @@
  * - 5      for the SPTree class; note that SPTree cannot solve
  *          most MCF instances, except those with SPT structure */
 
-#define WHICH_MCF 1
+#ifndef WHICH_MCF
+ #define WHICH_MCF 1
+#endif
 
 #if( LOG_LEVEL >= 1 )
 #define LOG1( x ) cout << x
@@ -121,10 +123,6 @@
 
 using namespace MCFClass_di_unipi_it;
 using namespace SMSpp_di_unipi_it;
-
-// FIXME: Avoid these declarations
-template<> const std::vector< int > MCFSolver< MCFC >::Solver_2_MCFClass_int;
-template<> const std::vector< int > MCFSolver< MCFC >::Solver_2_MCFClass_dbl;
 
 /*--------------------------------------------------------------------------*/
 /*------------------------- TYPES & CONSTEXPRS -----------------------------*/
@@ -403,7 +401,7 @@ static bool SolveMCF( void )
   auto stat = mcf->MCFGetStatus();
 
   // solve the MCFBlock- - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  Solver * slvr = (sMCFB->get_registered_solvers()).front();
+  Solver * slvr = ( sMCFB->get_registered_solvers() ).front();
   int rtrn = slvr->compute( false );
 
   if( ( stat == MCFClass::kOK ) &&

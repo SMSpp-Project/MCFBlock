@@ -1182,7 +1182,7 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
 
-Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base  ,
+Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base ,
 				Block * father )
 {
  if( r3bc != nullptr )
@@ -2231,8 +2231,8 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 
  // check to see how many of the initial arcs are either deleted or not
  // really changing the costs
- while( ( std::isnan( C[ rng.first ] ) || ( *NCost == C[ rng.first ] ) )
-	&& ( rng.first < rng.second ) ) {
+ while( ( rng.first < rng.second ) &&
+	( std::isnan( C[ rng.first ] ) || ( *NCost == C[ rng.first ] ) ) ) {
   ++rng.first;
   ++NCost;
   }
@@ -2288,7 +2288,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
-			  bool ordered  ,
+			  bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )  // nothing to change
@@ -2418,8 +2418,8 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
 
  // check to see how many of the initial arcs are either deleted or not
  // really changing the capacity
- while( ( std::isnan( C[ rng.first ] ) || ( *NCap == U[ rng.first ] ) )
-	&& ( rng.first < rng.second ) ) {
+ while( ( rng.first < rng.second ) &&
+	( std::isnan( C[ rng.first ] ) || ( *NCap == U[ rng.first ] ) ) ) {
   ++rng.first;
   ++NCap;
   }
@@ -2493,7 +2493,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
 /*--------------------------------------------------------------------------*/
 
 void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
-			  bool ordered  ,
+			  bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  if( U.empty() ) {
@@ -2936,7 +2936,7 @@ void MCFBlock::close_arcs( Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::close_arcs( Subset && nms , bool ordered  ,
+void MCFBlock::close_arcs( Subset && nms , bool ordered ,
 			   ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )
@@ -3100,7 +3100,7 @@ void MCFBlock::open_arcs( Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::open_arcs( Subset && nms , bool ordered  ,
+void MCFBlock::open_arcs( Subset && nms , bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  if( nms.empty() )
@@ -3512,7 +3512,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
   *   NO COMPLICATED OPERATIONS (Variable AND/OR Constraint BEING
   *   ADDED/REMOVED ...) CAN HAVE BEEN PERFORMED IN THE MEANTIME
   *
-  * This assumption drastically simplifies some of the logic here.*/
+  * This assumption drastically simplifies some of the logic here. */
 
  // C05FunctionModLinRngd - - - - - - - - - - - - - - - - - - - - - - - - - -
  if( const auto tmod = dynamic_cast< C05FunctionModLinRngd * >( mod ) ) {
