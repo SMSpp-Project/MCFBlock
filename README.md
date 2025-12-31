@@ -102,14 +102,15 @@ necessary to that must be independently edit it in an analogous way.
 
 ## Tools
 
-We provide a simple tool that converts MCF instances written in the DIMACS
-standard into netCDF files. Optionally it hacks into the netCDF file to
-change the number of static and dynamic nodes and arcs, as well as the
-maximum number of nodes and arcs.
+We provide the simple `dmx2nc4` tool that converts MCF instances written in
+the DIMACS standard format (DMX) into netCDF files. Optionally it hacks into
+the netCDF file to change the number of static and dynamic nodes and arcs,
+as well as the maximum number of nodes and arcs.
 
-You can run the tool from the `<build-dir>/tools` directory or install it
-with the library (see above). Run the tool without arguments for info on
-its usage:
+You can run the tool from the `<build-dir>/tools` directory, install it
+with the library (see above), or just go in the `tools/` folder and run
+`make` there (provided makefiles are properly set, see above). Run the tool
+without arguments for info on its usage:
 
 ```sh
 dmx2nc4
@@ -119,10 +120,25 @@ dmx2nc4
 ## Data
 
 We provide a small sample of small-to-mid-size MCF problems in the
-[data](data) folder. The instances comes compressed in the `dmx.tgz` file
-in [data/dmx](data/dmx). Once this is decompressed and `data/nc4` is
-created, the netCDF versions of the instances can be created in there by
-running the `batch` file in the `tools` folder.
+[data](data) folder. To get them, run
+
+```sh
+cd data
+wget https://gitlab.com/smspp/mcfblock/-/package_files/215783773/download -O dmx.tgz
+tar xzvf dmx.tgz
+```
+
+This creates the `data/dmx` folder containing the instances in the original
+DMX text-based format. Once this is available, the netCDF versions of the
+instances can be created by
+
+```sh
+mkdir nc4
+cd ../tools
+./batch
+```
+
+(provided the `dmx2nc4` tool is available, see above).
 
 
 ## Tests
