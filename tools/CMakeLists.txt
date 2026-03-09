@@ -9,9 +9,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # may wrongly appear unused, and by default the linker does not include them,
 # so we have to force the linking.
 if (BUILD_SHARED_LIBS)
-    if (MSVC)
-        add_link_options("/OPT:NOREF")
-    else () # Unix
+    if (UNIX)
         if (APPLE)
             add_link_options("-Wl,-dead_strip_dylibs")
         else ()
@@ -33,6 +31,17 @@ endif ()
 # ----- dmx2nc4 ------------------------------------------------------------- #
 add_executable(dmx2nc4 dmx2nc4.cpp)
 target_link_libraries(dmx2nc4 PRIVATE SMS++::MCFBlock)
+
+if (WIN32 AND BUILD_SHARED_LIBS)
+    # copy runtime DLLs next to the exe after build
+    add_custom_command(TARGET dmx2nc4 POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:dmx2nc4>
+            $<TARGET_FILE_DIR:dmx2nc4>
+            COMMAND_EXPAND_LISTS
+            COMMENT "Copying runtime DLLs next to dmx2nc4.exe"
+    )
+endif()
 
 # ----- Install instructions ------------------------------------------------ #
 include(GNUInstallDirs)
