@@ -42,7 +42,6 @@ static inline void Str2Sthg( const char* const str , T &sthg )
  }
 
 /*--------------------------------------------------------------------------*/
-
 /// Custom terminate function to print the exception message
 
 void smspp_terminate( void ) {
