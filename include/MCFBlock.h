@@ -2127,73 +2127,70 @@ public:
  static void static_initialization( void )
  {
   /*!!
- * Not all C++ compilers enjoy the template wizardry behind the three-args
- * version of register_method<> with the compact MS_*_*::args(), so we just
- * use the slightly less compact one with the explicit argument and be done
- * with it. !!*/
-  // register_method< MCFBlock >( "MCFBlock::chg_costs", &MCFBlock::chg_costs,
-  //                              MS_dbl_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_costs", &MCFBlock::chg_costs,
-  //                              MS_dbl_sbst::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps,
-  //                              MS_dbl_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps,
-  //                              MS_dbl_sbst::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts,
-  //                              MS_dbl_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts,
-  //                              MS_dbl_sbst::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::close_arcs",
-  //                              &MCFBlock::close_arcs,
-  //                              MS_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::close_arcs",
-  //                              &MCFBlock::close_arcs,
-  //                              MS_sbst::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::open_arcs", &MCFBlock::open_arcs,
-  //                              MS_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::open_arcs", &MCFBlock::open_arcs,
-  //                              MS_sbst::args() );
+  * Warning: Not all C++ compilers enjoy the template wizardry behind the
+   * three-args version of register_method<> with the compact MS_*_*::args(),
+   * so we just use the slightly less compact one with the explicit argument
+   * and be done with it.
 
+  register_method< MCFBlock >( "MCFBlock::chg_costs", & MCFBlock::chg_costs,
+                               MS_dbl_rngd::args() );
 
+  register_method< MCFBlock >( "MCFBlock::chg_costs", & MCFBlock::chg_costs,
+                               MS_dbl_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_ucaps", & MCFBlock::chg_ucaps,
+                               MS_dbl_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_ucaps", & MCFBlock::chg_ucaps,
+                               MS_dbl_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_dfcts", & MCFBlock::chg_dfcts,
+                               MS_dbl_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_dfcts", & MCFBlock::chg_dfcts,
+                               MS_dbl_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::close_arcs", & MCFBlock::close_arcs,
+                               MS_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::close_arcs", & MCFBlock::close_arcs,
+                               MS_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::open_arcs", & MCFBlock::open_arcs,
+                               MS_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::open_arcs", & MCFBlock::open_arcs,
+                               MS_sbst::args() );
+				       !!*/
   register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_costs" ,
-						   & MCFBlock::chg_costs );
+                                                   & MCFBlock::chg_costs );
 
   register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
    "MCFBlock::chg_costs" , & MCFBlock::chg_costs );
 
   register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_ucaps" ,
-						   & MCFBlock::chg_ucaps );
+                                                   & MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock , MF_dbl_it , Subset &&, bool >(
+  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
    "MCFBlock::chg_ucaps" , & MCFBlock::chg_ucaps );
 
   register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_dfcts" ,
-						   & MCFBlock::chg_dfcts );
+                                                   & MCFBlock::chg_dfcts );
 
   register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
    "MCFBlock::chg_dfcts" , & MCFBlock::chg_dfcts );
 
   register_method< MCFBlock , Range >( "MCFBlock::close_arcs" ,
-				       & MCFBlock::close_arcs );
+                                       & MCFBlock::close_arcs );
 
   register_method< MCFBlock , Subset && , bool >( "MCFBlock::close_arcs" ,
-						  & MCFBlock::close_arcs );
+                                                  & MCFBlock::close_arcs );
 
   register_method< MCFBlock , Range >( "MCFBlock::open_arcs" ,
-				       & MCFBlock::open_arcs );
+                                       & MCFBlock::open_arcs );
 
   register_method< MCFBlock , Subset && , bool >( "MCFBlock::open_arcs" ,
-						  & MCFBlock::open_arcs );
-
+                                                  & MCFBlock::open_arcs );
   }  // end( static_initialization )
 
 /*--------------------------------------------------------------------------*/
