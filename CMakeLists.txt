@@ -15,7 +15,7 @@
 #                         Dipartimento di Informatica                         #
 #                             Universita' di Pisa                             #
 # --------------------------------------------------------------------------- #
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 cmake_policy(VERSION 3.15)
 project(MCFBlock
         VERSION 0.5.1
@@ -54,7 +54,7 @@ else ()
     # MCFClass library, required by MCFBlock.
     # Requires CPLEX.
     set(MCFClass_READ_PATHS OFF CACHE BOOL
-        "Whether MCFClass will read locations for dependencies or not." FORCE)
+            "Whether MCFClass will read locations for dependencies or not." FORCE)
     add_subdirectory(MCFClass)
 
     # Add the binary directory to RPATH, so executables that use
@@ -84,7 +84,7 @@ target_compile_features(${modName} PUBLIC cxx_std_20)
 
 if (MSVC AND BUILD_SHARED_LIBS)
     target_link_options(${modName} INTERFACE "/INCLUDE:SMSpp_force_load_${modName}")
-endif()
+endif ()
 
 # When adding source files with target_sources(), PRIVATE means that the files
 # should only be added to this library, whereas PUBLIC means they should be
@@ -93,8 +93,8 @@ endif()
 # but should be added to anything that links to it.
 # Note: do not GLOB files here.
 target_sources(${modName} PRIVATE
-               src/MCFSolver.cpp
-               src/MCFBlock.cpp)
+        src/MCFSolver.cpp
+        src/MCFBlock.cpp)
 
 # When using target_include_directories(), PUBLIC means that any targets
 # that link to this target also need that include directory.
@@ -117,8 +117,8 @@ target_include_directories(
 # library, INTERFACE means they will be linked only to the targets that depend
 # on this library.
 target_link_libraries(${modName} PUBLIC
-                      ${modNamespace}::SMS++
-                      MCFClass::MCFClass)
+        ${modNamespace}::SMS++
+        MCFClass::MCFClass)
 
 # This alias is defined so that executables in this same project can use
 # the library with this notation.
@@ -188,7 +188,7 @@ elseif (WIN32)
             OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             # using Git for Windows that includes Git Bash
             COMMAND "C:/Program Files/Git/bin/bash.exe"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch" "$<TARGET_FILE:dmx2nc4>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch" "$<TARGET_FILE:dmx2nc4>"
             COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
             COMMENT "Running dmx2nc4"
