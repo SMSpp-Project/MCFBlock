@@ -3,6 +3,8 @@
 what=./data/N3-5-5-2-2.nc4
 #wchg=127
 
+MCFBlock_test=${1:-./MCFBlock_test}
+
 for mode in 0 1 2 12 13 14 20 29 30; do
   for (( seed = 0 ; seed < 20 ; seed++ )); do
 
@@ -12,7 +14,7 @@ for mode in 0 1 2 12 13 14 20 29 30; do
       printf "[$what $seed $mode $wchg]: "
     fi
 
-    ./MCFBlock_test $what $seed $mode $wchg
+    "$MCFBlock_test" $what $seed $mode $wchg
 
     retVal=$?
     if [ $retVal -ne 0 ]; then
