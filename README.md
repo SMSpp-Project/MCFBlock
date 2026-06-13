@@ -94,10 +94,10 @@ necessary to create the `../extlib/makefile-paths` out of the
 Check the [SMS++ installation wiki](https://gitlab.com/smspp/smspp-project/-/wikis/Customize-the-configuration#location-of-required-libraries)
 for further details.
 
-Note thar the [MCFClass
+Note that the [MCFClass
 project](https://github.com/frangio68/Min-Cost-Flow-Class) has a similar
-arrangement with its own extlib/ folder, but due to some magic it is noy
-necessary to that must be independently edit it in an analogous way.
+arrangement with its own extlib/ folder, but due to some magic it is not
+necessary to independently edit it in an analogous way.
 
 
 ## Tools
