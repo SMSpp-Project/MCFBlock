@@ -10,6 +10,7 @@ tools/dmx2nc4
 data/dmx
 data/nc4
 data/dmx.tgz
+data/upload-dmx
 data/.extracted
 
 # --- C/C++ build artifacts ----------------------------------
@@ -58,6 +59,7 @@ _deps/
 *.iml
 *.iws
 out/
+*.xcodeproj
 
 # --- OS junk ------------------------------------------------
 .DS_Store
