@@ -18,19 +18,8 @@ NAME = dmx2nc4
 # basic directory
 DIR = .
 
-# switch to select the :MCFClass solver, supported values are:
-# -DHAVE_CSCL2      for the CS2 class
-# -DHAVE_CPLEX      for the MCFCplex class
-# -DHAVE_MFSMX      for the MCFSimplex class
-# -DHAVE_MFZIB      for the MCFZIB class
-# -DHAVE_RELAX      for the RelaxIV class
-# -DHAVE_CPLEX      for the MCFCplex class
-# -DHAVE_SPTRE      for the SPTree class; note that SPTree cannot solve
-#                   most MCF instances, except those with SPT structure
-MCFCS = -DHAVE_MFSMX
-
 # common flags
-COMMON_SW = -std=c++17 $(MCFCS)
+COMMON_SW = -std=c++17
 
 # debug switches
 SW_DEBUG = -g -glldb -fno-inline $(COMMON_SW)

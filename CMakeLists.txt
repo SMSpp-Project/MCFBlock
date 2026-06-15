@@ -49,28 +49,7 @@ if (NOT hasParent)
     # If it's not being called by the umbrella, we need to
     # look for the system-installed libraries.
     find_package(SMS++ REQUIRED)
-    find_package(MCFClass REQUIRED)
-else ()
-    # MCFClass library, required by MCFBlock.
-    # Requires CPLEX.
-    set(MCFClass_READ_PATHS OFF CACHE BOOL
-            "Whether MCFClass will read locations for dependencies or not." FORCE)
-    add_subdirectory(MCFClass)
-
-    # Add the binary directory to RPATH, so executables that use
-    # dynamic loading will look into it.
-    set(SMSPP_BUILD_RPATH
-            "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
 endif ()
-
-# uncomment all of the following for which the corresponding
-# MCFSolver< :MCFClass > must be defined
-add_compile_definitions(HAVE_RELAX)
-if (MCFClass_USE_CPLEX)
-    add_compile_definitions(HAVE_CPLEX)
-endif ()
-add_compile_definitions(HAVE_MFSMX)
-#add_compile_definitions(HAVE_SPTRE)
 
 # ----- Configuration header ------------------------------------------------ #
 # This will generate a *Config.h header in the build directory.
@@ -93,7 +72,6 @@ endif ()
 # but should be added to anything that links to it.
 # Note: do not GLOB files here.
 target_sources(${modName} PRIVATE
-        src/MCFSolver.cpp
         src/MCFBlock.cpp)
 
 # When using target_include_directories(), PUBLIC means that any targets
@@ -117,8 +95,7 @@ target_include_directories(
 # library, INTERFACE means they will be linked only to the targets that depend
 # on this library.
 target_link_libraries(${modName} PUBLIC
-        ${modNamespace}::SMS++
-        MCFClass::MCFClass)
+        ${modNamespace}::SMS++)
 
 # This alias is defined so that executables in this same project can use
 # the library with this notation.
@@ -128,10 +105,7 @@ add_library(${modNamespace}::${modName} ALIAS ${modName})
 add_subdirectory(tools)
 
 if (BUILD_TESTING)
-    if (NOT HAVE_CPLEX)
-        add_compile_definitions(WHICH_MCF=2) # i.e., use MCFSimplex class
-    endif ()
-    add_subdirectory(test)
+    # Just consuming BUILD_TESTING to avoid warnings
 endif ()
 
 # ----- Custom commands and targets ----------------------------------------- #
