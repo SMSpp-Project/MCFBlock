@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added 
+### Added
+
+- accessors and setters to the flows and the potentials of `MCFSolution`, so
+  that a Solver can fill it directly out of its own data structures rather
+  than by writing the solution in the Variable and the Constraint of the
+  `MCFBlock` and having it read back from there
+
 
 ### Changed 
 

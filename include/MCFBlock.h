@@ -2568,6 +2568,40 @@ class MCFSolution : public Solution {
 
  MCFSolution * clone( bool empty = false ) const override final;
 
+/*----------- METHODS FOR READING AND WRITING THE SOLUTION -----------------*/
+ /// returns the arc flows saved in this MCFSolution
+ /** Returns the arc flows saved in this MCFSolution, which are empty if it
+  * does not save them [see MCFBlock::get_Solution()]. */
+
+ [[nodiscard]] MCFBlock::c_Vec_FNumber & get_x( void ) const {
+  return( v_x );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns the node potentials saved in this MCFSolution
+ /** Returns the node potentials saved in this MCFSolution, which are empty
+  * if it does not save them [see MCFBlock::get_Solution()]. */
+
+ [[nodiscard]] MCFBlock::c_Vec_CNumber & get_pi( void ) const {
+  return( v_pi );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets the arc flows saved in this MCFSolution
+ /** Sets the arc flows saved in this MCFSolution. This is what a Solver
+  * fills the Solution with directly out of its own data structures, rather
+  * than writing the solution in the Variable of the MCFBlock and having it
+  * read back from there, which requires the Variable to exist at all [see
+  * MCFSolver::get_Solution()]. */
+
+ void set_x( MCFBlock::Vec_FNumber && x ) { v_x = std::move( x ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets the node potentials saved in this MCFSolution
+ /** The counterpart of set_x() for the dual solution. */
+
+ void set_pi( MCFBlock::Vec_CNumber && pi ) { v_pi = std::move( pi ); }
+
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 
  protected:
