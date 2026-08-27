@@ -308,10 +308,10 @@ public:
   *
   * - m    is the current number of arcs of the network
   *
-  * - pSn  is the vector of the arc starting nodes, which must have size at
-  *        least m
-  *
   * - pEn  is the vector of the arc ending nodes, which must have size at
+  *        least m; note that this comes *before* pSn, cf. the signature
+  *
+  * - pSn  is the vector of the arc starting nodes, which must have size at
   *        least m
   *
   * - pU   is the vector of the arc upper capacities; capacities must be
