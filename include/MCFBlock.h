@@ -988,6 +988,17 @@ public:
  bool flow_feasible( FNumber feps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// like flow_feasible(), but the flow is given from the outside
+ /** Like flow_feasible( FNumber , bool ), but the flow to be checked is F
+  * rather than the one encoded in the Variable of the MCFBlock, which
+  * therefore need not even exist. F must have size at least get_NArcs();
+  * the entries corresponding to deleted arcs are ignored. This is what the
+  * "physical" version of flow_feasible() and is_feasible( Solution * ) both
+  * boil down to. */
+
+ bool flow_feasible( FNumber feps , c_Vec_FNumber & F );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the current solution is (approximately) bound feasible
  /** Returns true if the solution encoded in the current value of the flow
   * (x) Variable of the MCFBlock is approximately feasible w.r.t. the bound
@@ -1000,6 +1011,16 @@ public:
  bool bound_feasible( FNumber feps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// like bound_feasible(), but the flow is given from the outside
+ /** Like bound_feasible( FNumber , bool ), but the flow to be checked is F
+  * rather than the one encoded in the Variable of the MCFBlock, which
+  * therefore need not even exist. F must have size at least get_NArcs();
+  * the entries corresponding to deleted arcs are ignored, while those
+  * corresponding to closed arcs are checked against an upper bound of 0. */
+
+ bool bound_feasible( FNumber feps , c_Vec_FNumber & F );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the current solution is (approximately) dual feasible
  /** Returns true if the dual solution encoded in the current value of the
   * dual multipliers of both the flow conservation and bound constraints is
@@ -1010,6 +1031,24 @@ public:
   * is_feasible() and is_optimal(). */
 
  bool dual_feasible( CNumber ceps , bool useabstract = false );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// like dual_feasible(), but the potentials are given from the outside
+ /** Like dual_feasible( CNumber , bool ), but the dual solution to be
+  * checked is the vector Pi of the node potentials, which must have size at
+  * least get_NNodes(), rather than the one encoded in the dual multipliers
+  * of the Constraint of the MCFBlock, which therefore need not even exist.
+  *
+  * Note that with the potentials alone the check is only significant for
+  * the arcs with infinite capacity: the reduced cost of a capacitated arc
+  * can always be compensated by the (implicit) dual variable of its bound
+  * constraint, whatever its sign, whereas that of an uncapacitated one has
+  * to be nonnegative, otherwise the dual is infeasible. The rest of what
+  * makes ( F , Pi ) an optimal pair is checked by
+  * complementary_slackness( CNumber , FNumber , c_Vec_FNumber & ,
+  * c_Vec_CNumber & ). */
+
+ bool dual_feasible( CNumber ceps , c_Vec_CNumber & Pi );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if complementary slackness are (approximately) satisfied
@@ -1027,6 +1066,18 @@ public:
 
  bool complementary_slackness( CNumber ceps , FNumber feps ,
 			       bool useabstract = false );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// like complementary_slackness(), but the solutions are given from outside
+ /** Like complementary_slackness( CNumber , FNumber , bool ), but the pair
+  * to be checked is the flow F and the node potentials Pi, rather than the
+  * one encoded in the Variable and in the dual multipliers of the
+  * Constraint of the MCFBlock, which therefore need not even exist. F must
+  * have size at least get_NArcs() and Pi size at least get_NNodes(); the
+  * arcs that are deleted or closed are ignored. */
+
+ bool complementary_slackness( CNumber ceps , FNumber feps ,
+			       c_Vec_FNumber & F , c_Vec_CNumber & Pi );
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is approximately feasible
@@ -1052,6 +1103,18 @@ public:
  
  bool is_feasible( bool useabstract = false , Configuration *fsbc = nullptr )
   override;
+
+/*--------------------------------------------------------------------------*/
+ /// returns true if the solution in the Solution is approximately feasible
+ /** Returns true if the flow held by the MCFSolution sol is approximately
+  * feasible, i.e., it satisfies the flow conservation constraints and the
+  * arc bounds; the MCFBlock is only read for its data, its Variable are not
+  * touched and they need not even exist. sol must be a MCFSolution holding
+  * a primal solution, otherwise false is returned (a Solution that is not a
+  * MCFSolution is an error, and it throws). The tolerance is found exactly
+  * as in is_feasible( bool , Configuration * ). */
+
+ bool is_feasible( Solution * sol , Configuration * fsbc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is (approximately) optimal
@@ -1086,6 +1149,20 @@ public:
  
  bool is_optimal( bool useabstract = false  , Configuration *optc = nullptr )
   override;
+
+/*--------------------------------------------------------------------------*/
+ /// returns true if the solution in the Solution is approximately optimal
+ /** Returns true if the flow and the node potentials held by the MCFSolution
+  * sol are approximately optimal, i.e., the flow is feasible, the potentials
+  * are dual feasible and the two satisfy the Complementary Slackness
+  * Conditions; the MCFBlock is only read for its data, its Variable and
+  * Constraint are not touched and they need not even exist. sol must be a
+  * MCFSolution holding both a primal and a dual solution, otherwise false is
+  * returned (a Solution that is not a MCFSolution is an error, and it
+  * throws). The tolerances are found exactly as in is_optimal( bool ,
+  * Configuration * ). */
+
+ bool is_optimal( Solution * sol , Configuration * optc = nullptr ) override;
 
 /** @} ---------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
@@ -2230,6 +2307,12 @@ public:
    return( lfc );
   #endif
   }
+
+ /// extracts out of fsbc, or of the BlockConfig, the is_feasible() tolerance
+ FNumber feps_of( Configuration * fsbc ) const;
+
+ /// extracts out of optc, or of the BlockConfig, the is_optimal() tolerances
+ void eps_of( Configuration * optc , CNumber & ceps , FNumber & feps ) const;
 
  void guts_of_destructor( void );
 
