@@ -993,7 +993,7 @@ public:
   * rather than the one encoded in the Variable of the MCFBlock, which
   * therefore need not even exist. F must have size at least get_NArcs();
   * the entries corresponding to deleted arcs are ignored. This is what the
-  * "physical" version of flow_feasible() and is_feasible( Solution * ) both
+  * "physical" version of flow_feasible() and is_sol_feasible() both
   * boil down to. */
 
  bool flow_feasible( FNumber feps , c_Vec_FNumber & F );
@@ -1114,7 +1114,8 @@ public:
   * MCFSolution is an error, and it throws). The tolerance is found exactly
   * as in is_feasible( bool , Configuration * ). */
 
- bool is_feasible( Solution * sol , Configuration * fsbc = nullptr ) override;
+ bool is_sol_feasible( Solution * sol ,
+                       Configuration * fsbc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is (approximately) optimal
@@ -1162,7 +1163,8 @@ public:
   * throws). The tolerances are found exactly as in is_optimal( bool ,
   * Configuration * ). */
 
- bool is_optimal( Solution * sol , Configuration * optc = nullptr ) override;
+ bool is_sol_optimal( Solution * sol ,
+                      Configuration * optc = nullptr ) override;
 
 /** @} ---------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/

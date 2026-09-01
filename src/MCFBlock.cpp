@@ -1157,7 +1157,7 @@ bool MCFBlock::is_feasible( bool useabstract , Configuration *fsbc )
 
 /*--------------------------------------------------------------------------*/
 
-bool MCFBlock::is_feasible( Solution * sol , Configuration * fsbc )
+bool MCFBlock::is_sol_feasible( Solution * sol , Configuration * fsbc )
 {
  auto msol = dynamic_cast< MCFSolution * >( sol );
  if( ! msol )
@@ -1172,7 +1172,7 @@ bool MCFBlock::is_feasible( Solution * sol , Configuration * fsbc )
 
  return( flow_feasible( eps , F ) && bound_feasible( eps , F ) );
 
- }  // end( MCFBlock::is_feasible( Solution ) )
+ }  // end( MCFBlock::is_sol_feasible )
 
 /*--------------------------------------------------------------------------*/
 
@@ -1238,7 +1238,7 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
 
 /*--------------------------------------------------------------------------*/
 
-bool MCFBlock::is_optimal( Solution * sol , Configuration * optc )
+bool MCFBlock::is_sol_optimal( Solution * sol , Configuration * optc )
 {
  auto msol = dynamic_cast< MCFSolution * >( sol );
  if( ! msol )
@@ -1258,7 +1258,7 @@ bool MCFBlock::is_optimal( Solution * sol , Configuration * optc )
 	 dual_feasible( ceps , Pi ) &&
 	 complementary_slackness( ceps , feps , F , Pi ) );
 
- }  //  end( MCFBlock::is_optimal( Solution ) )
+ }  //  end( MCFBlock::is_sol_optimal )
 
 /*--------------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
