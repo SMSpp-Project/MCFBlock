@@ -9,6 +9,7 @@ cache:
 stages:
   - build
   - test
+  - test-dense
   - deploy
 
 build:
@@ -39,8 +40,12 @@ build:
       - CMakeLists.txt
       - .gitlab-ci.yml
 
-test:
-  stage: test
+# the MCF sweep exceeds the 3h cap a job has on the GitLab.com shared runners
+# when run as a single job, and the dense instances alone are some two thirds
+# of it, so it is split into two SEQUENTIAL stages, each comfortably under the
+# cap, along the line the batches are split: batch-dense carries the dense
+# instances, batch the rest of the sweep.
+.test_template:
   # the academic Gurobi WLS license caps concurrent sessions: a test job may
   # abort at startup with "GRBstartenv returned with status 10030" when other
   # Gurobi-heavy pipelines hold the sessions. Retry to ride out the contention.
@@ -56,8 +61,6 @@ test:
           "$GRB_LICENSEID" "$GRB_WLSACCESSID" "$GRB_WLSSECRET" > /tmp/gurobi.lic
         export GRB_LICENSE_FILE=/tmp/gurobi.lic
       fi
-  script:
-    - ctest -V -C Release -L "$CI_PROJECT_TITLE" --test-dir smspp-project/build --no-tests=error
   only:
     refs:
       - develop
@@ -70,6 +73,18 @@ test:
       - tools/*
       - CMakeLists.txt
       - .gitlab-ci.yml
+
+test:
+  extends: .test_template
+  stage: test
+  script:
+    - ctest -V -C Release -L "$CI_PROJECT_TITLE" -E "MCFBlock_test/batches/batch-dense" --test-dir smspp-project/build --no-tests=error
+
+test-dense:
+  extends: .test_template
+  stage: test-dense
+  script:
+    - ctest -V -C Release -L "$CI_PROJECT_TITLE" -R "MCFBlock_test/batches/batch-dense" --test-dir smspp-project/build --no-tests=error
 
 deploy:
   stage: deploy
