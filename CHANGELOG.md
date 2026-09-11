@@ -7,12 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added 
+### Added
 
-### Changed 
+### Changed
 
-### Fixed 
+### Fixed
 
+## [0.6.0] - 2026-09-12
+
+### Added
+
+- accessors and setters to the flows and the potentials of `MCFSolution`, so
+  that a Solver can fill it directly out of its own data structures rather
+  than by writing the solution in the Variable and the Constraint of the
+  `MCFBlock` and having it read back from there
+
+- `is_sol_feasible()` and `is_sol_optimal()`, which check a Solution, i.e., a
+  flow and potentials taken from the outside
+
+### Changed
+
+- the version of the module is the git tag of its repository, or the
+  VERSION.txt of a release tarball, and the shared library carries it: its
+  SONAME is major.minor while the major is 0, and it is installed with an
+  RPATH relative to itself, so that an installed tree keeps working wherever
+  it is moved
+
+### Removed
+
+- the MCFClass submodule, which is in MCFClassSolver
 
 ## [0.5.1] - 2025-12-12
 
@@ -179,7 +202,8 @@ Minor point release to avoid the master branch to become too stale:
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.1...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.0...develop
+[0.6.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.1...0.6.0
 [0.5.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.0...0.5.1
 [0.5.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.4...0.5.0
 [0.4.4]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.3...0.4.4

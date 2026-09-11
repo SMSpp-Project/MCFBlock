@@ -15,16 +15,22 @@
 #                         Dipartimento di Informatica                         #
 #                             Universita' di Pisa                             #
 # --------------------------------------------------------------------------- #
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 cmake_policy(VERSION 3.15)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/DeriveVersion.cmake)
+smspp_derive_version(SMSPP_MODULE_VERSION)
+
 project(MCFBlock
-        VERSION 0.5.1
+        VERSION ${SMSPP_MODULE_VERSION}
         DESCRIPTION "SMS++ MCFBlock module"
         HOMEPAGE_URL https://gitlab.com/smspp/mcfblock
         LANGUAGES C CXX)
 
 # These variables make the code harder to read but easier to change.
 set(modName ${PROJECT_NAME})
+
+# C-safe form of modName for the preprocessor macros in <modName>Config.h
+string(MAKE_C_IDENTIFIER "${modName}" modMacro)
 set(modNamespace "SMS++")
 
 # Find out if it's being called by the umbrella.
@@ -49,38 +55,50 @@ if (NOT hasParent)
     # If it's not being called by the umbrella, we need to
     # look for the system-installed libraries.
     find_package(SMS++ REQUIRED)
-    find_package(MCFClass REQUIRED)
-else ()
-    # MCFClass library, required by MCFBlock.
-    # Requires CPLEX.
-    set(MCFClass_READ_PATHS OFF CACHE BOOL
-        "Whether MCFClass will read locations for dependencies or not." FORCE)
-    add_subdirectory(MCFClass)
-
-    # Add the binary directory to RPATH, so executables that use
-    # dynamic loading will look into it.
-    set(SMSPP_BUILD_RPATH
-            "${SMSPP_BUILD_RPATH};${CMAKE_CURRENT_BINARY_DIR}/MCFClass")
 endif ()
-
-# uncomment all of the following for which the corresponding
-# MCFSolver< :MCFClass > must be defined
-add_compile_definitions(HAVE_RELAX)
-if (MCFClass_USE_CPLEX)
-    add_compile_definitions(HAVE_CPLEX)
-endif ()
-add_compile_definitions(HAVE_MFSMX)
-#add_compile_definitions(HAVE_SPTRE)
 
 # ----- Configuration header ------------------------------------------------ #
 # This will generate a *Config.h header in the build directory.
 configure_file(cmake/${modName}Config.h.in ${modName}Config.h)
+
+# ----- RPATH --------------------------------------------------------------- #
+# The installed libraries and executables look for the libraries of the same
+# installation relative to their own location, so that the installed tree can
+# be moved as a whole; the directories of the external libraries are kept.
+include(GNUInstallDirs)
+if (NOT CMAKE_INSTALL_RPATH)
+    if (APPLE)
+        set(rpathOrigin "@loader_path")
+    else ()
+        set(rpathOrigin "$ORIGIN")
+    endif ()
+    file(RELATIVE_PATH binToLib ${CMAKE_INSTALL_FULL_BINDIR}
+            ${CMAKE_INSTALL_FULL_LIBDIR})
+    set(CMAKE_INSTALL_RPATH "${rpathOrigin}" "${rpathOrigin}/${binToLib}")
+endif ()
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # ----- Library ------------------------------------------------------------- #
 # With the BUILD_SHARED_LIBS variable we can specify if the library will
 # be STATIC or SHARED, so no reason to do it now.
 add_library(${modName})
 target_compile_features(${modName} PUBLIC cxx_std_20)
+
+# The name of the shared library carries the version of its binary interface,
+# which any minor release may change while the major version is 0, and then
+# any major release.
+if (PROJECT_VERSION_MAJOR EQUAL 0)
+    set(soVersion ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
+else ()
+    set(soVersion ${PROJECT_VERSION_MAJOR})
+endif ()
+set_target_properties(${modName} PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${soVersion})
+
+if (MSVC AND BUILD_SHARED_LIBS)
+    target_link_options(${modName} INTERFACE "/INCLUDE:SMSpp_force_load_${modName}")
+endif ()
 
 # When adding source files with target_sources(), PRIVATE means that the files
 # should only be added to this library, whereas PUBLIC means they should be
@@ -89,8 +107,7 @@ target_compile_features(${modName} PUBLIC cxx_std_20)
 # but should be added to anything that links to it.
 # Note: do not GLOB files here.
 target_sources(${modName} PRIVATE
-               src/MCFSolver.cpp
-               src/MCFBlock.cpp)
+        src/MCFBlock.cpp)
 
 # When using target_include_directories(), PUBLIC means that any targets
 # that link to this target also need that include directory.
@@ -105,6 +122,7 @@ target_sources(${modName} PRIVATE
 target_include_directories(
         ${modName} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
         $<INSTALL_INTERFACE:include/${modNamespace}>)
 
 # When linking other targets to the library with target_link_libraries(),
@@ -113,8 +131,7 @@ target_include_directories(
 # library, INTERFACE means they will be linked only to the targets that depend
 # on this library.
 target_link_libraries(${modName} PUBLIC
-                      ${modNamespace}::SMS++
-                      MCFClass::MCFClass)
+        ${modNamespace}::SMS++)
 
 # This alias is defined so that executables in this same project can use
 # the library with this notation.
@@ -124,10 +141,7 @@ add_library(${modNamespace}::${modName} ALIAS ${modName})
 add_subdirectory(tools)
 
 if (BUILD_TESTING)
-    if (NOT HAVE_CPLEX)
-        add_compile_definitions(WHICH_MCF=2) # i.e., use MCFSimplex class
-    endif ()
-    add_subdirectory(test)
+    # Just consuming BUILD_TESTING to avoid warnings
 endif ()
 
 # ----- Custom commands and targets ----------------------------------------- #
@@ -184,7 +198,7 @@ elseif (WIN32)
             OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             # using Git for Windows that includes Git Bash
             COMMAND "C:/Program Files/Git/bin/bash.exe"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch" "$<TARGET_FILE:dmx2nc4>"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch" "$<TARGET_FILE:dmx2nc4>"
             COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
             COMMENT "Running dmx2nc4"

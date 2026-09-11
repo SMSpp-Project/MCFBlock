@@ -1,27 +1,22 @@
-# MCFBlock / MCFSolver
+# MCFBlock
 
-This project covers two conceptually different things (which may one day be
-split to two different projects):
-
-- `MCFBlock`, a SMS++ :Block for Linear Min-Cost Flow Problems
-
-- `MCFSolver`, a SMS++ :Solver for MCFBlock based on forwarding the interface
-  of (objects derived from the general abstract) [MCFClass of the
-  MCFClass project](http://www.di.unipi.it/optimize/Software/MCF.html)
+`MCFBlock` is a SMS++ :Block for Linear Min-Cost Flow Problems. It is a pure
+:Block depending only on the SMS++ core, and can be solved by any compatible
+:Solver, for instance the `MILPSolver` family, `MCFLemonSolver`, or
+`MCFSolver` (the latter provided by the separate
+[MCFClassSolver](https://gitlab.com/smspp/mcfclasssolver) module, which wraps
+the [MCFClass project](http://www.di.unipi.it/optimize/Software/MCF.html)).
 
 
 ## Getting started
 
-These instructions will let you build MCFBlock and MCFSolver on your system.
+These instructions will let you build MCFBlock on your system.
 
 
 ### Requirements
 
 - The [SMS++ core library](https://gitlab.com/smspp/smspp) and its
   requirements.
-
-- [MCFClass](https://github.com/frangio68/Min-Cost-Flow-Class) and its
-  requirements (depending on the actual :MCFClass solvers built).
 
 
 ### Build and install with CMake
@@ -57,13 +52,10 @@ target_link_libraries(<my_target> SMS++::MCFBlock)
 
 ### Running the tests with CMake
 
-A unit test will be built with the library.
-To disable it, set the option `BUILD_TESTING` to `OFF`.
-
-The test takes an instance of a MCF in DIMACS or NC4 format. The MCF problem
-is then repeatedly solved with several changes in costs/capacities/deficits,
-arcs openings/closures and arcs additions/deletions. The same operations are
-performed on the two solvers, and the results are compared.
+`MCFBlock` does not ship a tester of its own, since exercising it requires a
+:Solver. The tester that loads a MCF instance into an `MCFBlock` and solves it,
+comparing against direct usage of the underlying :MCFClass solver, lives in the
+[MCFClassSolver](https://gitlab.com/smspp/mcfclasssolver) module.
 
 
 ### Build and install with makefiles
@@ -80,36 +72,29 @@ module, which typically is either [makefile-c](makefile-c) including all
 necessary libraries comprised the "core SMS++" one, or
 [makefile-s](makefile-s) including all necessary libraries but not the "core
 SMS++" one (for the common case in which this is used together with other
-modules that already include them). One relevant case is the
-[tester comparing MCFBlock + MCFSolver with direct usage of the
-original :MCFClass solver](test/test.cpp) alluded to in the previous section.
-The makefiles in turn recursively include all the required other makefiles,
-hence one should only need to edit the "main makefile" for compilation type
-(C++ compiler and its options) and it all should be good to go. In case some
-of the external libraries are not at their default location, it should only be
-necessary to create the `../extlib/makefile-paths` out of the
-`extlib/makefile-default-paths-*` for your OS `*` and edit the relevant bits
-(commenting out all the rest).
+modules that already include them). The makefiles in turn recursively include
+all the required other makefiles, hence one should only need to edit the "main
+makefile" for compilation type (C++ compiler and its options) and it all
+should be good to go. In case some of the external libraries are not at their
+default location, it should only be necessary to create the
+`../extlib/makefile-paths` out of the `extlib/makefile-default-paths-*` for
+your OS `*` and edit the relevant bits (commenting out all the rest).
 
 Check the [SMS++ installation wiki](https://gitlab.com/smspp/smspp-project/-/wikis/Customize-the-configuration#location-of-required-libraries)
 for further details.
 
-Note thar the [MCFClass
-project](https://github.com/frangio68/Min-Cost-Flow-Class) has a similar
-arrangement with its own extlib/ folder, but due to some magic it is noy
-necessary to that must be independently edit it in an analogous way.
-
 
 ## Tools
 
-We provide a simple tool that converts MCF instances written in the DIMACS
-standard into netCDF files. Optionally it hacks into the netCDF file to
-change the number of static and dynamic nodes and arcs, as well as the
-maximum number of nodes and arcs.
+We provide the simple `dmx2nc4` tool that converts MCF instances written in
+the DIMACS standard format (DMX) into netCDF files. Optionally it hacks into
+the netCDF file to change the number of static and dynamic nodes and arcs,
+as well as the maximum number of nodes and arcs.
 
-You can run the tool from the `<build-dir>/tools` directory or install it
-with the library (see above). Run the tool without arguments for info on
-its usage:
+You can run the tool from the `<build-dir>/tools` directory, install it
+with the library (see above), or just go in the `tools/` folder and run
+`make` there (provided makefiles are properly set, see above). Run the tool
+without arguments for info on its usage:
 
 ```sh
 dmx2nc4
@@ -119,28 +104,37 @@ dmx2nc4
 ## Data
 
 We provide a small sample of small-to-mid-size MCF problems in the
-[data](data) folder. The instances comes compressed in the `dmx.tgz` file
-in [data/dmx](data/dmx). Once this is decompressed and `data/nc4` is
-created, the netCDF versions of the instances can be created in there by
-running the `batch` file in the `tools` folder.
+[data](data) folder. To get them, run
+
+```sh
+cd data
+wget https://gitlab.com/smspp/mcfblock/-/package_files/215783773/download -O dmx.tgz
+tar xzvf dmx.tgz
+```
+
+This creates the `data/dmx` folder containing the instances in the original
+DMX text-based format. Once this is available, the netCDF versions of the
+instances can be created by
+
+```sh
+mkdir nc4
+cd ../tools
+./batch
+```
+
+(provided the `dmx2nc4` tool is available, see above).
 
 
 ## Tests
 
-The [test](test) folder contains a tester that reads an instance of a MCF
-from a file (in either DIMACS or netCDF format) in an `MCFBlock`, and from
-there in an object of a class MCFC derived from `MCFClass`, as decided by
-the macro `WHICH_MCF`. Then, a `MCFSolver< MCFC >` is attached to the
-`MCFBlock`. The MCF problem is then repeatedly solved with several changes in
-costs / capacities / deficits, arcs openings / closures and arcs additions /
-deletions. The same operations are performed on the two solvers, and the
-results are compared. This mostly tests `MCFBlock` and `MCFSolver`, since
-the actual `MCFClass` solved is the same, and so it can easily be wrong in
-the same way for both the objects. The `batch` file tests basically only one
-instance but in many different configurations (there can actually be two
-`MCFBlock`, one of which is modified and the other solved, in all possible
-combinations) and repeatedly, while the `batch-l` tests only the simplest
-case but on several different problems of the [data](data) folder.
+`MCFBlock` is exercised through a :Solver. The
+[MCFClassSolver](https://gitlab.com/smspp/mcfclasssolver) module provides a
+tester that reads a MCF instance (in either DIMACS or netCDF format) into an
+`MCFBlock`, solves it repeatedly under several changes in costs, capacities and
+deficits, arc openings and closures and arc additions and deletions, and
+compares the results against direct usage of the underlying solver. The
+larger instances it uses are the netCDF files produced by the `dmx2nc4` tool
+from the [data](data) folder.
 
 
 ## Getting help

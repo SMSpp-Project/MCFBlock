@@ -769,42 +769,49 @@ bool MCFBlock::flow_feasible( c_FNumber feps , bool useabstract )
 
   if( ! RowConstraint::is_feasible( dE , feps ) )  // dynamic part
    return( false );
+
+  return( true );
   }
- else {
-  // do it using the physical representation- - - - - - - - - - - - - - - - -
 
-  Index i = 0;
-  Vec_FNumber tB = B;
+ // do it using the physical representation - - - - - - - - - - - - - - - - -
+ // i.e., read the flow out of the Variable and check that
 
-  // static part
-  for( ; i < get_NStaticArcs() ; ++i ) {
-   c_FNumber xi = x[ i ].get_value();
+ Vec_FNumber F( get_NArcs() );
+ get_x( F.begin() );
+
+ return( flow_feasible( feps , F ) );
+
+ }  // end( MCFBlock::flow_feasible( bool ) )
+
+/*--------------------------------------------------------------------------*/
+
+bool MCFBlock::flow_feasible( c_FNumber feps , c_Vec_FNumber & F )
+{
+ if( F.size() < get_NArcs() )
+  throw( std::invalid_argument( "MCFBlock::flow_feasible: F too small" ) );
+
+ // B is allowed to be empty, which means "all deficits are 0"
+ Vec_FNumber tB( get_NNodes() , 0 );
+ if( ! B.empty() )
+  std::copy( B.begin() , B.begin() + get_NNodes() , tB.begin() );
+
+ for( Index i = 0 ; i < get_NArcs() ; ++i )
+  if( ! is_deleted( i ) ) {
+   c_FNumber xi = F[ i ];
    tB[ SN[ i ] - 1 ] += xi;
    tB[ EN[ i ] - 1 ] -= xi;
    }
 
-  // dynamic part
-  if( HasDynamicX() ) {
-   auto dxi = dx.begin();
-   for( ; i < get_NArcs() ; ++i , ++dxi )
-    if( ! is_deleted( i ) ) {
-     c_FNumber xi = dxi->get_value();
-     tB[ SN[ i ] - 1 ] += xi;
-     tB[ EN[ i ] - 1 ] -= xi;
-     }
-   }
-
-  for( Index i = 0 ; i < get_NNodes() ; ++i ) {
-   c_FNumber slck = B[ i ] == 0 ? std::abs( tB[ i ] )
-                                : std::abs( tB[ i ] / B[ i ] );
-   if( slck > feps )
-    return( false );
-   }
+ for( Index i = 0 ; i < get_NNodes() ; ++i ) {
+  c_FNumber Bi = B.empty() ? 0 : B[ i ];
+  c_FNumber slck = Bi == 0 ? std::abs( tB[ i ] ) : std::abs( tB[ i ] / Bi );
+  if( slck > feps )
+   return( false );
   }
 
  return( true );
 
- }  // end( MCFBlock::flow_feasible )
+ }  // end( MCFBlock::flow_feasible( F ) )
 
 /*--------------------------------------------------------------------------*/
 
@@ -837,47 +844,46 @@ bool MCFBlock::bound_feasible( c_FNumber feps , bool useabstract )
   }
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
-  Index i = 0;
+  // i.e., read the flow out of the Variable and check that
 
-  // static part
-  for( ; i < get_NStaticArcs() ; ++i ) {
-   c_FNumber Ui = get_U( i );
-   c_FNumber xi = x[ i ].get_value();
-   if( Ui >= Inf< FNumber >() ) {
-    if( xi < - feps )
-     return( false );
-    }
-   else {
-    c_FNumber slck = Ui == 0 ? std::abs( xi ) :
-                               std::max( - xi , xi - Ui ) / std::abs( Ui );
-    if( slck > feps )
-     return( false );
-    }
+  Vec_FNumber F( get_NArcs() );
+  get_x( F.begin() );
+
+  return( bound_feasible( feps , F ) );
+  }
+
+ return( true );
+
+ }  // end( MCFBlock::bound_feasible( bool ) )
+
+/*--------------------------------------------------------------------------*/
+
+bool MCFBlock::bound_feasible( c_FNumber feps , c_Vec_FNumber & F )
+{
+ if( F.size() < get_NArcs() )
+  throw( std::invalid_argument( "MCFBlock::bound_feasible: F too small" ) );
+
+ for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+  if( is_deleted( i ) )
+   continue;
+
+  c_FNumber Ui = is_closed( i ) ? 0 : get_U( i );  // a closed arc: no flow
+  c_FNumber xi = F[ i ];
+  if( Ui >= Inf< FNumber >() ) {
+   if( xi < - feps )
+    return( false );
    }
-
-  // dynamic part
-  if( HasDynamicX() ) {
-   auto dxi = dx.begin();
-   for(  ; i < get_NArcs() ; ++i ) {
-    c_FNumber Ui = get_U( i );
-    c_FNumber xi = (*(dxi++)).get_value();
-    if( Ui >= Inf< FNumber >() ) {
-     if( xi < - feps )
-      return( false );
-     }
-    else {
-     c_FNumber slck = Ui == 0 ? std::abs( xi ) :
-                                std::max( - xi , xi - Ui ) / std::abs( Ui );
-     if( slck > feps )
-      return( false );
-     }
-    }
+  else {
+   c_FNumber slck = Ui == 0 ? std::abs( xi ) :
+                              std::max( - xi , xi - Ui ) / std::abs( Ui );
+   if( slck > feps )
+    return( false );
    }
   }
 
  return( true );
 
- }  // end( MCFBlock::bound_feasible )
+ }  // end( MCFBlock::bound_feasible( F ) )
 
 /*--------------------------------------------------------------------------*/
 
@@ -922,42 +928,51 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
   }
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
+  // i.e., read the potentials out of the dual multipliers and check those
 
-  Vec_CNumber RC;
-  get_rc( RC.begin() );
-  Vec_CNumber Pi;
+  Vec_CNumber Pi( get_NNodes() );
   get_pi( Pi.begin() );
 
-  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-   if( is_closed( i ) || is_deleted( i ) )
-    continue;
-
-   c_CNumber Ci = get_C( i );
-   c_CNumber RCi = Ci + Pi[ SN[ i ] - 1 ] - Pi[ EN[ i ] - 1 ];
-   c_CNumber df = std::abs( RCi - RC[ i ] );
-   c_CNumber mx = std::max( std::abs( Ci ) , df );
-   if( mx == 0 ) {
-    if( df > ceps )
-     return( false );
-    }
-   else
-    if( df > ceps * mx )
-     return( false );
-   }
+  return( dual_feasible( ceps , Pi ) );
   }
 
  return( true );
 
- }  // end( MCFBlock::dual_feasible )
+ }  // end( MCFBlock::dual_feasible( bool ) )
+
+/*--------------------------------------------------------------------------*/
+
+bool MCFBlock::dual_feasible( c_CNumber ceps , c_Vec_CNumber & Pi )
+{
+ if( Pi.size() < get_NNodes() )
+  throw( std::invalid_argument( "MCFBlock::dual_feasible: Pi too small" ) );
+
+ // the reduced cost of a capacitated arc is compensated by the (implicit)
+ // dual variable of its bound constraint, whatever its sign; that of an
+ // uncapacitated one has to be nonnegative, otherwise the dual is infeasible
+
+ for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+  if( is_closed( i ) || is_deleted( i ) )
+   continue;
+
+  if( get_U( i ) < Inf< FNumber >() )
+   continue;
+
+  c_CNumber Ci = get_C( i );
+  c_CNumber RCi = Ci + Pi[ SN[ i ] - 1 ] - Pi[ EN[ i ] - 1 ];
+  if( RCi < - ceps * std::max( std::abs( Ci ) , CNumber( 1 ) ) )
+   return( false );
+  }
+
+ return( true );
+
+ }  // end( MCFBlock::dual_feasible( Pi ) )
 
 /*--------------------------------------------------------------------------*/
 
 bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
 					bool useabstract )
 {
- Vec_CNumber RC;
- get_rc( RC.begin() );
-
  if( useabstract ) {
   // do it using the abstract representation- - - - - - - - - - - - - - - - -
 
@@ -965,6 +980,9 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
    throw( std::logic_error(
     "abstract representation not there in complementary_slackness(( , true )"
 			   ) );
+
+  Vec_CNumber RC( get_NArcs() );
+  get_rc( RC.begin() );
 
   auto obj = static_cast< FRealObjective * >( get_objective() );
   assert( obj );
@@ -980,8 +998,8 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
      c_CNumber Ci = lfo->get_coefficient( i );
      CNumber RCi = RC[ i ];
      if( Ci )
-      RCi /= Ci;
-     if( ( x[ i ].get_value() > feps ) && ( RCi < - ceps ) )
+      RCi /= std::abs( Ci );
+     if( ( x[ i ].get_value() > feps ) && ( RCi > ceps ) )
       return( false );
      }
     }
@@ -992,17 +1010,17 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
      c_CNumber Ci = lfo->get_coefficient( i );
      CNumber RCi = RC[ i ];
      if( Ci )
-      RCi /= Ci;
+      RCi /= std::abs( Ci );
      c_FNumber xiv = x[ i ].get_value();
      c_FNumber UBi = UB[ i ].get_rhs();
      if( UBi >= Inf< RowConstraint::RHSValue >() ) {
-      if( ( xiv > feps ) && ( RCi < - ceps ) )
+      if( ( xiv > feps ) && ( RCi > ceps ) )
        return( false );
       }
      else {
       c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
-      if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
-	  ( ( UBi - xiv > sfeps ) && ( RCi > ceps ) ) )
+      if( ( ( xiv > sfeps ) && ( RCi > ceps ) ) ||
+	  ( ( UBi - xiv > sfeps ) && ( RCi < - ceps ) ) )
        return( false );
       }
      }
@@ -1018,8 +1036,8 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
       c_CNumber Ci = lfo->get_coefficient( i );
       CNumber RCi = RC[ i ];
       if( Ci )
-       RCi /= Ci;
-      if( ( dxi->get_value() > feps ) && ( RCi < - ceps ) )
+       RCi /= std::abs( Ci );
+      if( ( dxi->get_value() > feps ) && ( RCi > ceps ) )
        return( false );
       }
      }
@@ -1031,17 +1049,17 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
       c_CNumber Ci = lfo->get_coefficient( i );
       CNumber RCi = RC[ i ];
       if( Ci )
-       RCi /= Ci;
+       RCi /= std::abs( Ci );
       c_FNumber dxiv = dxi->get_value();
       c_FNumber UBi = dubi->get_rhs();
       if( UBi >= Inf< RowConstraint::RHSValue >() ) {
-       if( ( dxiv > feps ) && ( RCi < - ceps ) )
+       if( ( dxiv > feps ) && ( RCi > ceps ) )
 	return( false );
        }
       else {
        c_FNumber sfeps = ( UBi == 0 ? feps : feps * UBi );
-       if( ( ( dxiv > sfeps ) && ( RCi < - ceps ) ) ||
-	   ( ( UBi - dxiv > sfeps ) && ( RCi > ceps ) ) )
+       if( ( ( dxiv > sfeps ) && ( RCi > ceps ) ) ||
+	   ( ( UBi - dxiv > sfeps ) && ( RCi < - ceps ) ) )
 	return( false );
        }
       }
@@ -1050,89 +1068,119 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   }
  else {
   // do it using the physical representation- - - - - - - - - - - - - - - - -
-  Index i = 0;
+  // i.e., read the flow and the potentials and check those
 
-  // static part
-  for(  ; i < get_NStaticArcs() ; ++i )
-   if( ( ! std::isnan( C[ i ] ) ) && ( ! x[ i ].is_fixed() ) ) {
-    // neither closed nor deleted
-    c_CNumber Ci = get_C( i );
-    CNumber RCi = RC[ i ];
-    if( Ci != 0 )
-     RCi /= C[ i ];
+  Vec_FNumber F( get_NArcs() );
+  get_x( F.begin() );
+  Vec_CNumber Pi( get_NNodes() );
+  get_pi( Pi.begin() );
 
-    c_FNumber Ui = get_U( i );
-    c_FNumber xiv = x[ i ].get_value();
+  return( complementary_slackness( ceps , feps , F , Pi ) );
+  }
 
-    if( Ui >= Inf< FNumber >() ) {
-     if( ( xiv > feps ) && ( RCi < - ceps ) )
-      return( false );
-     }
-    else {
-     c_FNumber sfeps = ( Ui == 0 ? feps : feps * Ui );
-     if( ( ( xiv > sfeps ) && ( RCi < - ceps ) ) ||
-	 ( ( Ui - xiv > sfeps ) && ( RCi > ceps ) ) )
-      return( false );
-     }
-    }
+ return( true );
 
-  // dynamic part
-  if( HasDynamicX() ) {
-   auto dxi = dx.begin();
+ }  // end( MCFBlock::complementary_slackness( bool ) )
 
-   for( ; i < get_NArcs() ; ++i , ++dxi )
-    if( ( ! std::isnan( C[ i ] ) ) && ( ! dxi->is_fixed() ) ) {
-     // neither closed nor deleted
-     c_FNumber dxiv = dxi->get_value();
-     c_CNumber Ci = get_C( i );
-     CNumber RCi = RC[ i ];
-     if( Ci != 0 )
-      RCi /= C[ i ];
+/*--------------------------------------------------------------------------*/
 
-     c_FNumber Ui = get_U( i );
-     if( Ui >= Inf< FNumber >() ) {
-      if( ( dxiv > feps ) && ( RCi < - ceps ) )
-       return( false );
-      }
-     else {
-      c_FNumber sfeps = ( Ui == 0 ? feps : feps * Ui );
-      if( ( ( dxiv > sfeps ) && ( RCi < - ceps ) ) ||
-	  ( ( Ui - dxiv > sfeps ) && ( RCi > ceps ) ) )
-       return( false );
-      }
-     }
+bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
+					c_Vec_FNumber & F ,
+					c_Vec_CNumber & Pi )
+{
+ if( F.size() < get_NArcs() )
+  throw( std::invalid_argument(
+			 "MCFBlock::complementary_slackness: F too small" ) );
+ if( Pi.size() < get_NNodes() )
+  throw( std::invalid_argument(
+			"MCFBlock::complementary_slackness: Pi too small" ) );
+
+ for( Index i = 0 ; i < get_NArcs() ; ++i ) {
+  if( is_closed( i ) || is_deleted( i ) )
+   continue;
+
+  // with the reduced cost being C + Pi[ SN ] - Pi[ EN ], optimality means
+  // that an arc carrying flow has nonpositive reduced cost and one not at
+  // its upper bound has nonnegative one, so that a nonzero reduced cost
+  // forces the flow at one of the two bounds
+  c_CNumber Ci = get_C( i );
+  CNumber RCi = Ci + Pi[ SN[ i ] - 1 ] - Pi[ EN[ i ] - 1 ];
+  if( Ci != 0 )
+   RCi /= std::abs( Ci );
+
+  c_FNumber Ui = is_closed( i ) ? 0 : get_U( i );
+  c_FNumber xiv = F[ i ];
+
+  if( Ui >= Inf< FNumber >() ) {
+   if( ( xiv > feps ) && ( RCi > ceps ) )
+    return( false );
+   if( RCi < - ceps )   // nothing stops the flow from increasing
+    return( false );
+   }
+  else {
+   c_FNumber sfeps = ( Ui == 0 ? feps : feps * Ui );
+   if( ( ( xiv > sfeps ) && ( RCi > ceps ) ) ||
+       ( ( Ui - xiv > sfeps ) && ( RCi < - ceps ) ) )
+    return( false );
    }
   }
 
  return( true );
 
- }  // end( MCFBlock::complementary_slackness )
+ }  // end( MCFBlock::complementary_slackness( F , Pi ) )
 
 /*--------------------------------------------------------------------------*/
 
-bool MCFBlock::is_feasible( bool useabstract , Configuration *fsbc )
+MCFBlock::FNumber MCFBlock::feps_of( Configuration * fsbc ) const
 {
- FNumber eps = 0;
  auto tfsbc = dynamic_cast< SimpleConfiguration< FNumber > * >( fsbc );
 
  if( ( ! tfsbc ) && f_BlockConfig &&
      f_BlockConfig->f_is_feasible_Configuration )
   tfsbc = dynamic_cast< SimpleConfiguration< FNumber > * >(
                         f_BlockConfig->f_is_feasible_Configuration );
- if( tfsbc )
-  eps = tfsbc->f_value;
+
+ return( tfsbc ? tfsbc->f_value : 0 );
+
+ }  // end( MCFBlock::feps_of )
+
+/*--------------------------------------------------------------------------*/
+
+bool MCFBlock::is_feasible( bool useabstract , Configuration *fsbc )
+{
+ c_FNumber eps = feps_of( fsbc );
 
  return( flow_feasible( eps , useabstract ) &&
 	 bound_feasible( eps , useabstract ) );
 
- }  // end( MCFBlock::is_feasible )
+ }  // end( MCFBlock::is_feasible( bool ) )
 
 /*--------------------------------------------------------------------------*/
 
-bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
+bool MCFBlock::is_sol_feasible( Solution * sol , Configuration * fsbc )
 {
- CNumber ceps = 0;
- FNumber feps = 0;
+ auto msol = dynamic_cast< MCFSolution * >( sol );
+ if( ! msol )
+  throw( std::invalid_argument( "MCFBlock::is_feasible: the Solution is not "
+				"a MCFSolution" ) );
+
+ auto & F = msol->get_x();
+ if( F.size() < get_NArcs() )  // no flow in there, nothing can be said
+  return( false );
+
+ c_FNumber eps = feps_of( fsbc );
+
+ return( flow_feasible( eps , F ) && bound_feasible( eps , F ) );
+
+ }  // end( MCFBlock::is_sol_feasible )
+
+/*--------------------------------------------------------------------------*/
+
+void MCFBlock::eps_of( Configuration * optc , CNumber & ceps ,
+		       FNumber & feps ) const
+{
+ ceps = 0;
+ feps = 0;
  if( optc ) {
   if( auto toptc =
       dynamic_cast< SimpleConfiguration< std::pair< CNumber , FNumber > > * >(
@@ -1171,12 +1219,46 @@ bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
      feps = fsbc->f_value;
    }
 
+ }  // end( MCFBlock::eps_of )
+
+/*--------------------------------------------------------------------------*/
+
+bool MCFBlock::is_optimal( bool useabstract , Configuration *optc )
+{
+ CNumber ceps;
+ FNumber feps;
+ eps_of( optc , ceps , feps );
+
  return( flow_feasible( feps , useabstract ) &&
 	 bound_feasible( feps , useabstract ) &&
 	 dual_feasible( ceps , useabstract ) &&
 	 complementary_slackness( ceps , feps , useabstract ) );
 
- }  //  end( MCFBlock::is_optimal )
+ }  //  end( MCFBlock::is_optimal( bool ) )
+
+/*--------------------------------------------------------------------------*/
+
+bool MCFBlock::is_sol_optimal( Solution * sol , Configuration * optc )
+{
+ auto msol = dynamic_cast< MCFSolution * >( sol );
+ if( ! msol )
+  throw( std::invalid_argument( "MCFBlock::is_optimal: the Solution is not "
+				"a MCFSolution" ) );
+
+ auto & F = msol->get_x();
+ auto & Pi = msol->get_pi();
+ if( ( F.size() < get_NArcs() ) || ( Pi.size() < get_NNodes() ) )
+  return( false );  // optimality needs both the flow and the potentials
+
+ CNumber ceps;
+ FNumber feps;
+ eps_of( optc , ceps , feps );
+
+ return( flow_feasible( feps , F ) && bound_feasible( feps , F ) &&
+	 dual_feasible( ceps , Pi ) &&
+	 complementary_slackness( ceps , feps , F , Pi ) );
+
+ }  //  end( MCFBlock::is_sol_optimal )
 
 /*--------------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/

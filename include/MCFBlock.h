@@ -308,10 +308,10 @@ public:
   *
   * - m    is the current number of arcs of the network
   *
-  * - pSn  is the vector of the arc starting nodes, which must have size at
-  *        least m
-  *
   * - pEn  is the vector of the arc ending nodes, which must have size at
+  *        least m; note that this comes *before* pSn, cf. the signature
+  *
+  * - pSn  is the vector of the arc starting nodes, which must have size at
   *        least m
   *
   * - pU   is the vector of the arc upper capacities; capacities must be
@@ -988,6 +988,17 @@ public:
  bool flow_feasible( FNumber feps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// like flow_feasible(), but the flow is given from the outside
+ /** Like flow_feasible( FNumber , bool ), but the flow to be checked is F
+  * rather than the one encoded in the Variable of the MCFBlock, which
+  * therefore need not even exist. F must have size at least get_NArcs();
+  * the entries corresponding to deleted arcs are ignored. This is what the
+  * "physical" version of flow_feasible() and is_sol_feasible() both
+  * boil down to. */
+
+ bool flow_feasible( FNumber feps , c_Vec_FNumber & F );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the current solution is (approximately) bound feasible
  /** Returns true if the solution encoded in the current value of the flow
   * (x) Variable of the MCFBlock is approximately feasible w.r.t. the bound
@@ -1000,6 +1011,16 @@ public:
  bool bound_feasible( FNumber feps , bool useabstract = false );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// like bound_feasible(), but the flow is given from the outside
+ /** Like bound_feasible( FNumber , bool ), but the flow to be checked is F
+  * rather than the one encoded in the Variable of the MCFBlock, which
+  * therefore need not even exist. F must have size at least get_NArcs();
+  * the entries corresponding to deleted arcs are ignored, while those
+  * corresponding to closed arcs are checked against an upper bound of 0. */
+
+ bool bound_feasible( FNumber feps , c_Vec_FNumber & F );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if the current solution is (approximately) dual feasible
  /** Returns true if the dual solution encoded in the current value of the
   * dual multipliers of both the flow conservation and bound constraints is
@@ -1010,6 +1031,24 @@ public:
   * is_feasible() and is_optimal(). */
 
  bool dual_feasible( CNumber ceps , bool useabstract = false );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// like dual_feasible(), but the potentials are given from the outside
+ /** Like dual_feasible( CNumber , bool ), but the dual solution to be
+  * checked is the vector Pi of the node potentials, which must have size at
+  * least get_NNodes(), rather than the one encoded in the dual multipliers
+  * of the Constraint of the MCFBlock, which therefore need not even exist.
+  *
+  * Note that with the potentials alone the check is only significant for
+  * the arcs with infinite capacity: the reduced cost of a capacitated arc
+  * can always be compensated by the (implicit) dual variable of its bound
+  * constraint, whatever its sign, whereas that of an uncapacitated one has
+  * to be nonnegative, otherwise the dual is infeasible. The rest of what
+  * makes ( F , Pi ) an optimal pair is checked by
+  * complementary_slackness( CNumber , FNumber , c_Vec_FNumber & ,
+  * c_Vec_CNumber & ). */
+
+ bool dual_feasible( CNumber ceps , c_Vec_CNumber & Pi );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// returns true if complementary slackness are (approximately) satisfied
@@ -1027,6 +1066,18 @@ public:
 
  bool complementary_slackness( CNumber ceps , FNumber feps ,
 			       bool useabstract = false );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// like complementary_slackness(), but the solutions are given from outside
+ /** Like complementary_slackness( CNumber , FNumber , bool ), but the pair
+  * to be checked is the flow F and the node potentials Pi, rather than the
+  * one encoded in the Variable and in the dual multipliers of the
+  * Constraint of the MCFBlock, which therefore need not even exist. F must
+  * have size at least get_NArcs() and Pi size at least get_NNodes(); the
+  * arcs that are deleted or closed are ignored. */
+
+ bool complementary_slackness( CNumber ceps , FNumber feps ,
+			       c_Vec_FNumber & F , c_Vec_CNumber & Pi );
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is approximately feasible
@@ -1052,6 +1103,19 @@ public:
  
  bool is_feasible( bool useabstract = false , Configuration *fsbc = nullptr )
   override;
+
+/*--------------------------------------------------------------------------*/
+ /// returns true if the solution in the Solution is approximately feasible
+ /** Returns true if the flow held by the MCFSolution sol is approximately
+  * feasible, i.e., it satisfies the flow conservation constraints and the
+  * arc bounds; the MCFBlock is only read for its data, its Variable are not
+  * touched and they need not even exist. sol must be a MCFSolution holding
+  * a primal solution, otherwise false is returned (a Solution that is not a
+  * MCFSolution is an error, and it throws). The tolerance is found exactly
+  * as in is_feasible( bool , Configuration * ). */
+
+ bool is_sol_feasible( Solution * sol ,
+                       Configuration * fsbc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is (approximately) optimal
@@ -1086,6 +1150,21 @@ public:
  
  bool is_optimal( bool useabstract = false  , Configuration *optc = nullptr )
   override;
+
+/*--------------------------------------------------------------------------*/
+ /// returns true if the solution in the Solution is approximately optimal
+ /** Returns true if the flow and the node potentials held by the MCFSolution
+  * sol are approximately optimal, i.e., the flow is feasible, the potentials
+  * are dual feasible and the two satisfy the Complementary Slackness
+  * Conditions; the MCFBlock is only read for its data, its Variable and
+  * Constraint are not touched and they need not even exist. sol must be a
+  * MCFSolution holding both a primal and a dual solution, otherwise false is
+  * returned (a Solution that is not a MCFSolution is an error, and it
+  * throws). The tolerances are found exactly as in is_optimal( bool ,
+  * Configuration * ). */
+
+ bool is_sol_optimal( Solution * sol ,
+                      Configuration * optc = nullptr ) override;
 
 /** @} ---------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
@@ -2127,73 +2206,70 @@ public:
  static void static_initialization( void )
  {
   /*!!
- * Not all C++ compilers enjoy the template wizardry behind the three-args
- * version of register_method<> with the compact MS_*_*::args(), so we just
- * use the slightly less compact one with the explicit argument and be done
- * with it. !!*/
-  // register_method< MCFBlock >( "MCFBlock::chg_costs", &MCFBlock::chg_costs,
-  //                              MS_dbl_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_costs", &MCFBlock::chg_costs,
-  //                              MS_dbl_sbst::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps,
-  //                              MS_dbl_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_ucaps", &MCFBlock::chg_ucaps,
-  //                              MS_dbl_sbst::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts,
-  //                              MS_dbl_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::chg_dfcts", &MCFBlock::chg_dfcts,
-  //                              MS_dbl_sbst::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::close_arcs",
-  //                              &MCFBlock::close_arcs,
-  //                              MS_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::close_arcs",
-  //                              &MCFBlock::close_arcs,
-  //                              MS_sbst::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::open_arcs", &MCFBlock::open_arcs,
-  //                              MS_rngd::args() );
-  //
-  // register_method< MCFBlock >( "MCFBlock::open_arcs", &MCFBlock::open_arcs,
-  //                              MS_sbst::args() );
+   * Warning: Not all C++ compilers enjoy the template wizardry behind the
+   * three-args version of register_method<> with the compact MS_*_*::args(),
+   * so we just use the slightly less compact one with the explicit argument
+   * and be done with it.
 
+  register_method< MCFBlock >( "MCFBlock::chg_costs", & MCFBlock::chg_costs,
+                               MS_dbl_rngd::args() );
 
+  register_method< MCFBlock >( "MCFBlock::chg_costs", & MCFBlock::chg_costs,
+                               MS_dbl_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_ucaps", & MCFBlock::chg_ucaps,
+                               MS_dbl_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_ucaps", & MCFBlock::chg_ucaps,
+                               MS_dbl_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_dfcts", & MCFBlock::chg_dfcts,
+                               MS_dbl_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::chg_dfcts", & MCFBlock::chg_dfcts,
+                               MS_dbl_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::close_arcs", & MCFBlock::close_arcs,
+                               MS_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::close_arcs", & MCFBlock::close_arcs,
+                               MS_sbst::args() );
+
+  register_method< MCFBlock >( "MCFBlock::open_arcs", & MCFBlock::open_arcs,
+                               MS_rngd::args() );
+
+  register_method< MCFBlock >( "MCFBlock::open_arcs", & MCFBlock::open_arcs,
+                               MS_sbst::args() );
+				       !!*/
   register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_costs" ,
-						   & MCFBlock::chg_costs );
+                                                   & MCFBlock::chg_costs );
 
   register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
    "MCFBlock::chg_costs" , & MCFBlock::chg_costs );
 
   register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_ucaps" ,
-						   & MCFBlock::chg_ucaps );
+                                                   & MCFBlock::chg_ucaps );
 
-  register_method< MCFBlock , MF_dbl_it , Subset &&, bool >(
+  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
    "MCFBlock::chg_ucaps" , & MCFBlock::chg_ucaps );
 
   register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_dfcts" ,
-						   & MCFBlock::chg_dfcts );
+                                                   & MCFBlock::chg_dfcts );
 
   register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
    "MCFBlock::chg_dfcts" , & MCFBlock::chg_dfcts );
 
   register_method< MCFBlock , Range >( "MCFBlock::close_arcs" ,
-				       & MCFBlock::close_arcs );
+                                       & MCFBlock::close_arcs );
 
   register_method< MCFBlock , Subset && , bool >( "MCFBlock::close_arcs" ,
-						  & MCFBlock::close_arcs );
+                                                  & MCFBlock::close_arcs );
 
   register_method< MCFBlock , Range >( "MCFBlock::open_arcs" ,
-				       & MCFBlock::open_arcs );
+                                       & MCFBlock::open_arcs );
 
   register_method< MCFBlock , Subset && , bool >( "MCFBlock::open_arcs" ,
-						  & MCFBlock::open_arcs );
-
+                                                  & MCFBlock::open_arcs );
   }  // end( static_initialization )
 
 /*--------------------------------------------------------------------------*/
@@ -2233,6 +2309,12 @@ public:
    return( lfc );
   #endif
   }
+
+ /// extracts out of fsbc, or of the BlockConfig, the is_feasible() tolerance
+ FNumber feps_of( Configuration * fsbc ) const;
+
+ /// extracts out of optc, or of the BlockConfig, the is_optimal() tolerances
+ void eps_of( Configuration * optc , CNumber & ceps , FNumber & feps ) const;
 
  void guts_of_destructor( void );
 
@@ -2570,6 +2652,40 @@ class MCFSolution : public Solution {
  void sum( const Solution * solution , double multiplier ) override final;
 
  MCFSolution * clone( bool empty = false ) const override final;
+
+/*----------- METHODS FOR READING AND WRITING THE SOLUTION -----------------*/
+ /// returns the arc flows saved in this MCFSolution
+ /** Returns the arc flows saved in this MCFSolution, which are empty if it
+  * does not save them [see MCFBlock::get_Solution()]. */
+
+ [[nodiscard]] MCFBlock::c_Vec_FNumber & get_x( void ) const {
+  return( v_x );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// returns the node potentials saved in this MCFSolution
+ /** Returns the node potentials saved in this MCFSolution, which are empty
+  * if it does not save them [see MCFBlock::get_Solution()]. */
+
+ [[nodiscard]] MCFBlock::c_Vec_CNumber & get_pi( void ) const {
+  return( v_pi );
+  }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets the arc flows saved in this MCFSolution
+ /** Sets the arc flows saved in this MCFSolution. This is what a Solver
+  * fills the Solution with directly out of its own data structures, rather
+  * than writing the solution in the Variable of the MCFBlock and having it
+  * read back from there, which requires the Variable to exist at all [see
+  * MCFSolver::get_Solution()]. */
+
+ void set_x( MCFBlock::Vec_FNumber && x ) { v_x = std::move( x ); }
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// sets the node potentials saved in this MCFSolution
+ /** The counterpart of set_x() for the dual solution. */
+
+ void set_pi( MCFBlock::Vec_CNumber && pi ) { v_pi = std::move( pi ); }
 
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 
