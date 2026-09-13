@@ -1118,6 +1118,13 @@ public:
                        Configuration * fsbc = nullptr ) override;
 
 /*--------------------------------------------------------------------------*/
+ /// is_sol_feasible() reads the MCFSolution, the Variable are left alone
+
+ [[nodiscard]] bool is_sol_feasible_physical( void ) const override {
+  return( true );
+  }
+
+/*--------------------------------------------------------------------------*/
  /// returns true if the current solution is (approximately) optimal
  /** Returns true if the solution encoded in the current value of the flow
   * (x) Variable of the MCFBlock is approximately optimal, which means that
@@ -1165,6 +1172,13 @@ public:
 
  bool is_sol_optimal( Solution * sol ,
                       Configuration * optc = nullptr ) override;
+
+/*--------------------------------------------------------------------------*/
+ /// is_sol_optimal() reads the MCFSolution, the Variable are left alone
+
+ [[nodiscard]] bool is_sol_optimal_physical( void ) const override {
+  return( true );
+  }
 
 /** @} ---------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
