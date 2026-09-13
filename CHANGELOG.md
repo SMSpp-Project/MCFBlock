@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.6.1] - 2026-09-13
+
+### Changed
+
+- `is_sol_feasible()` and `is_sol_optimal()` say that they leave the
+  Variable alone
+
 ## [0.6.0] - 2026-09-12
 
 ### Added
