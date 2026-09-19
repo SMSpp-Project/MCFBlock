@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `map_forward_Modification()` passed a change of the deficits on to the
+  other `MCFBlock` as a change of its capacities, and, when this `MCFBlock`
+  had no capacities or no deficits, read them out of the empty vector rather
+  than passing on the infinite capacities and the zero deficits it has
+
+- `map_forward_solution()` looked at the static bound Constraint where it
+  had to look at the dynamic ones, setting to zero the duals of the dynamic
+  bounds of the other `MCFBlock` whenever this one had no static bounds
+
 ## [0.6.1] - 2026-09-13
 
 ### Changed

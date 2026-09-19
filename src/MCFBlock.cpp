@@ -1510,7 +1510,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
 
   // dynamic part
   if( MCFB->HasDynamicX() && ( ! MCFB->dUB.empty() ) ) {
-   if( UB.empty() ) {
+   if( dUB.empty() ) {
     for( auto & cnst : MCFB->dUB )
      cnst.set_dual( 0 );
     }
@@ -1616,12 +1616,9 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
       MCFB->chg_ucap( U.empty() ? Inf< FNumber >() : U[ tmod->rng().first ] ,
 		      tmod->rng().first , iPM , iPA );
      else
-      if( U.empty() ) {
-       Vec_FNumber NCap( tmod->rng().second - tmod->rng().first );
-       auto NCit = NCap.begin();
-       for( Index i = tmod->rng().first ; i < tmod->rng().second ; ++i )
-	*(NCit++) = U[ i ];
-
+      if( U.empty() ) {  // all the capacities are infinite
+       Vec_FNumber NCap( tmod->rng().second - tmod->rng().first ,
+			 Inf< FNumber >() );
        MCFB->chg_ucaps( NCap.begin() , tmod->rng() , iPM , iPA );
        }
       else
@@ -1639,13 +1636,9 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
       MCFB->chg_dfct( B.empty() ? 0 : B[ tmod->rng().first ] ,
 		      tmod->rng().first , iPM , iPA );
      else
-      if( B.empty() ) {
-       Vec_FNumber NDfct( tmod->rng().second - tmod->rng().first );
-       auto NDit = NDfct.begin();
-       for( Index i = tmod->rng().first ; i < tmod->rng().second ; ++i )
-	*(NDit++) = B[ i ];
-
-       MCFB->chg_ucaps( NDfct.begin() , tmod->rng() , iPM , iPA );
+      if( B.empty() ) {  // all the deficits are zero
+       Vec_FNumber NDfct( tmod->rng().second - tmod->rng().first , 0 );
+       MCFB->chg_dfcts( NDfct.begin() , tmod->rng() , iPM , iPA );
        }
       else
        MCFB->chg_dfcts( B.begin() + tmod->rng().first , tmod->rng() ,
