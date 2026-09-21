@@ -254,7 +254,9 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
   std::copy( pC.begin() , pC.begin() + m , C.begin() );
   }
 
- if( std::any_of( pU.begin() , pU.begin() + m ,
+ // an empty pU means all capacities infinite, an empty pB all deficits 0
+ if( ( ! pU.empty() ) &&
+     std::any_of( pU.begin() , pU.begin() + m ,
 		  []( c_FNumber ui ) { return( ui < Inf< FNumber >() ); } ) ) {
   U.resize( MaxNArcs );
   std::copy( pU.begin() , pU.begin() + m , U.begin() );
@@ -262,7 +264,8 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
  else
   U.clear();
 
- if( std::any_of( pB.begin() , pB.begin() + n ,
+ if( ( ! pB.empty() ) &&
+     std::any_of( pB.begin() , pB.begin() + n ,
 		  []( c_FNumber bi ) { return( bi != 0 ); } ) ) {
   B.resize( MaxNNodes );
   std::copy( pB.begin() , pB.begin() + n , B.begin() );
@@ -2706,8 +2709,8 @@ void MCFBlock::chg_ucap( FNumber NCap , Index arc ,
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
- if( U.empty() ) {
-  if( NCap < Inf< FNumber >() )
+ if( U.empty() ) {  // all the capacities are infinite
+  if( NCap >= Inf< FNumber >() )
    return;
 
   U.assign( get_MaxNArcs() , Inf< FNumber >() );
@@ -2952,7 +2955,7 @@ void MCFBlock::chg_dfct( FNumber NDfct , Index nde ,
   if( ! NDfct )
    return;
 
-  B.assign( get_NNodes() , 0 );
+  B.assign( get_MaxNNodes() , 0 );
   }
 
  if( B[ nde ] == NDfct )

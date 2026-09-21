@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `load()` given no capacities or no deficits, which it documents as all
+  capacities infinite and all deficits zero, read past the end of the empty
+  vector
+
+- `chg_ucap()` on a MCFBlock with no capacities returned without doing
+  anything when the new capacity was finite, i.e., exactly when there was
+  something to change, and `chg_dfct()` on one with no deficits sized them
+  on the current number of nodes rather than on the maximum one
+
 - `map_forward_Modification()` passed a change of the deficits on to the
   other `MCFBlock` as a change of its capacities, and, when this `MCFBlock`
   had no capacities or no deficits, read them out of the empty vector rather
