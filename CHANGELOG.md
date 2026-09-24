@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   drops what looks unused takes the registration away with it, so the target
   now tells whoever links it to keep the symbol that forces the module in,
   and on ELF, where naming the symbol is not enough, the library as a whole
+
 - `chg_costs()`, `chg_ucaps()` and `chg_dfcts()` take their data as a
   `std::span< const double >`, whose length they check against the Range or
   the Subset instead of reading past the end, and are registered in the
@@ -83,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.1] - 2025-12-12
 
-### Fixed 
+### Fixed
 
 - the order in which some conditions are checked
 
@@ -91,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2024-02-28
 
-### Changed 
+### Changed
 
 - adapted to new CMake / makefile organisation
 
@@ -175,7 +176,11 @@ Mainly a fix release after much improved testing
 
 Minor point release to avoid the master branch to become too stale:
 
+### Changed
+
 - changed useabstract to hint from order
+
+### Fixed
 
 - fixed flaw in flow_feasible()
 
@@ -204,6 +209,7 @@ Minor point release to avoid the master branch to become too stale:
 ### Added
 
 - Support for MCFCplex class.
+
 - Support for new configuration framework.
 
 ## [0.2.0] - 2020-03-06
