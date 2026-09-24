@@ -1111,8 +1111,10 @@ public:
   * arc bounds; the MCFBlock is only read for its data, its Variable are not
   * touched and they need not even exist. sol must be a MCFSolution holding
   * a primal solution, otherwise false is returned (a Solution that is not a
-  * MCFSolution is an error, and it throws). The tolerance is found exactly
-  * as in is_feasible( bool , Configuration * ). */
+  * MCFSolution is an error, and it throws). What sol holds may as well be a
+  * direction, which sol says itself and which is checked against the
+  * homogeneous version of the constraints [see is_direction()]. The
+  * tolerance is found exactly as in is_feasible( bool , Configuration * ). */
 
  bool is_sol_feasible( Solution * sol ,
                        Configuration * fsbc = nullptr ) override;
@@ -1123,6 +1125,27 @@ public:
  [[nodiscard]] bool is_sol_feasible_physical( void ) const override {
   return( true );
   }
+
+/*--------------------------------------------------------------------------*/
+ /// true if what the flow Variable hold is a direction [see is_direction()]
+
+ [[nodiscard]] bool is_direction( void ) const override {
+  return( f_direction );
+  }
+
+/*--------------------------------------------------------------------------*/
+ /// tells the MCFBlock that its flow is a direction rather than a solution
+ /** A direction of a MCFBlock is a ray of its feasible region: a flow that
+  * conserves at every node with all the deficits zero, that is nonnegative
+  * on the arcs of infinite capacity and that is zero on all the others, an
+  * arc of finite capacity leaving no room to move for ever. */
+
+ void is_direction( bool yesno ) override { f_direction = yesno; }
+
+/*--------------------------------------------------------------------------*/
+ /// a MCFBlock knows what a direction of its own is
+
+ [[nodiscard]] bool has_directions( void ) const override { return( true ); }
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is (approximately) optimal
@@ -2248,6 +2271,9 @@ public:
  Vec_CNumber C;                  ///< vector of arc costs
  Vec_FNumber U;                  ///< vector of arc upper capacities
  Vec_FNumber B;                  ///< vector of node deficits
+
+ bool f_direction = false;
+ ///< true if the flow Variable hold a direction [see is_direction()]
 
  unsigned char AR;               ///< bit-wise coded: what abstract is there
 

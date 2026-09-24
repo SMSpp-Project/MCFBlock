@@ -790,9 +790,12 @@ bool MCFBlock::flow_feasible( c_FNumber feps , c_Vec_FNumber & F )
  if( F.size() < get_NArcs() )
   throw( std::invalid_argument( "MCFBlock::flow_feasible: F too small" ) );
 
- // B is allowed to be empty, which means "all deficits are 0"
+ /* B is allowed to be empty, which means "all deficits are 0"; a direction
+  * is checked against the homogeneous version of the constraints, i.e., as
+  * if all the deficits were 0 [see is_direction()]. */
+ const bool dir = f_direction;
  Vec_FNumber tB( get_NNodes() , 0 );
- if( ! B.empty() )
+ if( ( ! dir ) && ( ! B.empty() ) )
   std::copy( B.begin() , B.begin() + get_NNodes() , tB.begin() );
 
  for( Index i = 0 ; i < get_NArcs() ; ++i )
@@ -803,7 +806,7 @@ bool MCFBlock::flow_feasible( c_FNumber feps , c_Vec_FNumber & F )
    }
 
  for( Index i = 0 ; i < get_NNodes() ; ++i ) {
-  c_FNumber Bi = B.empty() ? 0 : B[ i ];
+  c_FNumber Bi = ( dir || B.empty() ) ? 0 : B[ i ];
   c_FNumber slck = Bi == 0 ? std::abs( tB[ i ] ) : std::abs( tB[ i ] / Bi );
   if( slck > feps )
    return( false );
@@ -873,12 +876,20 @@ bool MCFBlock::bound_feasible( c_FNumber feps , c_Vec_FNumber & F )
    if( xi < - feps )
     return( false );
    }
-  else {
-   c_FNumber slck = Ui == 0 ? std::abs( xi ) :
-                              std::max( - xi , xi - Ui ) / std::abs( Ui );
-   if( slck > feps )
-    return( false );
-   }
+  else
+   if( f_direction ) {
+    // an arc of finite capacity leaves no room to move for ever, hence a
+    // direction is zero on it [see is_direction()]
+    c_FNumber slck = Ui == 0 ? std::abs( xi ) : std::abs( xi ) / Ui;
+    if( slck > feps )
+     return( false );
+    }
+   else {
+    c_FNumber slck = Ui == 0 ? std::abs( xi ) :
+                               std::max( - xi , xi - Ui ) / std::abs( Ui );
+    if( slck > feps )
+     return( false );
+    }
   }
 
  return( true );
@@ -1170,7 +1181,18 @@ bool MCFBlock::is_sol_feasible( Solution * sol , Configuration * fsbc )
 
  c_FNumber eps = feps_of( fsbc );
 
- return( flow_feasible( eps , F ) && bound_feasible( eps , F ) );
+ /* Whether what sol holds is a solution or a direction sol says itself, and
+  * this method does not go through the Variable, hence nobody has told the
+  * MCFBlock: the flag is taken from sol for the check and put back as it
+  * was found [see is_direction()]. */
+ const bool wasdir = f_direction;
+ f_direction = msol->is_direction();
+
+ const bool feas = flow_feasible( eps , F ) && bound_feasible( eps , F );
+
+ f_direction = wasdir;
+
+ return( feas );
 
  }  // end( MCFBlock::is_sol_feasible )
 

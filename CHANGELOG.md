@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `is_direction()`, `is_direction( bool )` and `has_directions()`: a MCFBlock
+  knows what a direction of its own is, i.e., a flow that conserves at every
+  node with all the deficits zero, that is nonnegative on the arcs of
+  infinite capacity and that is zero on all the others, an arc of finite
+  capacity leaving no room to move for ever. `is_sol_feasible()` takes from
+  the `MCFSolution` whether what it holds is a solution or a direction, that
+  method not going through the Variable, and checks it accordingly
+
 ### Changed
 
 - whoever links the module keeps it: the classes of a module register
