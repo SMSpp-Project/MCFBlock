@@ -164,7 +164,22 @@ set(DMX_ARCHIVE ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx.tgz)
 set(DMX_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/download_dmx.cmake)
 
 file(WRITE ${DMX_SCRIPT} "
-file(DOWNLOAD \"${DMX_URL}\" \"${DMX_ARCHIVE}\" SHOW_PROGRESS)
+file(DOWNLOAD \"${DMX_URL}\" \"${DMX_ARCHIVE}\" SHOW_PROGRESS STATUS _status)
+list(GET _status 0 _code)
+list(GET _status 1 _message)
+if(NOT _code EQUAL 0)
+  # what is on disk is whatever the server answered with, and leaving it there
+  # would let the build take it for the archive: the next attempt has to
+  # download again rather than fail while extracting it
+  file(REMOVE \"${DMX_ARCHIVE}\")
+  message(FATAL_ERROR \"cannot download ${DMX_URL}: \${_message}\")
+endif()
+file(SIZE \"${DMX_ARCHIVE}\" _size)
+if(_size LESS 1024)
+  file(REMOVE \"${DMX_ARCHIVE}\")
+  message(FATAL_ERROR \"${DMX_ARCHIVE} came down with \${_size} bytes, so the \
+server answered but not with the archive: try again later\")
+endif()
 ")
 
 add_custom_command(
