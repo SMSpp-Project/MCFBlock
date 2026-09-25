@@ -158,9 +158,18 @@ endif ()
 
 # ----- Custom commands and targets ----------------------------------------- #
 
+# The version of the archive in the Package Registry. A published version is
+# never replaced: new data go out under a new version, written here first [see
+# data/upload-dmx], and the archive and the marker of its extraction carry it
+# in their name, so that a tree holding the data of an older version (a cache
+# of the CI, or a clone that has been extracted before) downloads and extracts
+# again instead of taking them for the current ones.
+set(DATA_VERSION 2025-07-29)
+
 # Download dmx.tgz from GitLab Package Registry if it doesn't exist
-set(DMX_URL "https://gitlab.com/api/v4/projects/14857645/packages/generic/dmx/latest/dmx.tgz")
-set(DMX_ARCHIVE ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx.tgz)
+set(DMX_URL "https://gitlab.com/api/v4/projects/14857645/packages/generic/dmx/${DATA_VERSION}/dmx.tgz")
+set(DMX_ARCHIVE ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx-${DATA_VERSION}.tgz)
+set(DATA_MARKER ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted-${DATA_VERSION})
 set(DMX_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/download_dmx.cmake)
 
 file(WRITE ${DMX_SCRIPT} "
@@ -193,11 +202,12 @@ add_custom_command(
 add_custom_target(download_dmx
         DEPENDS ${DMX_ARCHIVE})
 
-# Custom command to extract the dmx.tgz archive if the .extracted file does not exist
+# Custom command to extract the dmx.tgz archive if the marker of this version
+# does not exist
 add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted
-        COMMAND tar xzf ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx.tgz
-        COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted
+        OUTPUT ${DATA_MARKER}
+        COMMAND tar xzf ${DMX_ARCHIVE}
+        COMMAND echo > ${DATA_MARKER}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data
         COMMENT "Extracting dmx.tgz"
         VERBATIM
@@ -205,7 +215,7 @@ add_custom_command(
 
 # Create custom targets to run the dmx extraction
 add_custom_target(extract_dmx
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
+        DEPENDS ${DATA_MARKER})
 
 # Ensure that run_dmx is executed after the download
 add_dependencies(extract_dmx download_dmx)
@@ -219,7 +229,7 @@ if (UNIX)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
             COMMENT "Running dmx2nc4"
             VERBATIM
-            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${DATA_MARKER})
 elseif (WIN32)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
@@ -230,7 +240,7 @@ elseif (WIN32)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
             COMMENT "Running dmx2nc4"
             VERBATIM
-            DEPENDS $<TARGET_FILE:dmx2nc4> ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted)
+            DEPENDS $<TARGET_FILE:dmx2nc4> ${DATA_MARKER})
 endif ()
 
 # Create custom targets to run the nc4 generation

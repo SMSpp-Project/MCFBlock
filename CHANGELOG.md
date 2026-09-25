@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- the data archive is downloaded by version: `DATA_VERSION` in CMakeLists.txt
+  names the version of the Package Registry to read, and the archive and the
+  marker of its extraction carry it in their name, so that a tree holding
+  an older extraction (the cache of the CI, or a clone extracted before)
+  downloads and extracts again instead of running on the old data;
+  data/upload-dmx publishes the archive under that version
+
 - whoever links the module keeps it: the classes of a module register
   themselves in the factory from a static initialiser, and a linker that
   drops what looks unused takes the registration away with it, so the target
