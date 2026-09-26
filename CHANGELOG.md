@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `is_sol_dual_feasible( sol , config )`, whether the potentials a
+  `MCFSolution` holds are dual feasible, the Constraint left alone, and
+  `MCFSolution::is_dual_feasible()`, which asks it [see
+  `Solution::is_dual_feasible()`]
+
 - `is_direction()`, `is_direction( bool )` and `has_directions()`: a MCFBlock
   knows what a direction of its own is, i.e., a flow that conserves at every
   node with all the deficits zero, that is nonnegative on the arcs of

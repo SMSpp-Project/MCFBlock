@@ -1203,6 +1203,17 @@ public:
   return( true );
   }
 
+/*--------------------------------------------------------------------------*/
+ /// checks the dual feasibility of the potentials a MCFSolution holds
+ /** Checks whether the potentials held by sol, which must be a MCFSolution,
+  * are dual feasible [see dual_feasible( Pi )], with the tolerance of
+  * is_optimal( bool , Configuration * ) as fsbc gives it; false if sol holds
+  * fewer potentials than the nodes. This is what MCFSolution::
+  * is_dual_feasible() asks, the MCFBlock knowing the data the potentials are
+  * checked against, and the Constraint are not touched. */
+
+ bool is_sol_dual_feasible( Solution * sol , Configuration * fsbc = nullptr );
+
 /** @} ---------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
@@ -2837,6 +2848,14 @@ class MCFSolution : public Solution {
  /** The counterpart of set_x() for the dual solution. */
 
  void set_pi( MCFBlock::Vec_CNumber && pi ) { v_pi = std::move( pi ); }
+
+/*--------------------------------------------------------------------------*/
+ /// tells whether the potentials are dual feasible for the given MCFBlock
+ /** Asks the given Block, which must be a MCFBlock, whether the potentials
+  * held here are dual feasible [see MCFBlock::is_sol_dual_feasible()]. */
+
+ bool is_dual_feasible( Block * block ,
+			Configuration * fsbc = nullptr ) override;
 
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 
