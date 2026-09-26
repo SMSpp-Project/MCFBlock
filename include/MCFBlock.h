@@ -2254,6 +2254,15 @@ public:
 /*--------------------------------------------------------------------------*/
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 /*--------------------------------------------------------------------------*/
+ /// is_closed() of every arc, in one pass over the flow Variable
+ /** Returns the vector whose i-th element is is_closed( i ), computed in
+  * one pass over x and dx, while a loop calling is_closed( i ) for each arc
+  * costs quadratically in the number of dynamic ones, since dx is a list
+  * that i2p_x() walks from one of its ends. No arc is closed if the flow
+  * Variable have not been constructed, an arc being closed by fixing its
+  * flow Variable. */
+
+ [[nodiscard]] std::vector< bool > closed_arcs( void ) const;
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/

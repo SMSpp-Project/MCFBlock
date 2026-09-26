@@ -866,11 +866,12 @@ bool MCFBlock::bound_feasible( c_FNumber feps , c_Vec_FNumber & F )
  if( F.size() < get_NArcs() )
   throw( std::invalid_argument( "MCFBlock::bound_feasible: F too small" ) );
 
+ const auto cls = closed_arcs();
  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
   if( is_deleted( i ) )
    continue;
 
-  c_FNumber Ui = is_closed( i ) ? 0 : get_U( i );  // a closed arc: no flow
+  c_FNumber Ui = cls[ i ] ? 0 : get_U( i );  // a closed arc: no flow
   c_FNumber xi = F[ i ];
   if( Ui >= Inf< FNumber >() ) {
    if( xi < - feps )
@@ -895,6 +896,26 @@ bool MCFBlock::bound_feasible( c_FNumber feps , c_Vec_FNumber & F )
  return( true );
 
  }  // end( MCFBlock::bound_feasible( F ) )
+
+/*--------------------------------------------------------------------------*/
+
+std::vector< bool > MCFBlock::closed_arcs( void ) const
+{
+ std::vector< bool > cls( get_NArcs() , false );
+ if( ! ( AR & HasVar ) )
+  return( cls );
+
+ Index i = 0;
+ for( ; i < get_NStaticArcs() ; ++i )
+  cls[ i ] = ( ! is_deleted( i ) ) && x[ i ].is_fixed();
+
+ for( auto dxi = dx.begin() ; ( i < get_NArcs() ) && ( dxi != dx.end() ) ;
+      ++i , ++dxi )
+  cls[ i ] = ( ! is_deleted( i ) ) && dxi->is_fixed();
+
+ return( cls );
+
+ }  // end( MCFBlock::closed_arcs )
 
 /*--------------------------------------------------------------------------*/
 
@@ -962,8 +983,9 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , c_Vec_CNumber & Pi )
  // dual variable of its bound constraint, whatever its sign; that of an
  // uncapacitated one has to be nonnegative, otherwise the dual is infeasible
 
+ const auto cls = closed_arcs();
  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-  if( is_closed( i ) || is_deleted( i ) )
+  if( cls[ i ] || is_deleted( i ) )
    continue;
 
   if( get_U( i ) < Inf< FNumber >() )
@@ -1106,8 +1128,9 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   throw( std::invalid_argument(
 			"MCFBlock::complementary_slackness: Pi too small" ) );
 
+ const auto cls = closed_arcs();
  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-  if( is_closed( i ) || is_deleted( i ) )
+  if( cls[ i ] || is_deleted( i ) )
    continue;
 
   // with the reduced cost being C + Pi[ SN ] - Pi[ EN ], optimality means
@@ -1119,7 +1142,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   if( Ci != 0 )
    RCi /= std::abs( Ci );
 
-  c_FNumber Ui = is_closed( i ) ? 0 : get_U( i );
+  c_FNumber Ui = get_U( i );
   c_FNumber xiv = F[ i ];
 
   if( Ui >= Inf< FNumber >() ) {
@@ -2254,10 +2277,11 @@ void MCFBlock::print( std::ostream  & output , char vlvl ) const
      output << "n\t" << i + 1 << "\t" << - B[ i ] << std::endl;
 
   // print arc descriptors in DIMACS standard format
+  const auto cls = closed_arcs();
   for( Index i = 0 ; i < get_NArcs() ; ++i ) {
    output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
 
-   if( ( is_deleted( i ) ) || is_closed( i ) )
+   if( ( is_deleted( i ) ) || cls[ i ] )
     output << "0";
    else {
     if( U.empty() )

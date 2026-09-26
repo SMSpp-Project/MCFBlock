@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `bound_feasible()`, `dual_feasible()`, `complementary_slackness()` and
+  the DIMACS `print()` took quadratic time in the number of dynamic arcs,
+  asking `is_closed()` of each arc, which walks the list of the dynamic flow
+  Variable from one of its ends: they now read which arcs are closed in one
+  pass [see `closed_arcs()`], and on a GOTO instance of 1024 nodes and 65536
+  arcs the check of a solution goes from about 700 to about 5 million
+  instructions
+
 - on macOS a program linking the module lost the classes the module
   registers in the factories when the linker dropped the library, as it
   does under `-dead_strip_dylibs`, which conda sets: the target now asks the
