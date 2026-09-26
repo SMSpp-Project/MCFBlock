@@ -69,8 +69,15 @@ target_link_libraries(<my_target> SMS++::MCFBlock)
 
 ### Running the tests with CMake
 
-`MCFBlock` does not ship a tester of its own, since exercising it requires a
-:Solver. The tester that loads a MCF instance into an `MCFBlock` and solves it,
+The tester of the module (see [test/README.md](test/README.md)) is built when
+`BUILD_TESTING` is on, the default, and it is run from the build directory
+with:
+
+```sh
+ctest -L MCFBlock
+```
+
+The tester that loads a MCF instance into an `MCFBlock` and solves it,
 comparing against direct usage of the underlying :MCFClass solver, lives in the
 [MCFClassSolver](https://gitlab.com/smspp/mcfclasssolver) module.
 
@@ -144,7 +151,13 @@ cd ../tools
 
 ## Tests
 
-`MCFBlock` is exercised through a :Solver. The
+The [test](test) folder holds a tester of the `MCFBlock` alone, which needs
+nothing but the core SMS++ library: it builds its instances in memory and
+checks the DIMACS and netCDF round trips, every change of the data against the
+abstract representation and the `Modification` issued, the feasibility and the
+value of a flow set by hand, and a sequence of random changes.
+
+The solution of the instances is exercised through a :Solver. The
 [MCFClassSolver](https://gitlab.com/smspp/mcfclasssolver) module provides a
 tester that reads a MCF instance (in either DIMACS or netCDF format) into an
 `MCFBlock`, solves it repeatedly under several changes in costs, capacities and

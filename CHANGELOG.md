@@ -19,6 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MCFSolution::is_dual_feasible()`, which asks it [see
   `Solution::is_dual_feasible()`]
 
+- a tester of the module, `test/`, that needs nothing but the core SMS++
+  library: it builds its instances in memory and checks the DIMACS and
+  netCDF round trips of instances with no arcs, with unbalanced deficits,
+  with infinite capacities, with closed and with deleted arcs; every change
+  of the data, in its single, Range and Subset forms, empty ones included,
+  against the abstract representation and against the Modification a
+  `FakeSolver` receives, under `eNoMod`, `eModBlck` and `eDryRun` too, and
+  the other way round; the value and the feasibility of a flow set by hand,
+  the valid bounds, and a sequence of random changes drawn with a fixed
+  seed. It carries the label of the module, and the pipeline of the module
+  builds the module alone and runs it
+
 - `is_direction()`, `is_direction( bool )` and `has_directions()`: a MCFBlock
   knows what a direction of its own is, i.e., a flow that conserves at every
   node with all the deficits zero, that is nonnegative on the arcs of
@@ -49,6 +61,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   defer to the span ones
 
 ### Fixed
+
+- `serialize()` did not record the closed arcs, which came back open with
+  the capacity they had before being closed, i.e., the feasible set changed:
+  a closed arc is now written with capacity 0 and its cost, as `print( 'C' )`
+  does for the DIMACS format, "U" being written also when all the
+  capacities are otherwise infinite. After a round trip the arc is open with
+  capacity 0, the feasible set being the same, while the capacity it had
+  before being closed is not in the file
+
+- `generate_abstract_constraints()` on a MCFBlock with no capacities read
+  the right-hand sides of the bound Constraint out of the empty vector
+  rather than setting them to +Inf
+
+- `load( std::istream )` refused the capacity "+Inf" that `print( 'C' )`
+  writes for an arc of infinite capacity, so that a DIMACS file written by
+  the MCFBlock could not be read back
+
+- the arcs deleted before the flow conservation Constraint were generated
+  were left out of them, while an arc deleted afterwards keeps its (fixed)
+  flow Variable there: `add_arc()` in the slot of such an arc, and
+  `remove_arc()` of the last arc when such an arc came right before it,
+  threw looking for the Variable there. `deserialize()` now also fixes to 0
+  the flow Variable of the deleted arcs, as `remove_arc()` does
+
+- `remove_arc()` of the last arc on a MCFBlock with no static arcs, all the
+  other arcs being deleted, read the cost of the arc before the first one
+
+- `chg_costs()` and `chg_ucaps()` on a Range ending on deleted arcs compared
+  the new values of the arcs before them with the wrong entries, and could
+  leave some of them unchanged
+
+- `chg_dfcts()` on an unordered Subset of a MCFBlock with dynamic nodes told
+  the static nodes from the dynamic ones by the number of static arcs,
+  writing past the end of the static flow conservation Constraint
+
+- `get_x()` on a Range starting after the first dynamic arc read the flows
+  from the first dynamic arc on
+
+- `get_valid_upper_bound( true )` returned -Inf until
+  `get_valid_lower_bound()` had been called, and then never saw a change;
+  after a `load()` from memory both bounds were -Inf; the bounds read the
+  capacities out of the empty vector when all of them are infinite, and
+  became NaN with a deleted arc: they now sum over the arcs there are
 
 - `bound_feasible()`, `dual_feasible()`, `complementary_slackness()` and
   the DIMACS `print()` took quadratic time in the number of dynamic arcs,

@@ -439,7 +439,14 @@ public:
   * deficits are assumed to be 0. Finally, all the dimensions "DynNNodes",
   * "DynNArcs", "MaxDynNNodes" and "MaxDynNArcs" are optional: if they are
   * missing they are treated as being 0 (this happening for all four means
-  * that the graph is "fully static" and cannot be changed). */
+  * that the graph is "fully static" and cannot be changed).
+  *
+  * The format has no place for closed arcs: serialize() writes a closed arc
+  * with capacity 0 in "U" (keeping its cost in "C"), as print( 'C' ) does
+  * for the DIMACS format, writing "U" also when all the capacities are
+  * otherwise infinite. After a round trip such an arc is therefore open with
+  * capacity 0: the feasible set is the same, but is_closed() is false and
+  * the capacity the arc had before being closed is not in the file. */
 
  void deserialize( const netCDF::NcGroup & group ) override;
 
@@ -661,8 +668,9 @@ public:
   override {
   if( ! conditional )
    return( + Inf< double >() );
-   
-  if( std::isnan( f_cond_upper ) )
+
+  // the two bounds are computed together, and reset by f_cond_lower alone
+  if( std::isnan( f_cond_lower ) )
    compute_conditional_bounds();
 
   return( f_cond_upper );
@@ -1729,7 +1737,11 @@ public:
  /// extends Block::serialize( netCDF::NcGroup )
  /** Extends Block::serialize( netCDF::NcGroup ) to the specific format of a
   * MCFBlock. See MCFBlock::deserialize( netCDF::NcGroup ) for details of the
-  * format of the created netCDF group. */
+  * format of the created netCDF group. A closed arc is written with capacity
+  * 0 and its cost, as print( 'C' ) does, "U" being written also when all the
+  * capacities are otherwise infinite: after a round trip the arc is open with
+  * capacity 0, i.e., the feasible set is the same, but is_closed() is false
+  * and the capacity it had before being closed is lost. */
 
  void serialize( netCDF::NcGroup & group ) const override;
 

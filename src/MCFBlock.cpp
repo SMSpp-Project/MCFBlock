@@ -98,7 +98,12 @@ static FNumber read_UB( std::istream & iStrm )
  int c = iStrm.peek();
  if( ! iStrm )
   throw( std::invalid_argument( "error reading the input stream" ) );
-  
+
+ if( c == '+' ) {  // "+Inf", as print() writes it, or a signed number
+  iStrm.get();
+  c = iStrm.peek();
+  }
+
  if( ( c != 'I' ) && ( c != 'i' ) ) {
   FNumber res;
   iStrm >> res;
@@ -272,6 +277,8 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
   }
  else
   B.clear();
+
+ f_cond_lower = dNAN;  // reset conditional bounds
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -544,6 +551,12 @@ void MCFBlock::deserialize( const netCDF::NcGroup & group )
    C[ j ] = 0;
    }
 
+ // the cost of a deleted arc is NaN, and its flow is fixed to 0 as when it
+ // is deleted [see remove_arc()]
+ for( Index j = get_NStaticArcs() ; j < get_NArcs() ; ++j )
+  if( std::isnan( C[ j ] ) )
+   i2p_x( j )->is_fixed( true , eNoMod );
+
  // call the method of Block- - - - - - - - - - - - - - - - - - - - - - - - -
  // inside this the NBModification, the "nuclear option",  is issued
 
@@ -591,11 +604,12 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
    count[ EN[ i ] - 1 ]++;
    }
 
-  for( Index i = NStaticArcs ; i < get_NArcs() ; ++i )
-   if( ! is_deleted( i ) ) {
-    count[ SN[ i ] - 1 ]++;
-    count[ EN[ i ] - 1 ]++;
-    }
+  // a deleted arc keeps its fixed flow Variable in the Constraint of its
+  // nodes, as when it is deleted after they are generated [see remove_arc()]
+  for( Index i = NStaticArcs ; i < get_NArcs() ; ++i ) {
+   count[ SN[ i ] - 1 ]++;
+   count[ EN[ i ] - 1 ]++;
+   }
 
   // initialize the vectors of coefficients, and reset count[]
   std::vector< LinearFunction::v_coeff_pair > coeffs( get_NNodes() );
@@ -616,13 +630,12 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 
   // construct the vector of coefficients, dynamic phase
   if( MayHaveDynX() )
-   for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi )
-    if( ! is_deleted( i ) ) {
-     coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
+   for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi ) {
+    coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
                                     std::make_pair( &(*dxi) , double( -1 ) );
-     coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
+    coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
                                     std::make_pair( &(*dxi) , double( 1 ) );
-     }
+    }
 
   // generate the node-arc incidence matrix - - - - - - - - - - - - - - - - -
   // each constraint is an equality, i.e., LHS = RHS = B[ i ]
@@ -679,7 +692,7 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   UB.resize( get_NStaticArcs() );
   for( Index i = 0 ; i < get_NStaticArcs() ; ++i ) {
    UB[ i ].set_variable( & x[ i ] , eNoBlck );
-   UB[ i ].set_rhs( U[ i ] , eNoBlck );
+   UB[ i ].set_rhs( get_U( i ) , eNoBlck );  // U may be empty
    }
 
   add_static_constraint( UB );
@@ -690,10 +703,10 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   dUB.resize( get_NArcs() - get_NStaticArcs() );
 
   auto dxi = dx.begin();
-  auto ui = U.begin() + get_NStaticArcs();
+  Index i = get_NStaticArcs();
   for( auto & cnst : dUB ) {
    cnst.set_variable( &(*(dxi++)) , eNoBlck );
-   cnst.set_rhs( *(ui++) , eNoBlck );
+   cnst.set_rhs( get_U( i++ ) , eNoBlck );  // U may be empty
    }
 
   add_dynamic_constraint( dUB );
@@ -1971,8 +1984,9 @@ void MCFBlock::get_x( Vec_FNumber_it FSol , Range rng ) const
  for( ; rng.first < std::min( rng.second , get_NStaticArcs() ) ; )
   *(FSol++) = x[ rng.first++ ].get_value();
 
- if( HasDynamicX() ) {
-  auto dxi = dx.begin();
+ // here rng.first >= get_NStaticArcs() if any dynamic arc is left to read
+ if( HasDynamicX() && ( rng.first < std::min( rng.second , get_NArcs() ) ) ) {
+  auto dxi = std::next( dx.begin() , rng.first - get_NStaticArcs() );
   for( ; rng.first++ < std::min( rng.second , get_NArcs() ) ; )
    *(FSol++) = (*(dxi++)).get_value();
   }
@@ -2402,8 +2416,17 @@ void MCFBlock::serialize( netCDF::NcGroup & group ) const
 
  ( group.addVar( "C" , netCDF::NcDouble() , na ) ).putVar( C.data() );
 
- if( ! U.empty() )
-  ( group.addVar( "U" , netCDF::NcDouble() , na ) ).putVar( U.data() );
+ // the format has no place for closed arcs: they are written with capacity
+ // 0, as in print( 'C' ), hence U is written if any arc is closed even when
+ // it is empty, i.e., all the capacities are infinite
+ const auto cls = closed_arcs();
+ if( ( ! U.empty() ) || std::any_of( cls.begin() , cls.end() ,
+				     []( bool ci ) { return( ci ); } ) ) {
+  Vec_FNumber tU( get_NArcs() );
+  for( Index i = 0 ; i < get_NArcs() ; ++i )
+   tU[ i ] = cls[ i ] ? 0 : get_U( i );
+  ( group.addVar( "U" , netCDF::NcDouble() , na ) ).putVar( tU.data() );
+  }
 
  if( ! B.empty() )
   ( group.addVar( "B" , netCDF::NcDouble() , nn ) ).putVar( B.data() );
@@ -2439,12 +2462,15 @@ void MCFBlock::chg_costs( MF_dbl_sp NCost , Range rng ,
   return;                       // cowardly (and silently) return
 
  // check to see how many of the final arcs are either deleted or not
- // really changing the costs
+ // really changing the cost; the new cost of arc rng.second - 1 is
+ // *( NCEit - 1 ), whether the arc is deleted or not
  auto NCEit = NCost_it + ( rng.second - rng.first );
- while( ( ( std::isnan( C[ rng.second - 1 ] ) ) ||
-	  ( *(--NCEit) == C[ rng.second - 1 ] ) )
-	&& ( rng.first < rng.second ) )
+ while( ( rng.first < rng.second ) &&
+	( std::isnan( C[ rng.second - 1 ] ) ||
+	  ( *( NCEit - 1 ) == C[ rng.second - 1 ] ) ) ) {
   --rng.second;
+  --NCEit;
+  }
 
  if( rng.second <= rng.first )  // nothing left to change
   return;                       // cowardly (and silently) return
@@ -2638,12 +2664,15 @@ void MCFBlock::chg_ucaps( MF_dbl_sp NCap , Range rng ,
   return;                       // cowardly (and silently) return
 
  // check to see how many of the final arcs are either deleted or not
- // really changing the capacity
+ // really changing the capacity; the new capacity of arc rng.second - 1 is
+ // *( NCEit - 1 ), whether the arc is deleted or not
  auto NCEit = NCap_it + ( rng.second - rng.first );
- while( ( ( std::isnan( C[ rng.second - 1 ] ) ) ||
-	  ( *(--NCEit) == U[ rng.second - 1 ] ) )
-	&& ( rng.first < rng.second ) )
+ while( ( rng.first < rng.second ) &&
+	( std::isnan( C[ rng.second - 1 ] ) ||
+	  ( *( NCEit - 1 ) == U[ rng.second - 1 ] ) ) ) {
   --rng.second;
+  --NCEit;
+  }
 
  if( rng.second <= rng.first )  // nothing left to change
   return;                       // cowardly (and silently) return
@@ -3009,7 +3038,7 @@ void MCFBlock::chg_dfcts( MF_dbl_sp NDfct , Subset && nms ,
 
     // static part
     auto pit = pairs.begin();
-    for( ; ( pit != pairs.end() ) && ( pit->first < get_NStaticArcs() ) ;
+    for( ; ( pit != pairs.end() ) && ( pit->first < get_NStaticNodes() ) ;
 	 ++pit )
      if( B[ pit->first ] != pit->second ) {
       B[ pit->first ] = pit->second;
@@ -3663,7 +3692,9 @@ void MCFBlock::remove_arc( Index arc ,
   Index rmvdarcs = 1;  // how many arcs are removed in the end
 
   if( arc == NArcs - 1 ) {    // deleted last arc(s)
-   for( --NArcs ; std::isnan( C[ NArcs - 1 ] ) ; --NArcs , ++rmvdarcs )
+   // the deleted arcs before it go too, down to the static ones at most
+   for( --NArcs ; ( NArcs > get_NStaticArcs() ) &&
+		  std::isnan( C[ NArcs - 1 ] ) ; --NArcs , ++rmvdarcs )
     ;  // decrease arc count
    }
   else                       // deleted one arc in the middle
@@ -3855,54 +3886,22 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
 
 void MCFBlock::compute_conditional_bounds( void )
 {
+ // only the arcs there are count, a deleted one (of NaN cost) does not, and
+ // U may be empty
  f_cond_lower = f_cond_upper = 0;
 
- auto tC = C.begin();
- auto tU = U.begin();
-
- for( ; tC < C.end() ; ++tC , ++tU ) {
-  if( *tC == 0 )
+ for( Index a = 0 ; a < get_NArcs() ; ++a ) {
+  c_CNumber ca = C[ a ];
+  if( std::isnan( ca ) || ( ca == 0 ) )
    continue;
 
-  if( *tC < 0 ) {
-   if( *tU == Inf< FNumber >() ) {
-    f_cond_lower = -Inf< double >();
-    break;
-    }
-   else
-    f_cond_lower += *tC * (*tU);
-   }
+  c_FNumber ua = get_U( a );
+  if( ca < 0 )
+   f_cond_lower = ua == Inf< FNumber >() ? - Inf< double >() :
+                                           f_cond_lower + ca * ua;
   else
-   if( *tU == Inf< FNumber >() ) {
-    f_cond_upper = Inf< double >();
-    break;
-    }
-   else
-    f_cond_upper += *tC * (*tU);
-   }
-
- if( f_cond_lower > -Inf< double >() ) {
-  for( ; tC < C.end() ; ++tC , ++tU )
-   if( *tC < 0 ) {
-    if( *tU == Inf< FNumber >() ) {
-     f_cond_lower = -Inf< double >();
-     break;
-     }
-    else
-     f_cond_lower += *tC * (*tU);
-    }
-  }
-
- if( f_cond_upper < Inf< double >() ) {
-  for( ; tC < C.end() ; ++tC , ++tU )
-   if( *tC > 0 ) {
-    if( *tU == Inf< FNumber >() ) {
-     f_cond_upper = Inf< double >();
-     break;
-     }
-    else
-     f_cond_upper += *tC * (*tU);
-    }
+   f_cond_upper = ua == Inf< FNumber >() ? Inf< double >() :
+                                           f_cond_upper + ca * ua;
   }
  }  // end( MCFBlock::compute_conditional_bounds )
 
