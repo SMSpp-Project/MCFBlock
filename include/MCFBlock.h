@@ -2857,6 +2857,20 @@ class MCFSolution : public Solution {
  bool is_dual_feasible( Block * block ,
 			Configuration * fsbc = nullptr ) override;
 
+/*--------------------------------------------------------------------------*/
+ /// drops the flows of the arcs a MCFBlockMod of type eRmvArc removes
+ /** Drops the flows of the arcs that a physical MCFBlockRngdMod or
+  * MCFBlockSbstMod of type eRmvArc of the given MCFBlock says removed,
+  * writing them in dropped [see Solution::drop_physical_values()]: an arc
+  * removed at the end of the arcs takes its entry away, one removed in the
+  * middle leaves its slot, deleted, with zero flow, as the MCFBlock does.
+  * The potentials are left alone, the nodes staying. Any other Modification
+  * gets false. */
+
+ bool drop_physical_values( const Block * const block ,
+			    const Modification * const mod ,
+			    std::vector< double > & dropped ) override;
+
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 
  protected:

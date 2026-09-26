@@ -1340,6 +1340,43 @@ bool MCFSolution::is_dual_feasible( Block * block , Configuration * fsbc )
  }  //  end( MCFSolution::is_dual_feasible )
 
 /*--------------------------------------------------------------------------*/
+
+bool MCFSolution::drop_physical_values( const Block * const block ,
+					const Modification * const mod ,
+					std::vector< double > & dropped )
+{
+ auto mcfb = dynamic_cast< const MCFBlock * >( block );
+ auto mmod = dynamic_cast< const MCFBlockMod * >( mod );
+ if( ( ! mcfb ) || ( ! mmod ) || ( mmod->type() != MCFBlockMod::eRmvArc ) )
+  return( false );
+
+ MCFBlock::Subset arcs;
+ if( auto rmod = dynamic_cast< const MCFBlockRngdMod * >( mmod ) )
+  for( auto a = rmod->rng().first ; a < rmod->rng().second ; ++a )
+   arcs.push_back( a );
+ else
+  if( auto smod = dynamic_cast< const MCFBlockSbstMod * >( mmod ) )
+   arcs = smod->nms();
+  else
+   return( false );
+
+ dropped.clear();
+ dropped.reserve( arcs.size() );
+ for( auto a : arcs ) {
+  dropped.push_back( a < v_x.size() ? v_x[ a ] : 0 );
+  if( a < v_x.size() )
+   v_x[ a ] = 0;  // a deleted slot carries no flow
+  }
+
+ // the arcs past the last one the MCFBlock has are gone for good
+ if( v_x.size() > mcfb->get_NArcs() )
+  v_x.resize( mcfb->get_NArcs() );
+
+ return( true );
+
+ }  //  end( MCFSolution::drop_physical_values )
+
+/*--------------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
 /*--------------------------------------------------------------------------*/
 
