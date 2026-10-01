@@ -19,7 +19,7 @@ NAME = dmx2nc4
 DIR = .
 
 # common flags
-COMMON_SW = -std=c++17
+COMMON_SW = -std=c++20
 
 # debug switches
 SW_DEBUG = -g -glldb -fno-inline $(COMMON_SW)
