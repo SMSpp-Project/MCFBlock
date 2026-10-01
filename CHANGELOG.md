@@ -14,11 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   arcs removed at the end and zeroing the slots of those deleted in the
   middle
 
-- `is_sol_dual_feasible( sol , config )`, whether the potentials a
-  `MCFSolution` holds are dual feasible, the Constraint left alone, and
-  `MCFSolution::is_dual_feasible()`, which asks it [see
-  `Solution::is_dual_feasible()`]
-
 - a tester of the module, `test/`, that needs nothing but the core SMS++
   library: it builds its instances in memory and checks the DIMACS and
   netCDF round trips of instances with no arcs, with unbalanced deficits,

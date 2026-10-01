@@ -1320,40 +1320,6 @@ bool MCFBlock::is_sol_optimal( Solution * sol , Configuration * optc )
 
 /*--------------------------------------------------------------------------*/
 
-bool MCFBlock::is_sol_dual_feasible( Solution * sol , Configuration * fsbc )
-{
- auto msol = dynamic_cast< MCFSolution * >( sol );
- if( ! msol )
-  throw( std::invalid_argument( "MCFBlock::is_sol_dual_feasible: the "
-				"Solution is not a MCFSolution" ) );
-
- auto & Pi = msol->get_pi();
- if( Pi.size() < get_NNodes() )
-  return( false );
-
- CNumber ceps;
- FNumber feps;
- eps_of( fsbc , ceps , feps );
-
- return( dual_feasible( ceps , Pi ) );
-
- }  //  end( MCFBlock::is_sol_dual_feasible )
-
-/*--------------------------------------------------------------------------*/
-
-bool MCFSolution::is_dual_feasible( Block * block , Configuration * fsbc )
-{
- auto mcfb = dynamic_cast< MCFBlock * >( block );
- if( ! mcfb )
-  throw( std::invalid_argument( "MCFSolution::is_dual_feasible: the Block "
-				"is not a MCFBlock" ) );
-
- return( mcfb->is_sol_dual_feasible( this , fsbc ) );
-
- }  //  end( MCFSolution::is_dual_feasible )
-
-/*--------------------------------------------------------------------------*/
-
 bool MCFSolution::drop_physical_values( const Block * const block ,
 					const Modification * const mod ,
 					std::vector< double > & dropped )
