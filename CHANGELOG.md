@@ -57,6 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- a flow ColVariable fixed at a value other than 0 makes the MCFBlock
+  throw, as documented, instead of closing the arc as if it were fixed at 0
+
 - `serialize()` did not record the closed arcs, which came back open with
   the capacity they had before being closed, i.e., the feasible set changed:
   a closed arc is now written with capacity 0 and its cost, as `print( 'C' )`

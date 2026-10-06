@@ -1166,6 +1166,17 @@ static void test_abstract_to_physical( void )
  check( ! mcf.is_closed( 0 ) , "unfixing the flow: open" );
  check_rngd( md , MCFBlockMod::eOpenArc , Range( 0 , 1 ) ,
 	     "unfixing the flow" );
+
+ // fixing is closing: a flow fixed at any other value than 0 is refused
+ bool refused = false;
+ mcf.i2p_x( 0 )->set_value( 1 );
+ try { mcf.i2p_x( 0 )->is_fixed( true ); }
+ catch( std::invalid_argument & ) { refused = true; }
+ take( fs );
+ check( refused , "fixing the flow at 1: refused" );
+ mcf.i2p_x( 0 )->is_fixed( false );
+ mcf.i2p_x( 0 )->set_value( 0 );
+ take( fs );
  check_abstract( mcf , "abstract to physical" );
 
  // what cannot be done through the abstract representation
