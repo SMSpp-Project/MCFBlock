@@ -7,11 +7,143 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-09
+
 ### Added
+
+- `MCFSolution::drop_physical_values()` drops the flows of the arcs that a
+  `MCFBlockMod` of type `eRmvArc` removed, taking away the entries of the
+  arcs removed at the end and zeroing the slots of those deleted in the
+  middle
+
+- a tester of the module, `test/`, that needs nothing but the core SMS++
+  library: it builds its instances in memory and checks the DIMACS and
+  netCDF round trips of instances with no arcs, with unbalanced deficits,
+  with infinite capacities, with closed and with deleted arcs; every change
+  of the data, in its single, Range and Subset forms, empty ones included,
+  against the abstract representation and against the Modification a
+  `FakeSolver` receives, under `eNoMod`, `eModBlck` and `eDryRun` too, and
+  the other way round; the value and the feasibility of a flow set by hand,
+  the valid bounds, and a sequence of random changes drawn with a fixed
+  seed. It carries the label of the module, and the pipeline of the module
+  builds the module alone and runs it
+
+- `is_direction()`, `is_direction( bool )` and `has_directions()`: a MCFBlock
+  knows what a direction of its own is, i.e., a flow that conserves at every
+  node with all the deficits zero, that is nonnegative on the arcs of
+  infinite capacity and that is zero on all the others, an arc of finite
+  capacity leaving no room to move for ever. `is_sol_feasible()` takes from
+  the `MCFSolution` whether what it holds is a solution or a direction, that
+  method not going through the Variable, and checks it accordingly
 
 ### Changed
 
+- the data archive is downloaded by version: `DATA_VERSION` in CMakeLists.txt
+  names the version of the Package Registry to read, and the archive and the
+  marker of its extraction carry it in their name, so that a tree holding
+  an older extraction (the cache of the CI, or a clone extracted before)
+  downloads and extracts again instead of running on the old data;
+  data/upload-dmx publishes the archive under that version
+
+- whoever links the module keeps it: the classes of a module register
+  themselves in the factory from a static initialiser, and a linker that
+  drops what looks unused takes the registration away with it, so the target
+  now tells whoever links it to keep the symbol that forces the module in,
+  and on ELF, where naming the symbol is not enough, the library as a whole
+
+- `chg_costs()`, `chg_ucaps()` and `chg_dfcts()` take their data as a
+  `std::span< const double >`, whose length they check against the Range or
+  the Subset instead of reading past the end, and are registered in the
+  methods factory in that form too; the forms taking an iterator stay, and
+  defer to the span ones
+
 ### Fixed
+
+- a flow ColVariable fixed at a value other than 0 makes the MCFBlock
+  throw, as documented, instead of closing the arc as if it were fixed at 0
+
+- `serialize()` did not record the closed arcs, which came back open with
+  the capacity they had before being closed, i.e., the feasible set changed:
+  a closed arc is now written with capacity 0 and its cost, as `print( 'C' )`
+  does for the DIMACS format, "U" being written also when all the
+  capacities are otherwise infinite. After a round trip the arc is open with
+  capacity 0, the feasible set being the same, while the capacity it had
+  before being closed is not in the file
+
+- `generate_abstract_constraints()` on a MCFBlock with no capacities read
+  the right-hand sides of the bound Constraint out of the empty vector
+  rather than setting them to +Inf
+
+- `load( std::istream )` refused the capacity "+Inf" that `print( 'C' )`
+  writes for an arc of infinite capacity, so that a DIMACS file written by
+  the MCFBlock could not be read back
+
+- the arcs deleted before the flow conservation Constraint were generated
+  were left out of them, while an arc deleted afterwards keeps its (fixed)
+  flow Variable there: `add_arc()` in the slot of such an arc, and
+  `remove_arc()` of the last arc when such an arc came right before it,
+  threw looking for the Variable there. `deserialize()` now also fixes to 0
+  the flow Variable of the deleted arcs, as `remove_arc()` does
+
+- `remove_arc()` of the last arc on a MCFBlock with no static arcs, all the
+  other arcs being deleted, read the cost of the arc before the first one
+
+- `chg_costs()` and `chg_ucaps()` on a Range ending on deleted arcs compared
+  the new values of the arcs before them with the wrong entries, and could
+  leave some of them unchanged
+
+- `chg_dfcts()` on an unordered Subset of a MCFBlock with dynamic nodes told
+  the static nodes from the dynamic ones by the number of static arcs,
+  writing past the end of the static flow conservation Constraint
+
+- `get_x()` on a Range starting after the first dynamic arc read the flows
+  from the first dynamic arc on
+
+- `get_valid_upper_bound( true )` returned -Inf until
+  `get_valid_lower_bound()` had been called, and then never saw a change;
+  after a `load()` from memory both bounds were -Inf; the bounds read the
+  capacities out of the empty vector when all of them are infinite, and
+  became NaN with a deleted arc: they now sum over the arcs there are
+
+- `bound_feasible()`, `dual_feasible()`, `complementary_slackness()` and
+  the DIMACS `print()` took quadratic time in the number of dynamic arcs,
+  asking `is_closed()` of each arc, which walks the list of the dynamic flow
+  Variable from one of its ends: they now read which arcs are closed in one
+  pass [see `closed_arcs()`], and on a GOTO instance of 1024 nodes and 65536
+  arcs the check of a solution goes from about 700 to about 5 million
+  instructions
+
+- on macOS a program linking the module lost the classes the module
+  registers in the factories when the linker dropped the library, as it
+  does under `-dead_strip_dylibs`, which conda sets: the target now asks the
+  linker for the symbol that forces the module in (`-u`), which ld64,
+  unlike the ELF linker, counts as a use of the library
+
+- the step that fetches the data archive of this module says what went wrong
+  when it goes wrong: the download is checked, an archive that did not arrive
+  is removed instead of being left on disk for the build to take for the real
+  one, and the message names the URL. A server that answers with an error page
+  used to leave a file of a few bytes there, which made the next build fail
+  while extracting it, with the message of `tar` and no mention of the
+  download
+
+- `load()` given no capacities or no deficits, which it documents as all
+  capacities infinite and all deficits zero, read past the end of the empty
+  vector
+
+- `chg_ucap()` on a MCFBlock with no capacities returned without doing
+  anything when the new capacity was finite, i.e., exactly when there was
+  something to change, and `chg_dfct()` on one with no deficits sized them
+  on the current number of nodes rather than on the maximum one
+
+- `map_forward_Modification()` passed a change of the deficits on to the
+  other `MCFBlock` as a change of its capacities, and, when this `MCFBlock`
+  had no capacities or no deficits, read them out of the empty vector rather
+  than passing on the infinite capacities and the zero deficits it has
+
+- `map_forward_solution()` looked at the static bound Constraint where it
+  had to look at the dynamic ones, setting to zero the duals of the dynamic
+  bounds of the other `MCFBlock` whenever this one had no static bounds
 
 ## [0.6.1] - 2026-09-13
 
@@ -46,20 +178,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.1] - 2025-12-12
 
-### Added 
-
-### Changed 
-
-### Fixed 
+### Fixed
 
 - the order in which some conditions are checked
 
 - avoid static vectors prone to static initialization fiasco
 
-
 ## [0.5.0] - 2024-02-28
 
-### Changed 
+### Changed
 
 - adapted to new CMake / makefile organisation
 
@@ -67,20 +194,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   submodule of the umbrella (i.e., it is now found in ./MCFClass
   rather than in ../MCFClass)
 
-
 ## [0.4.4] - 2023-05-23
 
 ### Changed
 
 - now using general RowConstraint::is_feasible()
 
-
 ## [0.4.3] - 2022-08-25
 
 ### Fixed
 
 - include header <iomanip>
-
 
 ## [0.4.2] - 2022-06-28
 
@@ -142,17 +266,19 @@ Mainly a fix release after much improved testing
 
 - fixed flaw in MCFSolution
 
-
 ## [0.4.1] - 2021-12-07
 
 Minor point release to avoid the master branch to become too stale:
 
+### Changed
+
 - changed useabstract to hint from order
+
+### Fixed
 
 - fixed flaw in flow_feasible()
 
 - fixed an issue in MCFSolution + minor changes
-
 
 ## [0.4.0] - 2021-02-05
 
@@ -166,21 +292,19 @@ Minor point release to avoid the master branch to become too stale:
 
 - Using proper eps in var.is_feasible.
 
-
 ## [0.3.1] - 2020-09-24
 
 ### Fixed
 
 - Workaround for default MCFSolver setting.
 
-
 ## [0.3.0] - 2020-09-16
 
 ### Added
 
 - Support for MCFCplex class.
-- Support for new configuration framework.
 
+- Support for new configuration framework.
 
 ## [0.2.0] - 2020-03-06
 
@@ -188,13 +312,11 @@ Minor point release to avoid the master branch to become too stale:
 
 - Just updated to release version.
 
-
 ## [0.1.2] - 2020-03-04
 
 ### Fixed
 
 - Minor fixes in namespace use.
-
 
 ## [0.1.1] - 2020-02-10
 
@@ -202,14 +324,15 @@ Minor point release to avoid the master branch to become too stale:
 
 - Minor fix in makefile support.
 
-
 ## [0.1.0] - 2020-02-07
 
 ### Added
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.0...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.7.0...develop
+[0.7.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.1...0.7.0
+[0.6.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.0...0.6.1
 [0.6.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.1...0.6.0
 [0.5.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.0...0.5.1
 [0.5.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.4.4...0.5.0

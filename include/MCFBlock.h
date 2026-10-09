@@ -439,7 +439,14 @@ public:
   * deficits are assumed to be 0. Finally, all the dimensions "DynNNodes",
   * "DynNArcs", "MaxDynNNodes" and "MaxDynNArcs" are optional: if they are
   * missing they are treated as being 0 (this happening for all four means
-  * that the graph is "fully static" and cannot be changed). */
+  * that the graph is "fully static" and cannot be changed).
+  *
+  * The format has no place for closed arcs: serialize() writes a closed arc
+  * with capacity 0 in "U" (keeping its cost in "C"), as print( 'C' ) does
+  * for the DIMACS format, writing "U" also when all the capacities are
+  * otherwise infinite. After a round trip such an arc is therefore open with
+  * capacity 0: the feasible set is the same, but is_closed() is false and
+  * the capacity the arc had before being closed is not in the file. */
 
  void deserialize( const netCDF::NcGroup & group ) override;
 
@@ -661,8 +668,9 @@ public:
   override {
   if( ! conditional )
    return( + Inf< double >() );
-   
-  if( std::isnan( f_cond_upper ) )
+
+  // the two bounds are computed together, and reset by f_cond_lower alone
+  if( std::isnan( f_cond_lower ) )
    compute_conditional_bounds();
 
   return( f_cond_upper );
@@ -1111,8 +1119,10 @@ public:
   * arc bounds; the MCFBlock is only read for its data, its Variable are not
   * touched and they need not even exist. sol must be a MCFSolution holding
   * a primal solution, otherwise false is returned (a Solution that is not a
-  * MCFSolution is an error, and it throws). The tolerance is found exactly
-  * as in is_feasible( bool , Configuration * ). */
+  * MCFSolution is an error, and it throws). What sol holds may as well be a
+  * direction, which sol says itself and which is checked against the
+  * homogeneous version of the constraints [see is_direction()]. The
+  * tolerance is found exactly as in is_feasible( bool , Configuration * ). */
 
  bool is_sol_feasible( Solution * sol ,
                        Configuration * fsbc = nullptr ) override;
@@ -1123,6 +1133,27 @@ public:
  [[nodiscard]] bool is_sol_feasible_physical( void ) const override {
   return( true );
   }
+
+/*--------------------------------------------------------------------------*/
+ /// true if what the flow Variable hold is a direction [see is_direction()]
+
+ [[nodiscard]] bool is_direction( void ) const override {
+  return( f_direction );
+  }
+
+/*--------------------------------------------------------------------------*/
+ /// tells the MCFBlock that its flow is a direction rather than a solution
+ /** A direction of a MCFBlock is a ray of its feasible region: a flow that
+  * conserves at every node with all the deficits zero, that is nonnegative
+  * on the arcs of infinite capacity and that is zero on all the others, an
+  * arc of finite capacity leaving no room to move for ever. */
+
+ void is_direction( bool yesno ) override { f_direction = yesno; }
+
+/*--------------------------------------------------------------------------*/
+ /// a MCFBlock knows what a direction of its own is
+
+ [[nodiscard]] bool has_directions( void ) const override { return( true ); }
 
 /*--------------------------------------------------------------------------*/
  /// returns true if the current solution is (approximately) optimal
@@ -1695,7 +1726,11 @@ public:
  /// extends Block::serialize( netCDF::NcGroup )
  /** Extends Block::serialize( netCDF::NcGroup ) to the specific format of a
   * MCFBlock. See MCFBlock::deserialize( netCDF::NcGroup ) for details of the
-  * format of the created netCDF group. */
+  * format of the created netCDF group. A closed arc is written with capacity
+  * 0 and its cost, as print( 'C' ) does, "U" being written also when all the
+  * capacities are otherwise infinite: after a round trip the arc is open with
+  * capacity 0, i.e., the feasible set is the same, but is_closed() is false
+  * and the capacity it had before being closed is lost. */
 
  void serialize( netCDF::NcGroup & group ) const override;
 
@@ -1734,8 +1769,9 @@ public:
  /// change the costs of a contiguous interval of arcs
  /** Method to change the costs of a subset of arcs with "contiguous names".
   * That is, *( NCost + i - strt ) becomes the new cost of the i-th arc in
-  * \p rng. Note that if the right extreme of the range is >= get_NArcs() it 
-  * is ignored.
+  * \p rng. Note that if the right extreme of the range is >= get_NArcs() it
+  * is ignored; \p NCost has to be at least as long as what is left of
+  * \p rng.
   *
   * Note that if \p rng contains some closed arc, its cost is also changed.
   * While this has no immediate impact on the problem solved, if the arc is
@@ -1755,14 +1791,27 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_costs( c_Vec_CNumber_it NCost , Range rng = INFRange ,
+ void chg_costs( MF_dbl_sp NCost , Range rng = INFRange ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// change the costs of a contiguous interval, iterator form
+ /** As the span form, \p NCost pointing to the first of the new costs; its
+  * length is taken from \p rng, restricted to what there is. */
+
+ void chg_costs( c_Vec_CNumber_it NCost , Range rng = INFRange ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
+  rng.second = std::min( rng.second , get_NArcs() );
+  if( rng.second > rng.first )
+   chg_costs( MF_dbl_sp( & * NCost , rng.second - rng.first ) , rng , issueMod ,
+	      issueAMod );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the costs of an arbitrary subset of arcs
  /** Method to change the costs of an arbitrary subset of arc. That is,
   * *( NCost + i ) becomes the new cost of arc nms[ i ] for all 0 <= i <
-  * NCost.size(), (which means that nms.size() == NCost.size()). The
+  * nms.size(), \p NCost having to be at least as long as \p nms. The
   * parameter ordered tells if the nms vector is ordered for increasing
   * index of the arc. As the && tells, nms is "consumed" by the method,
   * typically being shipped to an appropriate MCFBlockSbstMod object.
@@ -1771,9 +1820,22 @@ public:
   * the "physical" one is a MCFBlockSbstMod), and about changes in costs
   * of closed arcs. */
 
- void chg_costs( c_Vec_CNumber_it NCost ,
+ void chg_costs( MF_dbl_sp NCost ,
 		 Subset && nms , bool ordered = false ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// change the costs of an arbitrary subset, iterator form
+ /** As the span form, \p NCost pointing to the first of the new costs; its
+  * length is taken from \p nms. */
+
+ void chg_costs( c_Vec_CNumber_it NCost ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
+  if( ! nms.empty() )
+   chg_costs( MF_dbl_sp( & * NCost , nms.size() ) , std::move( nms ) , ordered ,
+	      issueMod , issueAMod );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// changes the cost of the given arc
@@ -1790,7 +1852,8 @@ public:
  /** Method to change the capacities of a subset of arcs with "contiguous
   * names". That is, *( NCap + i - strt ) becomes the new capacity of the i-th
   * arc in \p rng. Note that if the right extreme of the range is
-  * >= get_NArcs() it is ignored. Note that, according to the Configuration of
+  * >= get_NArcs() it is ignored; \p NCap has to be at least as long as what
+  * is left of \p rng. Note that, according to the Configuration of
   * the static Constraint, the capacity of the arcs cannot be changed: trying
   * to do that will result in an exception being thrown.
   *
@@ -1816,14 +1879,27 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_ucaps( c_Vec_FNumber_it NCap , Range rng = INFRange ,
+ void chg_ucaps( MF_dbl_sp NCap , Range rng = INFRange ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// change the capacities of a contiguous interval, iterator form
+ /** As the span form, \p NCap pointing to the first of the new capacities; its
+  * length is taken from \p rng, restricted to what there is. */
+
+ void chg_ucaps( c_Vec_FNumber_it NCap , Range rng = INFRange ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
+  rng.second = std::min( rng.second , get_NArcs() );
+  if( rng.second > rng.first )
+   chg_ucaps( MF_dbl_sp( & * NCap , rng.second - rng.first ) , rng , issueMod ,
+	      issueAMod );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the capacities of an arbitrary subset of arcs
  /** Method to change the capacities of an arbitrary subset of arc. That is,
   * *( NCap + i ) becomes the new capacity of arc nms[ i ] for all 0 <= i <
-  * NCap.size() (which means that nms.size() == NCap.size()). The parameter
+  * nms.size(), \p NCap having to be at least as long as \p nms. The parameter
   * ordered tells if the nms vector is ordered for increasing index of the
   * arc. As the && tells, nms is "consumed" by the method, typically
   * being shipped to an appropriate MCFBlockSbstMod object.
@@ -1836,9 +1912,22 @@ public:
   * the "physical" one is a MCFBlockSbstMod) and about changing capacities
   * of closed arcs. */
 
- void chg_ucaps( c_Vec_FNumber_it NCap ,
+ void chg_ucaps( MF_dbl_sp NCap ,
 		 Subset && nms , bool ordered = false ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// change the capacities of an arbitrary subset, iterator form
+ /** As the span form, \p NCap pointing to the first of the new capacities; its
+  * length is taken from \p nms. */
+
+ void chg_ucaps( c_Vec_FNumber_it NCap ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
+  if( ! nms.empty() )
+   chg_ucaps( MF_dbl_sp( & * NCap , nms.size() ) , std::move( nms ) , ordered ,
+	      issueMod , issueAMod );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the capacity of the given arc
@@ -1858,7 +1947,8 @@ public:
  /** Method to change the deficits of a subset of nodes with "contiguous
   * names". That is, *( NDfct + i - strt ) becomes the new deficit of the i-th
   * node in \p rng. Note that if the right extreme of the range is
-  * >= get_NNodes() it is ignored. Note that "node names" here go from 0 to
+  * >= get_NNodes() it is ignored; \p NDfct has to be at least as long as
+  * what is left of \p rng. Note that "node names" here go from 0 to
   * get_NNodes() - 1, despite the fact that get_SN() and get_EN() report node
   * "names" between 1 and get_NNodes().
   *
@@ -1875,14 +1965,27 @@ public:
   *
   * Also, if issueMod says so then a "physical" MCFBlockRngdMod is issued. */
 
- void chg_dfcts( c_Vec_FNumber_it NDfct , Range rng = INFRange ,
+ void chg_dfcts( MF_dbl_sp NDfct , Range rng = INFRange ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// change the deficits of a contiguous interval, iterator form
+ /** As the span form, \p NDfct pointing to the first of the new deficits; its
+  * length is taken from \p rng, restricted to what there is. */
+
+ void chg_dfcts( c_Vec_FNumber_it NDfct , Range rng = INFRange ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
+  rng.second = std::min( rng.second , get_NNodes() );
+  if( rng.second > rng.first )
+   chg_dfcts( MF_dbl_sp( & * NDfct , rng.second - rng.first ) , rng , issueMod ,
+	      issueAMod );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the deficits of an arbitrary subset of nodes
  /** Method to change the deficits of an arbitrary subset of nodes. That is,
   * *( NDfct + i ) becomes the new deficit of node nms[ i ] for all 0 <= i <
-  * NDfct.size(), (which means that nms.size() == NDfct.size()). The
+  * nms.size(), \p NDfct having to be at least as long as \p nms. The
   * parameter ordered tells if the nms vector is ordered for increasing index
   * of the node. Note that "node names" here go from 0 to get_NNodes() - 1,
   * despite the fact that get_SN() and get_EN() report node "names" between
@@ -1892,9 +1995,22 @@ public:
   * See chg_dfcts( range ) for Modification issued (except that, of course,
   * the "physical" one is a MCFBlockSbstMod). */
 
- void chg_dfcts( c_Vec_FNumber_it NDfct ,
+ void chg_dfcts( MF_dbl_sp NDfct ,
 		 Subset && nms , bool ordered = false ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
+
+/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
+ /// change the deficits of an arbitrary subset, iterator form
+ /** As the span form, \p NDfct pointing to the first of the new deficits; its
+  * length is taken from \p nms. */
+
+ void chg_dfcts( c_Vec_FNumber_it NDfct ,
+		 Subset && nms , bool ordered = false ,
+		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
+  if( ! nms.empty() )
+   chg_dfcts( MF_dbl_sp( & * NDfct , nms.size() ) , std::move( nms ) , ordered ,
+	      issueMod , issueAMod );
+  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// changes the deficit of the given node
@@ -2150,6 +2266,15 @@ public:
 /*--------------------------------------------------------------------------*/
 /*-------------------------- PROTECTED METHODS -----------------------------*/
 /*--------------------------------------------------------------------------*/
+ /// is_closed() of every arc, in one pass over the flow Variable
+ /** Returns the vector whose i-th element is is_closed( i ), computed in
+  * one pass over x and dx, while a loop calling is_closed( i ) for each arc
+  * costs quadratically in the number of dynamic ones, since dx is a list
+  * that i2p_x() walks from one of its ends. No arc is closed if the flow
+  * Variable have not been constructed, an arc being closed by fixing its
+  * flow Variable. */
+
+ [[nodiscard]] std::vector< bool > closed_arcs( void ) const;
 
 /*--------------------------------------------------------------------------*/
 /*--------------------------- PROTECTED FIELDS  ----------------------------*/
@@ -2167,6 +2292,9 @@ public:
  Vec_CNumber C;                  ///< vector of arc costs
  Vec_FNumber U;                  ///< vector of arc upper capacities
  Vec_FNumber B;                  ///< vector of node deficits
+
+ bool f_direction = false;
+ ///< true if the flow Variable hold a direction [see is_direction()]
 
  unsigned char AR;               ///< bit-wise coded: what abstract is there
 
@@ -2271,6 +2399,27 @@ public:
                                                    & MCFBlock::chg_dfcts );
 
   register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
+   "MCFBlock::chg_dfcts" , & MCFBlock::chg_dfcts );
+
+  // the same data-carrying methods in the span form, which the iterator
+  // one defers to
+
+  register_method< MCFBlock , MF_dbl_sp , Range >( "MCFBlock::chg_costs" ,
+                                                   & MCFBlock::chg_costs );
+
+  register_method< MCFBlock , MF_dbl_sp , Subset && , bool >(
+   "MCFBlock::chg_costs" , & MCFBlock::chg_costs );
+
+  register_method< MCFBlock , MF_dbl_sp , Range >( "MCFBlock::chg_ucaps" ,
+                                                   & MCFBlock::chg_ucaps );
+
+  register_method< MCFBlock , MF_dbl_sp , Subset && , bool >(
+   "MCFBlock::chg_ucaps" , & MCFBlock::chg_ucaps );
+
+  register_method< MCFBlock , MF_dbl_sp , Range >( "MCFBlock::chg_dfcts" ,
+                                                   & MCFBlock::chg_dfcts );
+
+  register_method< MCFBlock , MF_dbl_sp , Subset && , bool >(
    "MCFBlock::chg_dfcts" , & MCFBlock::chg_dfcts );
 
   register_method< MCFBlock , Range >( "MCFBlock::close_arcs" ,
@@ -2700,6 +2849,20 @@ class MCFSolution : public Solution {
  /** The counterpart of set_x() for the dual solution. */
 
  void set_pi( MCFBlock::Vec_CNumber && pi ) { v_pi = std::move( pi ); }
+
+/*--------------------------------------------------------------------------*/
+ /// drops the flows of the arcs a MCFBlockMod of type eRmvArc removes
+ /** Drops the flows of the arcs that a physical MCFBlockRngdMod or
+  * MCFBlockSbstMod of type eRmvArc of the given MCFBlock says removed,
+  * writing them in dropped [see Solution::drop_physical_values()]: an arc
+  * removed at the end of the arcs takes its entry away, one removed in the
+  * middle leaves its slot, deleted, with zero flow, as the MCFBlock does.
+  * The potentials are left alone, the nodes staying. Any other Modification
+  * gets false. */
+
+ bool drop_physical_values( const Block * const block ,
+			    const Modification * const mod ,
+			    std::vector< double > & dropped ) override;
 
 /*-------------------- PROTECTED PART OF THE CLASS -------------------------*/
 

@@ -13,14 +13,22 @@ the [MCFClass project](http://www.di.unipi.it/optimize/Software/MCF.html)).
 These instructions will let you build MCFBlock on your system.
 
 
-The module also comes ready-made: `sudo apt install libsmspp-mcf-dev` from the
-[PPA of the project](https://launchpad.net/~smspp/+archive/ubuntu/ppa), which
-has `smspp-mcf` for its command-line tool as well, and `vcpkg install
-"smspp[core,mcf]"` from the [SMS++ vcpkg
-registry](https://gitlab.com/smspp/vcpkg-registry); `conda install -c
-conda-forge smspp-project` and `brew install smspp`, from the [tap of the
-project](https://github.com/SMSpp-Project/homebrew-smspp), carry the whole
-framework. What follows is about building it yourself.
+The module also comes ready-made, in any of
+
+```sh
+sudo add-apt-repository ppa:smspp-project/smspp   # Ubuntu
+sudo apt install libsmspp-mcf-dev                 # and smspp-mcf for the tool
+
+conda install -c conda-forge smspp-project        # Linux, macOS, Windows
+
+brew tap SMSpp-Project/smspp                      # macOS, Linux
+brew install smspp
+
+vcpkg install "smspp[core,mcf]"                   # from the sources
+```
+
+where apt and the port give the module alone, while conda and the tap carry
+the whole framework. What follows is about building it yourself.
 
 ### Requirements
 
@@ -61,8 +69,15 @@ target_link_libraries(<my_target> SMS++::MCFBlock)
 
 ### Running the tests with CMake
 
-`MCFBlock` does not ship a tester of its own, since exercising it requires a
-:Solver. The tester that loads a MCF instance into an `MCFBlock` and solves it,
+The tester of the module (see [test/README.md](test/README.md)) is built when
+`BUILD_TESTING` is on, the default, and it is run from the build directory
+with:
+
+```sh
+ctest -L MCFBlock
+```
+
+The tester that loads a MCF instance into an `MCFBlock` and solves it,
 comparing against direct usage of the underlying :MCFClass solver, lives in the
 [MCFClassSolver](https://gitlab.com/smspp/mcfclasssolver) module.
 
@@ -136,7 +151,13 @@ cd ../tools
 
 ## Tests
 
-`MCFBlock` is exercised through a :Solver. The
+The [test](test) folder holds a tester of the `MCFBlock` alone, which needs
+nothing but the core SMS++ library: it builds its instances in memory and
+checks the DIMACS and netCDF round trips, every change of the data against the
+abstract representation and the `Modification` issued, the feasibility and the
+value of a flow set by hand, and a sequence of random changes.
+
+The solution of the instances is exercised through a :Solver. The
 [MCFClassSolver](https://gitlab.com/smspp/mcfclasssolver) module provides a
 tester that reads a MCF instance (in either DIMACS or netCDF format) into an
 `MCFBlock`, solves it repeatedly under several changes in costs, capacities and
@@ -163,6 +184,10 @@ conduct, and the process for submitting merge requests to us.
 ### Current Lead Authors
 
 - **Antonio Frangioni**  
+  Dipartimento di Informatica  
+  Università di Pisa
+
+- **Donato Meoli**  
   Dipartimento di Informatica  
   Università di Pisa
 

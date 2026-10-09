@@ -9,8 +9,8 @@ tools/dmx2nc4
 # Data directories
 data/dmx
 data/nc4
-data/dmx.tgz
-data/.extracted
+data/dmx*.tgz
+data/.extracted*
 
 # --- C/C++ build artifacts ----------------------------------
 *.o

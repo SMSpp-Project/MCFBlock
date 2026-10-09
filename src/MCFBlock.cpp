@@ -98,7 +98,12 @@ static FNumber read_UB( std::istream & iStrm )
  int c = iStrm.peek();
  if( ! iStrm )
   throw( std::invalid_argument( "error reading the input stream" ) );
-  
+
+ if( c == '+' ) {  // "+Inf", as print() writes it, or a signed number
+  iStrm.get();
+  c = iStrm.peek();
+  }
+
  if( ( c != 'I' ) && ( c != 'i' ) ) {
   FNumber res;
   iStrm >> res;
@@ -121,8 +126,8 @@ static FNumber read_UB( std::istream & iStrm )
 /*--------------------------------------------------------------------------*/
 // returns the number of elements where two vectors differ
 
-template< typename T >
-static Index countdiff( T beg , T end , T cmp )
+template< class It , class Jt >
+static Index countdiff( It beg , It end , Jt cmp )
 {
  Index ndiff = 0;
  for( ; beg != end ; )
@@ -136,9 +141,8 @@ static Index countdiff( T beg , T end , T cmp )
 // returns true if two vectors differ, one of them being given as a base
 // vector and a subset of indices
 
-template< typename T >
-static bool is_equal( std::vector< T > & vec , c_Subset & nms ,
-		      typename std::vector< T >::const_iterator cmp ,
+template< typename T , class It >
+static bool is_equal( std::vector< T > & vec , c_Subset & nms , It cmp ,
 		      Index n_max )
 {
  for( auto nm : nms ) {
@@ -155,9 +159,8 @@ static bool is_equal( std::vector< T > & vec , c_Subset & nms ,
 // returns the number of elements where two vectors differ, one of them
 // being given as a base vector and a subset of indices
 
-template< typename T >
-static Index countdiff( std::vector< T > & vec , c_Subset & nms ,
-			typename std::vector< T >::const_iterator cmp ,
+template< typename T , class It >
+static Index countdiff( std::vector< T > & vec , c_Subset & nms , It cmp ,
 			Index n_max )
 {
  Index ndiff = 0;
@@ -174,9 +177,8 @@ static Index countdiff( std::vector< T > & vec , c_Subset & nms ,
 /*--------------------------------------------------------------------------*/
 // copys one vector to a given subset of another
 
-template< typename T >
-static void copyidx( std::vector< T > & vec , c_Subset & nms ,
-		     typename std::vector< T >::const_iterator cpy )
+template< typename T , class It >
+static void copyidx( std::vector< T > & vec , c_Subset & nms , It cpy )
 {
  for( auto nm : nms )
   vec[ nm ] = *(cpy++);
@@ -257,7 +259,9 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
   std::copy( pC.begin() , pC.begin() + m , C.begin() );
   }
 
- if( std::any_of( pU.begin() , pU.begin() + m ,
+ // an empty pU means all capacities infinite, an empty pB all deficits 0
+ if( ( ! pU.empty() ) &&
+     std::any_of( pU.begin() , pU.begin() + m ,
 		  []( c_FNumber ui ) { return( ui < Inf< FNumber >() ); } ) ) {
   U.resize( MaxNArcs );
   std::copy( pU.begin() , pU.begin() + m , U.begin() );
@@ -265,13 +269,16 @@ void MCFBlock::load( Index n , Index m , c_Subset & pEn , c_Subset & pSn ,
  else
   U.clear();
 
- if( std::any_of( pB.begin() , pB.begin() + n ,
+ if( ( ! pB.empty() ) &&
+     std::any_of( pB.begin() , pB.begin() + n ,
 		  []( c_FNumber bi ) { return( bi != 0 ); } ) ) {
   B.resize( MaxNNodes );
   std::copy( pB.begin() , pB.begin() + n , B.begin() );
   }
  else
   B.clear();
+
+ f_cond_lower = dNAN;  // reset conditional bounds
 
  // allocate flow variables - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -544,6 +551,12 @@ void MCFBlock::deserialize( const netCDF::NcGroup & group )
    C[ j ] = 0;
    }
 
+ // the cost of a deleted arc is NaN, and its flow is fixed to 0 as when it
+ // is deleted [see remove_arc()]
+ for( Index j = get_NStaticArcs() ; j < get_NArcs() ; ++j )
+  if( std::isnan( C[ j ] ) )
+   i2p_x( j )->is_fixed( true , eNoMod );
+
  // call the method of Block- - - - - - - - - - - - - - - - - - - - - - - - -
  // inside this the NBModification, the "nuclear option",  is issued
 
@@ -591,11 +604,12 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
    count[ EN[ i ] - 1 ]++;
    }
 
-  for( Index i = NStaticArcs ; i < get_NArcs() ; ++i )
-   if( ! is_deleted( i ) ) {
-    count[ SN[ i ] - 1 ]++;
-    count[ EN[ i ] - 1 ]++;
-    }
+  // a deleted arc keeps its fixed flow Variable in the Constraint of its
+  // nodes, as when it is deleted after they are generated [see remove_arc()]
+  for( Index i = NStaticArcs ; i < get_NArcs() ; ++i ) {
+   count[ SN[ i ] - 1 ]++;
+   count[ EN[ i ] - 1 ]++;
+   }
 
   // initialize the vectors of coefficients, and reset count[]
   std::vector< LinearFunction::v_coeff_pair > coeffs( get_NNodes() );
@@ -616,13 +630,12 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
 
   // construct the vector of coefficients, dynamic phase
   if( MayHaveDynX() )
-   for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi )
-    if( ! is_deleted( i ) ) {
-     coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
+   for( auto dxi = dx.begin() ; i < get_NArcs() ; ++i , ++dxi ) {
+    coeffs[ SN[ i ] - 1 ][ count[ SN[ i ] - 1 ]++ ] =
                                     std::make_pair( &(*dxi) , double( -1 ) );
-     coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
+    coeffs[ EN[ i ] - 1 ][ count[ EN[ i ] - 1 ]++ ] =
                                     std::make_pair( &(*dxi) , double( 1 ) );
-     }
+    }
 
   // generate the node-arc incidence matrix - - - - - - - - - - - - - - - - -
   // each constraint is an equality, i.e., LHS = RHS = B[ i ]
@@ -679,7 +692,7 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   UB.resize( get_NStaticArcs() );
   for( Index i = 0 ; i < get_NStaticArcs() ; ++i ) {
    UB[ i ].set_variable( & x[ i ] , eNoBlck );
-   UB[ i ].set_rhs( U[ i ] , eNoBlck );
+   UB[ i ].set_rhs( get_U( i ) , eNoBlck );  // U may be empty
    }
 
   add_static_constraint( UB );
@@ -690,10 +703,10 @@ void MCFBlock::generate_abstract_constraints( Configuration *stcc )
   dUB.resize( get_NArcs() - get_NStaticArcs() );
 
   auto dxi = dx.begin();
-  auto ui = U.begin() + get_NStaticArcs();
+  Index i = get_NStaticArcs();
   for( auto & cnst : dUB ) {
    cnst.set_variable( &(*(dxi++)) , eNoBlck );
-   cnst.set_rhs( *(ui++) , eNoBlck );
+   cnst.set_rhs( get_U( i++ ) , eNoBlck );  // U may be empty
    }
 
   add_dynamic_constraint( dUB );
@@ -790,9 +803,12 @@ bool MCFBlock::flow_feasible( c_FNumber feps , c_Vec_FNumber & F )
  if( F.size() < get_NArcs() )
   throw( std::invalid_argument( "MCFBlock::flow_feasible: F too small" ) );
 
- // B is allowed to be empty, which means "all deficits are 0"
+ /* B is allowed to be empty, which means "all deficits are 0"; a direction
+  * is checked against the homogeneous version of the constraints, i.e., as
+  * if all the deficits were 0 [see is_direction()]. */
+ const bool dir = f_direction;
  Vec_FNumber tB( get_NNodes() , 0 );
- if( ! B.empty() )
+ if( ( ! dir ) && ( ! B.empty() ) )
   std::copy( B.begin() , B.begin() + get_NNodes() , tB.begin() );
 
  for( Index i = 0 ; i < get_NArcs() ; ++i )
@@ -803,7 +819,7 @@ bool MCFBlock::flow_feasible( c_FNumber feps , c_Vec_FNumber & F )
    }
 
  for( Index i = 0 ; i < get_NNodes() ; ++i ) {
-  c_FNumber Bi = B.empty() ? 0 : B[ i ];
+  c_FNumber Bi = ( dir || B.empty() ) ? 0 : B[ i ];
   c_FNumber slck = Bi == 0 ? std::abs( tB[ i ] ) : std::abs( tB[ i ] / Bi );
   if( slck > feps )
    return( false );
@@ -863,27 +879,56 @@ bool MCFBlock::bound_feasible( c_FNumber feps , c_Vec_FNumber & F )
  if( F.size() < get_NArcs() )
   throw( std::invalid_argument( "MCFBlock::bound_feasible: F too small" ) );
 
+ const auto cls = closed_arcs();
  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
   if( is_deleted( i ) )
    continue;
 
-  c_FNumber Ui = is_closed( i ) ? 0 : get_U( i );  // a closed arc: no flow
+  c_FNumber Ui = cls[ i ] ? 0 : get_U( i );  // a closed arc: no flow
   c_FNumber xi = F[ i ];
   if( Ui >= Inf< FNumber >() ) {
    if( xi < - feps )
     return( false );
    }
-  else {
-   c_FNumber slck = Ui == 0 ? std::abs( xi ) :
-                              std::max( - xi , xi - Ui ) / std::abs( Ui );
-   if( slck > feps )
-    return( false );
-   }
+  else
+   if( f_direction ) {
+    // an arc of finite capacity leaves no room to move for ever, hence a
+    // direction is zero on it [see is_direction()]
+    c_FNumber slck = Ui == 0 ? std::abs( xi ) : std::abs( xi ) / Ui;
+    if( slck > feps )
+     return( false );
+    }
+   else {
+    c_FNumber slck = Ui == 0 ? std::abs( xi ) :
+                               std::max( - xi , xi - Ui ) / std::abs( Ui );
+    if( slck > feps )
+     return( false );
+    }
   }
 
  return( true );
 
  }  // end( MCFBlock::bound_feasible( F ) )
+
+/*--------------------------------------------------------------------------*/
+
+std::vector< bool > MCFBlock::closed_arcs( void ) const
+{
+ std::vector< bool > cls( get_NArcs() , false );
+ if( ! ( AR & HasVar ) )
+  return( cls );
+
+ Index i = 0;
+ for( ; i < get_NStaticArcs() ; ++i )
+  cls[ i ] = ( ! is_deleted( i ) ) && x[ i ].is_fixed();
+
+ for( auto dxi = dx.begin() ; ( i < get_NArcs() ) && ( dxi != dx.end() ) ;
+      ++i , ++dxi )
+  cls[ i ] = ( ! is_deleted( i ) ) && dxi->is_fixed();
+
+ return( cls );
+
+ }  // end( MCFBlock::closed_arcs )
 
 /*--------------------------------------------------------------------------*/
 
@@ -951,8 +996,9 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , c_Vec_CNumber & Pi )
  // dual variable of its bound constraint, whatever its sign; that of an
  // uncapacitated one has to be nonnegative, otherwise the dual is infeasible
 
+ const auto cls = closed_arcs();
  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-  if( is_closed( i ) || is_deleted( i ) )
+  if( cls[ i ] || is_deleted( i ) )
    continue;
 
   if( get_U( i ) < Inf< FNumber >() )
@@ -1095,8 +1141,9 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   throw( std::invalid_argument(
 			"MCFBlock::complementary_slackness: Pi too small" ) );
 
+ const auto cls = closed_arcs();
  for( Index i = 0 ; i < get_NArcs() ; ++i ) {
-  if( is_closed( i ) || is_deleted( i ) )
+  if( cls[ i ] || is_deleted( i ) )
    continue;
 
   // with the reduced cost being C + Pi[ SN ] - Pi[ EN ], optimality means
@@ -1108,7 +1155,7 @@ bool MCFBlock::complementary_slackness( c_CNumber ceps , c_FNumber feps ,
   if( Ci != 0 )
    RCi /= std::abs( Ci );
 
-  c_FNumber Ui = is_closed( i ) ? 0 : get_U( i );
+  c_FNumber Ui = get_U( i );
   c_FNumber xiv = F[ i ];
 
   if( Ui >= Inf< FNumber >() ) {
@@ -1170,7 +1217,18 @@ bool MCFBlock::is_sol_feasible( Solution * sol , Configuration * fsbc )
 
  c_FNumber eps = feps_of( fsbc );
 
- return( flow_feasible( eps , F ) && bound_feasible( eps , F ) );
+ /* Whether what sol holds is a solution or a direction sol says itself, and
+  * this method does not go through the Variable, hence nobody has told the
+  * MCFBlock: the flag is taken from sol for the check and put back as it
+  * was found [see is_direction()]. */
+ const bool wasdir = f_direction;
+ f_direction = msol->is_direction();
+
+ const bool feas = flow_feasible( eps , F ) && bound_feasible( eps , F );
+
+ f_direction = wasdir;
+
+ return( feas );
 
  }  // end( MCFBlock::is_sol_feasible )
 
@@ -1259,6 +1317,43 @@ bool MCFBlock::is_sol_optimal( Solution * sol , Configuration * optc )
 	 complementary_slackness( ceps , feps , F , Pi ) );
 
  }  //  end( MCFBlock::is_sol_optimal )
+
+/*--------------------------------------------------------------------------*/
+
+bool MCFSolution::drop_physical_values( const Block * const block ,
+					const Modification * const mod ,
+					std::vector< double > & dropped )
+{
+ auto mcfb = dynamic_cast< const MCFBlock * >( block );
+ auto mmod = dynamic_cast< const MCFBlockMod * >( mod );
+ if( ( ! mcfb ) || ( ! mmod ) || ( mmod->type() != MCFBlockMod::eRmvArc ) )
+  return( false );
+
+ MCFBlock::Subset arcs;
+ if( auto rmod = dynamic_cast< const MCFBlockRngdMod * >( mmod ) )
+  for( auto a = rmod->rng().first ; a < rmod->rng().second ; ++a )
+   arcs.push_back( a );
+ else
+  if( auto smod = dynamic_cast< const MCFBlockSbstMod * >( mmod ) )
+   arcs = smod->nms();
+  else
+   return( false );
+
+ dropped.clear();
+ dropped.reserve( arcs.size() );
+ for( auto a : arcs ) {
+  dropped.push_back( a < v_x.size() ? v_x[ a ] : 0 );
+  if( a < v_x.size() )
+   v_x[ a ] = 0;  // a deleted slot carries no flow
+  }
+
+ // the arcs past the last one the MCFBlock has are gone for good
+ if( v_x.size() > mcfb->get_NArcs() )
+  v_x.resize( mcfb->get_NArcs() );
+
+ return( true );
+
+ }  //  end( MCFSolution::drop_physical_values )
 
 /*--------------------------------------------------------------------------*/
 /*------------------------- Methods for R3 Blocks --------------------------*/
@@ -1510,7 +1605,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
 
   // dynamic part
   if( MCFB->HasDynamicX() && ( ! MCFB->dUB.empty() ) ) {
-   if( UB.empty() ) {
+   if( dUB.empty() ) {
     for( auto & cnst : MCFB->dUB )
      cnst.set_dual( 0 );
     }
@@ -1616,12 +1711,9 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
       MCFB->chg_ucap( U.empty() ? Inf< FNumber >() : U[ tmod->rng().first ] ,
 		      tmod->rng().first , iPM , iPA );
      else
-      if( U.empty() ) {
-       Vec_FNumber NCap( tmod->rng().second - tmod->rng().first );
-       auto NCit = NCap.begin();
-       for( Index i = tmod->rng().first ; i < tmod->rng().second ; ++i )
-	*(NCit++) = U[ i ];
-
+      if( U.empty() ) {  // all the capacities are infinite
+       Vec_FNumber NCap( tmod->rng().second - tmod->rng().first ,
+			 Inf< FNumber >() );
        MCFB->chg_ucaps( NCap.begin() , tmod->rng() , iPM , iPA );
        }
       else
@@ -1639,13 +1731,9 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
       MCFB->chg_dfct( B.empty() ? 0 : B[ tmod->rng().first ] ,
 		      tmod->rng().first , iPM , iPA );
      else
-      if( B.empty() ) {
-       Vec_FNumber NDfct( tmod->rng().second - tmod->rng().first );
-       auto NDit = NDfct.begin();
-       for( Index i = tmod->rng().first ; i < tmod->rng().second ; ++i )
-	*(NDit++) = B[ i ];
-
-       MCFB->chg_ucaps( NDfct.begin() , tmod->rng() , iPM , iPA );
+      if( B.empty() ) {  // all the deficits are zero
+       Vec_FNumber NDfct( tmod->rng().second - tmod->rng().first , 0 );
+       MCFB->chg_dfcts( NDfct.begin() , tmod->rng() , iPM , iPA );
        }
       else
        MCFB->chg_dfcts( B.begin() + tmod->rng().first , tmod->rng() ,
@@ -1862,8 +1950,9 @@ void MCFBlock::get_x( Vec_FNumber_it FSol , Range rng ) const
  for( ; rng.first < std::min( rng.second , get_NStaticArcs() ) ; )
   *(FSol++) = x[ rng.first++ ].get_value();
 
- if( HasDynamicX() ) {
-  auto dxi = dx.begin();
+ // here rng.first >= get_NStaticArcs() if any dynamic arc is left to read
+ if( HasDynamicX() && ( rng.first < std::min( rng.second , get_NArcs() ) ) ) {
+  auto dxi = std::next( dx.begin() , rng.first - get_NStaticArcs() );
   for( ; rng.first++ < std::min( rng.second , get_NArcs() ) ; )
    *(FSol++) = (*(dxi++)).get_value();
   }
@@ -2239,10 +2328,11 @@ void MCFBlock::print( std::ostream  & output , char vlvl ) const
      output << "n\t" << i + 1 << "\t" << - B[ i ] << std::endl;
 
   // print arc descriptors in DIMACS standard format
+  const auto cls = closed_arcs();
   for( Index i = 0 ; i < get_NArcs() ; ++i ) {
    output << "a\t" << SN[ i ] << "\t" << EN[ i ] << "\t0\t";
 
-   if( ( is_deleted( i ) ) || is_closed( i ) )
+   if( ( is_deleted( i ) ) || cls[ i ] )
     output << "0";
    else {
     if( U.empty() )
@@ -2292,8 +2382,17 @@ void MCFBlock::serialize( netCDF::NcGroup & group ) const
 
  ( group.addVar( "C" , netCDF::NcDouble() , na ) ).putVar( C.data() );
 
- if( ! U.empty() )
-  ( group.addVar( "U" , netCDF::NcDouble() , na ) ).putVar( U.data() );
+ // the format has no place for closed arcs: they are written with capacity
+ // 0, as in print( 'C' ), hence U is written if any arc is closed even when
+ // it is empty, i.e., all the capacities are infinite
+ const auto cls = closed_arcs();
+ if( ( ! U.empty() ) || std::any_of( cls.begin() , cls.end() ,
+				     []( bool ci ) { return( ci ); } ) ) {
+  Vec_FNumber tU( get_NArcs() );
+  for( Index i = 0 ; i < get_NArcs() ; ++i )
+   tU[ i ] = cls[ i ] ? 0 : get_U( i );
+  ( group.addVar( "U" , netCDF::NcDouble() , na ) ).putVar( tU.data() );
+  }
 
  if( ! B.empty() )
   ( group.addVar( "B" , netCDF::NcDouble() , nn ) ).putVar( B.data() );
@@ -2304,31 +2403,40 @@ void MCFBlock::serialize( netCDF::NcGroup & group ) const
 /*------------- METHODS FOR ADDING / REMOVING / CHANGING DATA --------------*/
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
+void MCFBlock::chg_costs( MF_dbl_sp NCost , Range rng ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  rng.second = std::min( rng.second , get_NArcs() );
  if( rng.second <= rng.first )  // nothing to change
   return;                       // cowardly (and silently) return
 
+ if( NCost.size() < rng.second - rng.first )
+  throw( std::invalid_argument( "MCFBlock::chg_costs: the span is "
+				"shorter than the Range" ) );
+
+ auto NCost_it = NCost.begin();
+
  // check to see how many of the initial arcs are either deleted or not
  // really changing the costs
  while( ( rng.first < rng.second ) &&
-	( std::isnan( C[ rng.first ] ) || ( *NCost == C[ rng.first ] ) ) ) {
+	( std::isnan( C[ rng.first ] ) || ( *NCost_it == C[ rng.first ] ) ) ) {
   ++rng.first;
-  ++NCost;
+  ++NCost_it;
   }
 
  if( rng.second <= rng.first )  // nothing left to change
   return;                       // cowardly (and silently) return
 
  // check to see how many of the final arcs are either deleted or not
- // really changing the costs
- auto NCEit = NCost + ( rng.second - rng.first );
- while( ( ( std::isnan( C[ rng.second - 1 ] ) ) ||
-	  ( *(--NCEit) == C[ rng.second - 1 ] ) )
-	&& ( rng.first < rng.second ) )
+ // really changing the cost; the new cost of arc rng.second - 1 is
+ // *( NCEit - 1 ), whether the arc is deleted or not
+ auto NCEit = NCost_it + ( rng.second - rng.first );
+ while( ( rng.first < rng.second ) &&
+	( std::isnan( C[ rng.second - 1 ] ) ||
+	  ( *( NCEit - 1 ) == C[ rng.second - 1 ] ) ) ) {
   --rng.second;
+  --NCEit;
+  }
 
  if( rng.second <= rng.first )  // nothing left to change
   return;                       // cowardly (and silently) return
@@ -2339,11 +2447,11 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
   Vec_CNumber NC( rng.second - rng.first );
   auto NCit = NC.begin();
 
-  for( Index i = rng.first ; i < rng.second ; ++i , ++NCost )
+  for( Index i = rng.first ; i < rng.second ; ++i , ++NCost_it )
    if( std::isnan( C[ i ] ) )  // arc is deleted
     *(NCit++) = 0;             // give it an "harmless" coefficient
    else                        // arc is there    
-    *(NCit++) = C[ i ] = *NCost;
+    *(NCit++) = C[ i ] = *NCost_it;
 
   get_lfo()->modify_coefficients( std::move( NC ) , rng ,
 				  un_ModBlock( issueAMod ) );
@@ -2351,9 +2459,9 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   for( Index i = rng.first ; i < rng.second ; ++i , ++NCost )
+   for( Index i = rng.first ; i < rng.second ; ++i , ++NCost_it )
     if( ! std::isnan( C[ i ] ) )
-     C[ i ] = *NCost;
+     C[ i ] = *NCost_it;
 
  f_cond_lower = dNAN;  // reset conditional bounds
 
@@ -2369,14 +2477,20 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
+void MCFBlock::chg_costs( MF_dbl_sp NCost , Subset && nms ,
 			  bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
+ if( NCost.size() < nms.size() )
+  throw( std::invalid_argument( "MCFBlock::chg_costs: the span is "
+				"shorter than the Subset" ) );
+
+ auto NCost_it = NCost.begin();
+
  if( nms.empty() )  // nothing to change
   return;           // cowardly (and silently) return
 
- // eliminate from NCost and nms the entries corresponding to either
+ // eliminate from NCost_it and nms the entries corresponding to either
  // deleted arcs or arcs whose cost actually does not change; meanwhile,
  // if nms is not ordered, order it
  Vec_CNumber NC;
@@ -2385,7 +2499,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
   auto NCit = NC.begin();
   auto nmsit = nms.begin();
   for( auto i : nms ) {
-   auto nci = *(NCost++);
+   auto nci = *(NCost_it++);
    if( ( ! std::isnan( C[ i ] ) ) && ( nci != C[ i ] ) ) {
     *(nmsit++) = i;
     *(NCit++) = nci;
@@ -2399,7 +2513,7 @@ void MCFBlock::chg_costs( c_Vec_CNumber_it NCost , Subset && nms ,
   std::vector< TP > pairs;
   pairs.reserve( nms.size() );
   for( auto i : nms ) {
-   auto nci = *(NCost++);
+   auto nci = *(NCost_it++);
    if( ( ! std::isnan( C[ i ] ) ) && ( nci != C[ i ] ) )
     pairs.push_back( std::make_pair( i , nci ) );
    }
@@ -2482,15 +2596,21 @@ void MCFBlock::chg_cost( CNumber NCost , Index arc ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
+void MCFBlock::chg_ucaps( MF_dbl_sp NCap , Range rng ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  rng.second = std::min( rng.second , get_NArcs() );
  if( rng.second <= rng.first )  // nothing to change
   return;                       // cowardly (and silently) return
 
+ if( NCap.size() < rng.second - rng.first )
+  throw( std::invalid_argument( "MCFBlock::chg_ucaps: the span is "
+				"shorter than the Range" ) );
+
+ auto NCap_it = NCap.begin();
+
  if( U.empty() ) {
-  if( std::all_of( NCap , NCap + ( rng.second - rng.first ) ,
+  if( std::all_of( NCap_it , NCap_it + ( rng.second - rng.first ) ,
 		   []( c_FNumber cap ) { return( cap >= Inf< FNumber >() ); }
 		   ) )
    return;
@@ -2501,21 +2621,24 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
  // check to see how many of the initial arcs are either deleted or not
  // really changing the capacity
  while( ( rng.first < rng.second ) &&
-	( std::isnan( C[ rng.first ] ) || ( *NCap == U[ rng.first ] ) ) ) {
+	( std::isnan( C[ rng.first ] ) || ( *NCap_it == U[ rng.first ] ) ) ) {
   ++rng.first;
-  ++NCap;
+  ++NCap_it;
   }
 
  if( rng.second <= rng.first )  // nothing left to change
   return;                       // cowardly (and silently) return
 
  // check to see how many of the final arcs are either deleted or not
- // really changing the capacity
- auto NCEit = NCap + ( rng.second - rng.first );
- while( ( ( std::isnan( C[ rng.second - 1 ] ) ) ||
-	  ( *(--NCEit) == U[ rng.second - 1 ] ) )
-	&& ( rng.first < rng.second ) )
+ // really changing the capacity; the new capacity of arc rng.second - 1 is
+ // *( NCEit - 1 ), whether the arc is deleted or not
+ auto NCEit = NCap_it + ( rng.second - rng.first );
+ while( ( rng.first < rng.second ) &&
+	( std::isnan( C[ rng.second - 1 ] ) ||
+	  ( *( NCEit - 1 ) == U[ rng.second - 1 ] ) ) ) {
   --rng.second;
+  --NCEit;
+  }
 
  if( rng.second <= rng.first )  // nothing left to change
   return;                       // cowardly (and silently) return
@@ -2536,20 +2659,20 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
   Index i = rng.first;
 
   // static part
-  for( ; i < std::min( rng.second , get_NStaticArcs() ) ;  ++i , ++NCap )
-   if( ( ! std::isnan( C[ i ] ) ) && ( U[ i ] != *NCap ) ) {
-    U[ i ] = *NCap;
-    UB[ i ].set_rhs( *NCap , ampar );
+  for( ; i < std::min( rng.second , get_NStaticArcs() ) ;  ++i , ++NCap_it )
+   if( ( ! std::isnan( C[ i ] ) ) && ( U[ i ] != *NCap_it ) ) {
+    U[ i ] = *NCap_it;
+    UB[ i ].set_rhs( *NCap_it , ampar );
     }
 
   // dynamic part
   for( auto dubi = std::next( dUB.begin() ,
 			      rng.first >= get_NStaticArcs() ?
 			      i - get_NStaticArcs() : 0 ) ;
-       i < rng.second ; ++i , ++NCap , ++dubi )
-   if( ( ! std::isnan( C[ i ] ) ) && ( U[ i ] != *NCap ) ) {
-    U[ i ] = *NCap;
-    dubi->set_rhs( *NCap , ampar );
+       i < rng.second ; ++i , ++NCap_it , ++dubi )
+   if( ( ! std::isnan( C[ i ] ) ) && ( U[ i ] != *NCap_it ) ) {
+    U[ i ] = *NCap_it;
+    dubi->set_rhs( *NCap_it , ampar );
     }
 
   close_if_needed( ampar , rng.second - rng.first );
@@ -2559,7 +2682,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
   // note that this also changes the capacity of deleted arcs, but since that
   // is never really used, it does not matter
   if( not_dry_run( issueMod ) )
-   std::copy( NCap , NCap + ( rng.second - rng.first ) ,
+   std::copy( NCap_it , NCap_it + ( rng.second - rng.first ) ,
 	      U.begin() + rng.first );
 
  if( issue_pmod( issueMod ) )  // issue "physical Modification" - - - - - - -
@@ -2574,12 +2697,18 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
+void MCFBlock::chg_ucaps( MF_dbl_sp NCap , Subset && nms ,
 			  bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
+ if( NCap.size() < nms.size() )
+  throw( std::invalid_argument( "MCFBlock::chg_ucaps: the span is "
+				"shorter than the Subset" ) );
+
+ auto NCap_it = NCap.begin();
+
  if( U.empty() ) {
-  if( std::all_of( NCap , NCap + nms.size() ,
+  if( std::all_of( NCap_it , NCap_it + nms.size() ,
 		   []( c_FNumber cap ) { return( cap >= Inf< FNumber >() ); }
 		   ) )
    return;
@@ -2587,7 +2716,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
   U.assign( get_MaxNArcs() , Inf< FNumber >() );
   }
 
- // eliminate from NCap and nms the entries corresponding to either
+ // eliminate from NCap_it and nms the entries corresponding to either
  // deleted arcs or arcs whose capacity actually does not change;
  // meanwhile, if nms is not ordered, order it
  Vec_FNumber NC;
@@ -2596,7 +2725,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
   auto NCit = NC.begin();
   auto nmsit = nms.begin();
   for( auto i : nms ) {
-   auto nci = *(NCap++);
+   auto nci = *(NCap_it++);
    if( ( ! std::isnan( C[ i ] ) ) && ( nci != U[ i ] ) ) {
     *(nmsit++) = i;
     *(NCit++) = nci;
@@ -2609,7 +2738,7 @@ void MCFBlock::chg_ucaps( c_Vec_FNumber_it NCap , Subset && nms ,
   std::vector< TP > pairs;
   pairs.reserve( nms.size() );
   for( auto i : nms ) {
-   auto nci = *(NCap++);
+   auto nci = *(NCap_it++);
    if( ( ! std::isnan( C[ i ] ) ) && ( nci != U[ i ] ) )
     pairs.push_back( std::make_pair( i , nci ) );
    }
@@ -2692,8 +2821,8 @@ void MCFBlock::chg_ucap( FNumber NCap , Index arc ,
  if( arc >= get_NArcs() )
   throw( std::invalid_argument( "invalid arc name" ) );
 
- if( U.empty() ) {
-  if( NCap < Inf< FNumber >() )
+ if( U.empty() ) {  // all the capacities are infinite
+  if( NCap >= Inf< FNumber >() )
    return;
 
   U.assign( get_MaxNArcs() , Inf< FNumber >() );
@@ -2734,22 +2863,28 @@ void MCFBlock::chg_ucap( FNumber NCap , Index arc ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
+void MCFBlock::chg_dfcts( MF_dbl_sp NDfct , Range rng ,
 			  ModParam issueMod , ModParam issueAMod )
 {
  rng.second = std::min( rng.second , get_NNodes() );
  if( rng.second <= rng.first )  // nothing to change
   return;                 // cowardly (and silently) return
 
+ if( NDfct.size() < rng.second - rng.first )
+  throw( std::invalid_argument( "MCFBlock::chg_dfcts: the span is "
+				"shorter than the Range" ) );
+
+ auto NDfct_it = NDfct.begin();
+
  if( B.empty() ) {
-  if( std::all_of( NDfct , NDfct + ( rng.second - rng.first ) ,
+  if( std::all_of( NDfct_it , NDfct_it + ( rng.second - rng.first ) ,
 		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
 
   B.assign( get_MaxNNodes() , 0 );
   }
 
- c_Index ndiff = countdiff( NDfct , NDfct + ( rng.second - rng.first ) ,
+ c_Index ndiff = countdiff( NDfct_it , NDfct_it + ( rng.second - rng.first ) ,
 			    B.cbegin() + rng.first );
  if( ! ndiff )
   return;
@@ -2764,20 +2899,20 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
   Index i = rng.first;
 
   // static part
-  for( ; i < std::min( rng.second , get_NStaticNodes() ) ;  ++i , ++NDfct )
-   if( B[ i ] != *NDfct ) {
-    B[ i ] = *NDfct;
-    E[ i ].set_both( *NDfct , ampar );
+  for( ; i < std::min( rng.second , get_NStaticNodes() ) ;  ++i , ++NDfct_it )
+   if( B[ i ] != *NDfct_it ) {
+    B[ i ] = *NDfct_it;
+    E[ i ].set_both( *NDfct_it , ampar );
     }
 
   // dynamic part
   for( auto dei = std::next( dE.begin() ,
 			     rng.first >= get_NStaticNodes() ?
 			     i - get_NStaticNodes() : 0 ) ;
-       i < rng.second ; ++i , ++NDfct , ++dei )
-   if( B[ i ] != *NDfct ) {
-    B[ i ] = *NDfct;
-    dei->set_both( *NDfct , ampar );
+       i < rng.second ; ++i , ++NDfct_it , ++dei )
+   if( B[ i ] != *NDfct_it ) {
+    B[ i ] = *NDfct_it;
+    dei->set_both( *NDfct_it , ampar );
     }
 
   close_if_needed( ampar , ndiff );
@@ -2785,7 +2920,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   std::copy( NDfct , NDfct + ( rng.second - rng.first ) ,
+   std::copy( NDfct_it , NDfct_it + ( rng.second - rng.first ) ,
 	      B.begin() + rng.first );
 
  // TODO: if some changes are "fake", restrict the range
@@ -2802,19 +2937,25 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Range rng ,
 
 /*--------------------------------------------------------------------------*/
 
-void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
+void MCFBlock::chg_dfcts( MF_dbl_sp NDfct , Subset && nms ,
 			  bool ordered ,
 			  ModParam issueMod , ModParam issueAMod )
 {
+ if( NDfct.size() < nms.size() )
+  throw( std::invalid_argument( "MCFBlock::chg_dfcts: the span is "
+				"shorter than the Subset" ) );
+
+ auto NDfct_it = NDfct.begin();
+
  if( B.empty() ) {
-  if( std::all_of( NDfct , NDfct + nms.size() ,
+  if( std::all_of( NDfct_it , NDfct_it + nms.size() ,
 		   []( c_FNumber dfct ) { return( dfct == 0 ); } ) )
    return;
 
   B.assign( get_MaxNNodes() , 0 );
   }
 
- Index ndiff = countdiff( B , nms , NDfct , get_NNodes() );
+ Index ndiff = countdiff( B , nms , NDfct_it , get_NNodes() );
  if( ! ndiff )
   return;
 
@@ -2830,10 +2971,10 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
     // static part
     auto nit = nms.begin();
     for( ; ( nit != nms.end() ) && ( *nit < get_NStaticNodes() ) ;
-	 ++NDfct , ++nit ) {
-     if( B[ *nit ] != *NDfct ) {
-      B[ *nit ] = *NDfct;
-      E[ *nit ].set_both( *NDfct , ampar );
+	 ++NDfct_it , ++nit ) {
+     if( B[ *nit ] != *NDfct_it ) {
+      B[ *nit ] = *NDfct_it;
+      E[ *nit ].set_both( *NDfct_it , ampar );
       }
      }
 
@@ -2841,12 +2982,12 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
     auto dei = dE.begin();
     for( Index i = get_NStaticNodes() ; nit != nms.end() ; ++i , ++dei )
      if( *nit == i ) {
-      if( B[ i ] != *NDfct ) {
-       B[ i ] = *NDfct;
-       dei->set_both( *NDfct , ampar );
+      if( B[ i ] != *NDfct_it ) {
+       B[ i ] = *NDfct_it;
+       dei->set_both( *NDfct_it , ampar );
        }
       nit++;
-      NDfct++;
+      NDfct_it++;
       }
     }
    else {
@@ -2854,7 +2995,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
     typedef std::pair< Index , FNumber > index_pair;
     std::vector< index_pair > pairs( nms.size() );
     for( Index i = 0 ; i < nms.size() ; ++i )
-     pairs[ i ] = std::make_pair( nms[ i ] , *(NDfct++) );
+     pairs[ i ] = std::make_pair( nms[ i ] , *(NDfct_it++) );
 
     // sort the vector for increasing index
     std::sort( pairs.begin() , pairs.end() ,
@@ -2863,7 +3004,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
 
     // static part
     auto pit = pairs.begin();
-    for( ; ( pit != pairs.end() ) && ( pit->first < get_NStaticArcs() ) ;
+    for( ; ( pit != pairs.end() ) && ( pit->first < get_NStaticNodes() ) ;
 	 ++pit )
      if( B[ pit->first ] != pit->second ) {
       B[ pit->first ] = pit->second;
@@ -2882,10 +3023,10 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
       }
     }
   else
-   for( auto nit = nms.begin() ; nit != nms.end() ; ++NDfct , ++nit ) {
-    if( B[ *nit ] != *NDfct ) {
-     B[ *nit ] = *NDfct;
-     E[ *nit ].set_both( *NDfct , ampar );
+   for( auto nit = nms.begin() ; nit != nms.end() ; ++NDfct_it , ++nit ) {
+    if( B[ *nit ] != *NDfct_it ) {
+     B[ *nit ] = *NDfct_it;
+     E[ *nit ].set_both( *NDfct_it , ampar );
      }
     }
 
@@ -2894,7 +3035,7 @@ void MCFBlock::chg_dfcts( c_Vec_CNumber_it NDfct , Subset && nms ,
  else
   // only change the physical representation- - - - - - - - - - - - - - - - -
   if( not_dry_run( issueMod ) )
-   copyidx( B , nms , NDfct );
+   copyidx( B , nms , NDfct_it );
 
  // TODO: eliminate from nms the "fake" changes
 
@@ -2926,7 +3067,7 @@ void MCFBlock::chg_dfct( FNumber NDfct , Index nde ,
   if( ! NDfct )
    return;
 
-  B.assign( get_NNodes() , 0 );
+  B.assign( get_MaxNNodes() , 0 );
   }
 
  if( B[ nde ] == NDfct )
@@ -3517,7 +3658,9 @@ void MCFBlock::remove_arc( Index arc ,
   Index rmvdarcs = 1;  // how many arcs are removed in the end
 
   if( arc == NArcs - 1 ) {    // deleted last arc(s)
-   for( --NArcs ; std::isnan( C[ NArcs - 1 ] ) ; --NArcs , ++rmvdarcs )
+   // the deleted arcs before it go too, down to the static ones at most
+   for( --NArcs ; ( NArcs > get_NStaticArcs() ) &&
+		  std::isnan( C[ NArcs - 1 ] ) ; --NArcs , ++rmvdarcs )
     ;  // decrease arc count
    }
   else                       // deleted one arc in the middle
@@ -3693,6 +3836,14 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
   auto i = p2i_x( xi );
   if( std::isnan( C[ i ] ) )
    throw( std::logic_error( "[un]fixing deleted arc not allowed" ) );
+  // fixing is closing the arc, i.e. a flow of 0: any other value is one
+  // the arc cannot be told to carry
+  if( xi->is_fixed() && ( xi->get_value() != 0 ) )
+   throw( std::invalid_argument( "MCFBlock::guts_of_add_Modification: flow "
+				 "Variable of arc " + std::to_string( i ) +
+				 " fixed at " +
+				 std::to_string( xi->get_value() ) +
+				 ", only 0 (closing the arc) is allowed" ) );
   if( xi->is_fixed() )
    close_arc( i , make_par( eNoBlck , chnl ) , eDryRun );
   else
@@ -3709,54 +3860,22 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
 
 void MCFBlock::compute_conditional_bounds( void )
 {
+ // only the arcs there are count, a deleted one (of NaN cost) does not, and
+ // U may be empty
  f_cond_lower = f_cond_upper = 0;
 
- auto tC = C.begin();
- auto tU = U.begin();
-
- for( ; tC < C.end() ; ++tC , ++tU ) {
-  if( *tC == 0 )
+ for( Index a = 0 ; a < get_NArcs() ; ++a ) {
+  c_CNumber ca = C[ a ];
+  if( std::isnan( ca ) || ( ca == 0 ) )
    continue;
 
-  if( *tC < 0 ) {
-   if( *tU == Inf< FNumber >() ) {
-    f_cond_lower = -Inf< double >();
-    break;
-    }
-   else
-    f_cond_lower += *tC * (*tU);
-   }
+  c_FNumber ua = get_U( a );
+  if( ca < 0 )
+   f_cond_lower = ua == Inf< FNumber >() ? - Inf< double >() :
+                                           f_cond_lower + ca * ua;
   else
-   if( *tU == Inf< FNumber >() ) {
-    f_cond_upper = Inf< double >();
-    break;
-    }
-   else
-    f_cond_upper += *tC * (*tU);
-   }
-
- if( f_cond_lower > -Inf< double >() ) {
-  for( ; tC < C.end() ; ++tC , ++tU )
-   if( *tC < 0 ) {
-    if( *tU == Inf< FNumber >() ) {
-     f_cond_lower = -Inf< double >();
-     break;
-     }
-    else
-     f_cond_lower += *tC * (*tU);
-    }
-  }
-
- if( f_cond_upper < Inf< double >() ) {
-  for( ; tC < C.end() ; ++tC , ++tU )
-   if( *tC > 0 ) {
-    if( *tU == Inf< FNumber >() ) {
-     f_cond_upper = Inf< double >();
-     break;
-     }
-    else
-     f_cond_upper += *tC * (*tU);
-    }
+   f_cond_upper = ua == Inf< FNumber >() ? Inf< double >() :
+                                           f_cond_upper + ca * ua;
   }
  }  // end( MCFBlock::compute_conditional_bounds )
 
