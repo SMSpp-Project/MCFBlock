@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-09
+
 ### Added
 
 - `MCFSolution::drop_physical_values()` drops the flows of the arcs that a
@@ -328,7 +330,8 @@ Minor point release to avoid the master branch to become too stale:
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.1...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.7.0...develop
+[0.7.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.1...0.7.0
 [0.6.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.0...0.6.1
 [0.6.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.1...0.6.0
 [0.5.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.0...0.5.1
