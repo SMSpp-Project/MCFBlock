@@ -161,91 +161,100 @@ if (BUILD_TESTING)
     add_subdirectory(test)
 endif ()
 
-# ----- Custom commands and targets ----------------------------------------- #
-
-# The version of the archive in the Package Registry. A published version is
-# never replaced: new data go out under a new version, written here first [see
-# data/upload-dmx], and the archive and the marker of its extraction carry it
-# in their name, so that a tree holding the data of an older version (a cache
-# of the CI, or a clone that has been extracted before) downloads and extracts
-# again instead of taking them for the current ones.
+# ----- Data ---------------------------------------------------------------- #
+# The instances the tests read are, for each <fmt> of DATA_FORMATS, the
+# archive <fmt>.tgz in the GitLab Package Registry of the project
+# DATA_PROJECT, extracted into data/<fmt>. Nothing of this is built with the
+# module: extract_<DATA_PREFIX>_<fmt> downloads the archive (by building
+# download_<DATA_PREFIX>_<fmt>) and extracts it, and it is built when the
+# tests that read the instances are run, by a test that sets up the fixture
+# <DATA_PREFIX>_<fmt>_extracted they require.
+#
+# A published version is never replaced: new data go out under a new
+# version, written here first [see the upload scripts in data/], and the
+# archive and the marker of its extraction carry it in their name, so that a
+# tree holding the data of an older version (a cache of the CI, or a clone
+# that has been extracted before) downloads and extracts again instead of
+# taking them for the current ones.
 set(DATA_VERSION 2025-07-29)
+set(DATA_PROJECT 14857645)
+set(DATA_PREFIX mcf)
+set(DATA_FORMATS dmx)
 
-# Download dmx.tgz from GitLab Package Registry if it doesn't exist
-set(DMX_URL "https://gitlab.com/api/v4/projects/14857645/packages/generic/dmx/${DATA_VERSION}/dmx.tgz")
-set(DMX_ARCHIVE ${CMAKE_CURRENT_SOURCE_DIR}/data/dmx-${DATA_VERSION}.tgz)
-set(DATA_MARKER ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted-${DATA_VERSION})
-set(DMX_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/download_dmx.cmake)
+foreach (fmt ${DATA_FORMATS})
+    set(url "https://gitlab.com/api/v4/projects/${DATA_PROJECT}/packages/\
+generic/${fmt}/${DATA_VERSION}/${fmt}.tgz")
+    set(archive ${CMAKE_CURRENT_SOURCE_DIR}/data/${fmt}-${DATA_VERSION}.tgz)
+    set(script
+        ${CMAKE_CURRENT_BINARY_DIR}/download_${DATA_PREFIX}_${fmt}.cmake)
+    # the marker of the extraction, on which what is made from the instances
+    # depends too
+    set(DATA_MARKER_${fmt}
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/.extracted-${fmt}-${DATA_VERSION})
 
-file(WRITE ${DMX_SCRIPT} "
-file(DOWNLOAD \"${DMX_URL}\" \"${DMX_ARCHIVE}\" SHOW_PROGRESS STATUS _status)
+    file(WRITE ${script} "
+file(DOWNLOAD \"${url}\" \"${archive}\" SHOW_PROGRESS STATUS _status)
 list(GET _status 0 _code)
 list(GET _status 1 _message)
 if(NOT _code EQUAL 0)
   # what is on disk is whatever the server answered with, and leaving it there
   # would let the build take it for the archive: the next attempt has to
   # download again rather than fail while extracting it
-  file(REMOVE \"${DMX_ARCHIVE}\")
-  message(FATAL_ERROR \"cannot download ${DMX_URL}: \${_message}\")
+  file(REMOVE \"${archive}\")
+  message(FATAL_ERROR \"cannot download ${url}: \${_message}\")
 endif()
-file(SIZE \"${DMX_ARCHIVE}\" _size)
+file(SIZE \"${archive}\" _size)
 if(_size LESS 1024)
-  file(REMOVE \"${DMX_ARCHIVE}\")
-  message(FATAL_ERROR \"${DMX_ARCHIVE} came down with \${_size} bytes, so the \
+  file(REMOVE \"${archive}\")
+  message(FATAL_ERROR \"${archive} came down with \${_size} bytes, so the \
 server answered but not with the archive: try again later\")
 endif()
 ")
 
-add_custom_command(
-        OUTPUT ${DMX_ARCHIVE}
-        COMMAND ${CMAKE_COMMAND} -E echo "Downloading dmx.tgz from GitLab Package Registry..."
-        COMMAND ${CMAKE_COMMAND} -P ${DMX_SCRIPT}
-        COMMENT "Downloading dmx.tgz"
-        VERBATIM
-)
+    add_custom_command(
+            OUTPUT ${archive}
+            COMMAND ${CMAKE_COMMAND} -P ${script}
+            COMMENT "Downloading ${fmt}.tgz from the GitLab Package Registry"
+            VERBATIM)
+    add_custom_target(download_${DATA_PREFIX}_${fmt} DEPENDS ${archive})
 
-add_custom_target(download_dmx
-        DEPENDS ${DMX_ARCHIVE})
-
-# Custom command to extract the dmx.tgz archive if the marker of this version
-# does not exist
-add_custom_command(
-        OUTPUT ${DATA_MARKER}
-        COMMAND tar xzf ${DMX_ARCHIVE}
-        COMMAND echo > ${DATA_MARKER}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data
-        COMMENT "Extracting dmx.tgz"
-        VERBATIM
-        DEPENDS download_dmx)
-
-# Create custom targets to run the dmx extraction
-add_custom_target(extract_dmx
-        DEPENDS ${DATA_MARKER})
-
-# Ensure that run_dmx is executed after the download
-add_dependencies(extract_dmx download_dmx)
+    add_custom_command(
+            OUTPUT ${DATA_MARKER_${fmt}}
+            COMMAND ${CMAKE_COMMAND} -E tar xzf ${archive}
+            COMMAND ${CMAKE_COMMAND} -E touch ${DATA_MARKER_${fmt}}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/data
+            COMMENT "Extracting ${fmt}.tgz"
+            VERBATIM
+            DEPENDS ${archive})
+    add_custom_target(extract_${DATA_PREFIX}_${fmt}
+                      DEPENDS ${DATA_MARKER_${fmt}})
+    # the archive is the output of a command in both targets: it has to be
+    # downloaded once, before it is extracted
+    add_dependencies(extract_${DATA_PREFIX}_${fmt}
+                     download_${DATA_PREFIX}_${fmt})
+endforeach ()
 
 # Custom command to run tools/batch with the dmx2nc4 exe if the .generated file does not exist
 if (UNIX)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tools/batch ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4
-            COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
             COMMENT "Running dmx2nc4"
             VERBATIM
-            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${DATA_MARKER})
+            DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/tools/dmx2nc4 ${DATA_MARKER_dmx})
 elseif (WIN32)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             # using Git for Windows that includes Git Bash
             COMMAND "C:/Program Files/Git/bin/bash.exe"
             "${CMAKE_CURRENT_SOURCE_DIR}/tools/batch" "$<TARGET_FILE:dmx2nc4>"
-            COMMAND echo > ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
+            COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tools
             COMMENT "Running dmx2nc4"
             VERBATIM
-            DEPENDS $<TARGET_FILE:dmx2nc4> ${DATA_MARKER})
+            DEPENDS $<TARGET_FILE:dmx2nc4> ${DATA_MARKER_dmx})
 endif ()
 
 # Create custom targets to run the nc4 generation
@@ -253,7 +262,7 @@ add_custom_target(run_dmx2nc4
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/nc4/.generated)
 
 # Ensure that run_dmx2nc4 is executed after the build
-add_dependencies(run_dmx2nc4 dmx2nc4)
+add_dependencies(run_dmx2nc4 dmx2nc4 extract_mcf_dmx)
 
 # ----- Install instructions ------------------------------------------------ #
 # The following commands are used when installing the library
