@@ -2579,7 +2579,7 @@ class MCFBlockMod : public Modification
 
  virtual ~MCFBlockMod() = default;   ///< destructor, does nothing
 
-/*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
+/*-------------------- PUBLIC METHODS OF THE CLASS -------------------------*/
 
  /// returns the [MCF]Block to which the MCFBlockMod refers
 
@@ -2646,7 +2646,7 @@ class MCFBlockRngdMod : public MCFBlockMod
 
  virtual ~MCFBlockRngdMod() = default;   ///< destructor, does nothing
 
-/*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
+/*-------------------- PUBLIC METHODS OF THE CLASS -------------------------*/
 
  /// accessor to the range
 
@@ -2705,7 +2705,7 @@ class MCFBlockSbstMod : public MCFBlockMod
 
  virtual ~MCFBlockSbstMod() = default;  ///< destructor, does nothing
 
-/*-------------------- PUBLIC METHODS OF THE CLASS ------------------------*/
+/*-------------------- PUBLIC METHODS OF THE CLASS -------------------------*/
 
  /// accessor to the subset
 
