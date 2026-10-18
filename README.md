@@ -1,5 +1,11 @@
 # MCFBlock
 
+[![Pipeline](https://gitlab.com/smspp/mcfblock/badges/develop/pipeline.svg)](https://gitlab.com/smspp/mcfblock/-/pipelines?ref=develop)
+[![Release](https://gitlab.com/smspp/mcfblock/-/badges/release.svg)](https://gitlab.com/smspp/mcfblock/-/releases)
+[![Documentation](https://img.shields.io/badge/docs-Doxygen-blue)](https://smspp.gitlab.io/smspp-project/)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+
 `MCFBlock` is a SMS++ :Block for Linear Min-Cost Flow Problems. It is a pure
 :Block depending only on the SMS++ core, and can be solved by any compatible
 :Solver, for instance the `MILPSolver` family, `MCFLemonSolver`, or
