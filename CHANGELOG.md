@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `download_mcf_dmx` and `extract_mcf_dmx`, which `run_dmx2nc4` builds
   first
 
+### Fixed
+
+- the documentation of `MCFBlock.h`: the TeX quotes around a node and an
+  arc opened a code span that Doxygen never closed, so that it dropped
+  the class `MCFBlock` from the reference and took its methods for free
+  functions
+
 ## [0.7.0] - 2026-10-09
 
 ### Added

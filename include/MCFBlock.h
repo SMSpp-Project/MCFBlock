@@ -82,13 +82,13 @@ namespace SMSpp_di_unipi_it
  * (linear) Min-Cost Flow (MCF) problem.
  *
  * The data of the problem consist of a (directed) graph G = ( N , A ) with
- * n = |N| nodes and m = |A| (directed) arcs. Each node `i' has a deficit
+ * n = |N| nodes and m = |A| (directed) arcs. Each node i has a deficit
  * b[ i ], i.e., the amount of flow that is produced/consumed by the node:
  * source nodes (which produce flow) have negative deficits and sink nodes
- * (which consume flow) have positive deficits. Each arc `(i, j)' has an
+ * (which consume flow) have positive deficits. Each arc (i, j) has an
  * upper capacity U[ i , j ] and a linear cost coefficient C[ i , j ]. Flow
  * variables X[ i , j ] represents the amount of flow to be sent on arc
- * (i, j). Parallel arcs, i.e., multiple copies of the same arc `(i, j)' are
+ * (i, j). Parallel arcs, i.e., multiple copies of the same arc (i, j) are
  * in general allowed; it is expected that they have different costs (for
  * otherwise they can be merged into a unique arc), but this is not strictly
  * enforced. Multiple copies of some arc (i, j) can be seen as "total" flow
