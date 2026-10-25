@@ -41,6 +41,12 @@ MCFBkINC = -I$(MCFBkSDR)/include
 
 MCFBkH   = $(MCFBkSDR)/include/MCFBlock.h
 
+# the C++20 module smspp.mcfblock - - - - - - - - - - - - - - - - - - - - - -
+# [see makefile-mod of SMS++]
+
+$(eval $(call SMSppMODrule,MCFBk,$(MCFBkSDR),MCFBlock,smspp.mcfblock,\
+	$(SMS++MOD)))
+
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 clean::
