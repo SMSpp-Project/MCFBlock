@@ -45,7 +45,7 @@ MCFBkH   = $(MCFBkSDR)/include/MCFBlock.h
 # [see makefile-mod of SMS++]
 
 $(eval $(call SMSppMODrule,MCFBk,$(MCFBkSDR),MCFBlock,smspp.mcfblock,\
-	$(SMS++MOD)))
+	SMS++))
 
 # clean - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
