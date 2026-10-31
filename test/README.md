@@ -15,9 +15,11 @@ forms, empty and unordered ones included, is checked against the abstract
 representation (the flow `Variable`, the coefficients of the `Objective`, the
 bound and flow conservation `Constraint`), which has to follow it, and
 against the `Modification` received by a `FakeSolver` of the core registered
-on the `MCFBlock`, with the `eNoMod`, `eModBlck` and `eDryRun` values of the
-parameters as well; so is the other way round, a change of the abstract
-representation that the `MCFBlock` has to translate into its data. The arcs
+on the `MCFBlock`, and what each says it changes (`changes()`, written down
+in the tester from what the change does to the model), with the `eNoMod`,
+`eModBlck` and `eDryRun` values of the parameters as well; so is the other
+way round, a change of the abstract representation that the `MCFBlock` has
+to translate into its data. The arcs
 deleted before the `Constraint` are generated, and the instance whose arcs
 are all dynamic and are all removed, are checked on their own.
 

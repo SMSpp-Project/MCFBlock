@@ -13,8 +13,9 @@
  * deficits, closing and opening arcs, adding and removing arcs), in the
  * single, Range and Subset forms, empty ones included, is checked against
  * the abstract representation, which has to follow it, and against the
- * Modification the FakeSolver receives, under the eNoMod and eModBlck
- * values of the parameters too; so is the other way round, a change of the
+ * Modification the FakeSolver receives, and what each says it changes [see
+ * Modification::changes()], under the eNoMod and eModBlck values of the
+ * parameters too; so is the other way round, a change of the
  * abstract representation that the MCFBlock has to translate into its
  * data. A flow set by hand in the Variable is checked for its objective
  * value and its feasibility, and so are the valid bounds on the optimal
@@ -298,6 +299,42 @@ static void check_no_concern( const Mods & md , const std::string & what )
  }
 
 /*--------------------------------------------------------------------------*/
+/// what a physical Modification of type t has to say it changes, written
+/// from what the change does to the model: the costs are the Objective, the
+/// capacities and the deficits the sides of the flow and bound Constraint,
+/// opening an arc enlarges the feasible region and closing it shrinks it,
+/// while adding or removing an arc may change anything
+
+static Modification::ModConcern expected_changes( int t )
+{
+ using M = Modification;
+ switch( t ) {
+  case( MCFBlockMod::eChgCost ):
+   return( M::eModPhys | M::eModObj | M::eObjUp | M::eObjDown );
+  case( MCFBlockMod::eChgCaps ):
+  case( MCFBlockMod::eChgDfct ):
+   return( M::eModPhys | M::eModCnsSide | M::eRegnGrow | M::eRegnShrink );
+  case( MCFBlockMod::eOpenArc ):
+   return( M::eModPhys | M::eModCnsSide | M::eRegnGrow );
+  case( MCFBlockMod::eCloseArc ):
+   return( M::eModPhys | M::eModCnsSide | M::eRegnShrink );
+  default:
+   return( M::eModPhys | M::eEffAny );
+  }
+ }
+
+/// the one physical Modification says what it changes [see
+/// Modification::changes()]
+
+static void check_changes( const Mods & md , int t , const std::string & what )
+{
+ check( md.phys.front()->changes() == expected_changes( t ) , what +
+	": the physical Modification of type " + std::to_string( t ) +
+	" says it changes " + std::to_string( md.phys.front()->changes() ) +
+	" instead of " + std::to_string( expected_changes( t ) ) );
+ }
+
+/*--------------------------------------------------------------------------*/
 /// exactly one physical Modification, of type t, on the Range r
 
 static void check_rngd( const Mods & md , int t , Range r ,
@@ -312,6 +349,7 @@ static void check_rngd( const Mods & md , int t , Range r ,
 	": the physical Modification is not a MCFBlockRngdMod of type " +
 	std::to_string( t ) + " on [ " + std::to_string( r.first ) + " , " +
 	std::to_string( r.second ) + " )" );
+ check_changes( md , t , what );
  check_no_concern( md , what );
  }
 
@@ -329,6 +367,7 @@ static void check_sbst( const Mods & md , int t , const Subset & s ,
  check( sm && ( sm->type() == t ) && ( sm->nms() == s ) , what +
 	": the physical Modification is not a MCFBlockSbstMod of type " +
 	std::to_string( t ) + " on the expected ordered Subset" );
+ check_changes( md , t , what );
  check_no_concern( md , what );
  }
 
