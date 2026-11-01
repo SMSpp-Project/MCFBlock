@@ -1697,8 +1697,8 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
       MCFB->chg_cost( C[ tmod->rng().first ] , tmod->rng().first ,
 		      iPM , iPA );
      else
-      MCFB->chg_costs( C.begin() + tmod->rng().first , tmod->rng() ,
-		       iPM , iPA );
+      MCFB->chg_costs( MF_dbl_sp( C ).subspan( tmod->rng().first ) ,
+		       tmod->rng() , iPM , iPA );
      break;
     case( MCFBlockMod::eChgCaps ):
      #ifndef NDEBUG
@@ -1714,11 +1714,11 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
       if( U.empty() ) {  // all the capacities are infinite
        Vec_FNumber NCap( tmod->rng().second - tmod->rng().first ,
 			 Inf< FNumber >() );
-       MCFB->chg_ucaps( NCap.begin() , tmod->rng() , iPM , iPA );
+       MCFB->chg_ucaps( MF_dbl_sp( NCap ) , tmod->rng() , iPM , iPA );
        }
       else
-       MCFB->chg_ucaps( U.begin() + tmod->rng().first , tmod->rng() ,
-			iPM , iPA );
+       MCFB->chg_ucaps( MF_dbl_sp( U ).subspan( tmod->rng().first ) ,
+			tmod->rng() , iPM , iPA );
      break;
     case( MCFBlockMod::eChgDfct ):
      #ifndef NDEBUG
@@ -1733,11 +1733,11 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
      else
       if( B.empty() ) {  // all the deficits are zero
        Vec_FNumber NDfct( tmod->rng().second - tmod->rng().first , 0 );
-       MCFB->chg_dfcts( NDfct.begin() , tmod->rng() , iPM , iPA );
+       MCFB->chg_dfcts( MF_dbl_sp( NDfct ) , tmod->rng() , iPM , iPA );
        }
       else
-       MCFB->chg_dfcts( B.begin() + tmod->rng().first , tmod->rng() ,
-			iPM , iPA );
+       MCFB->chg_dfcts( MF_dbl_sp( B ).subspan( tmod->rng().first ) ,
+			tmod->rng() , iPM , iPA );
      break;
     case( MCFBlockMod::eOpenArc ):
      #ifndef NDEBUG
@@ -1811,7 +1811,7 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
      for( Index i = 0 ; i < NCost.size() ; i++ )
       NCost[ i ] = C[ tmod->nms()[ i ] ];
 
-     MCFB->chg_costs( NCost.begin() , Subset( tmod->nms() ) , true ,
+     MCFB->chg_costs( MF_dbl_sp( NCost ) , Subset( tmod->nms() ) , true ,
 		      iPM , iPA );
      break;
      }
@@ -1827,7 +1827,7 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
       for( Index i = 0 ; i < NCap.size() ; i++ )
        NCap[ i ] = U[ tmod->nms()[ i ] ];
 
-     MCFB->chg_ucaps( NCap.begin() , Subset( tmod->nms() ) , true ,
+     MCFB->chg_ucaps( MF_dbl_sp( NCap ) , Subset( tmod->nms() ) , true ,
 		      iPM , iPA );
      break;
      }
@@ -1843,7 +1843,7 @@ bool MCFBlock::map_forward_Modification( Block * R3B , c_p_Mod mod ,
       for( Index i = 0 ; i < NDfct.size() ; i++ )
        NDfct[ i ] = B[ tmod->nms()[ i ] ];
 
-     MCFB->chg_dfcts( NDfct.begin() , Subset( tmod->nms() ) , true ,
+     MCFB->chg_dfcts( MF_dbl_sp( NDfct ) , Subset( tmod->nms() ) , true ,
 		      iPM , iPA );
      break;
      }
@@ -3797,7 +3797,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
    for( Index i = tmod->range().first ; i < tmod->range().second ; )
     *(NCit++) = lfo->get_coefficient( i++ );
 
-   chg_costs( NC.begin() , tmod->range() ,
+   chg_costs( MF_dbl_sp( NC ) , tmod->range() ,
 	      make_par( eNoBlck , chnl ) , eDryRun );
    }
 
@@ -3824,7 +3824,7 @@ void MCFBlock::guts_of_add_Modification( p_Mod mod , ChnlName chnl )
   for( auto i : tmod->subset() )
    *(NCit++) = lfo->get_coefficient( i++ );
 
-  chg_costs( NC.begin() , Subset( tmod->subset() ) , true ,
+  chg_costs( MF_dbl_sp( NC ) , Subset( tmod->subset() ) , true ,
 	     make_par( eNoBlck , chnl ) , eDryRun );
   return;
   }

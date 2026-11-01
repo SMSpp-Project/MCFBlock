@@ -51,6 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `download_mcf_dmx` and `extract_mcf_dmx`, which `run_dmx2nc4` builds
   first
 
+### Removed
+
+- the forms of `chg_costs()`, `chg_ucaps()` and `chg_dfcts()` taking an
+  iterator, and their registration in the methods factory, which has only
+  the span forms; `map_forward_Modification()`, `map_back_Modification()`
+  and the tester pass a span
+
 ### Fixed
 
 - on Windows, the executables that copy their DLLs next to themselves

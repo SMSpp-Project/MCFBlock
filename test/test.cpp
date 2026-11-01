@@ -735,7 +735,7 @@ static void test_costs( void )
  check_none( take( fs ) , "chg_cost() to the same value" );
 
  const Vec_CNumber nc = { 7 , 8 };
- mcf.chg_costs( nc.begin() , Range( 0 , 2 ) );
+ mcf.chg_costs( Block::MF_dbl_sp( nc ) , Range( 0 , 2 ) );
  md = take( fs );
  check_rngd( md , MCFBlockMod::eChgCost , Range( 0 , 2 ) , "chg_costs( Range )"
 	     );
@@ -751,9 +751,9 @@ static void test_costs( void )
 	     "chg_costs( Range beyond the arcs )" );
  check_abstract( mcf , "chg_costs( Range beyond the arcs )" );
 
- mcf.chg_costs( nc.begin() , Range( 3 , 3 ) );
+ mcf.chg_costs( Block::MF_dbl_sp( nc ) , Range( 3 , 3 ) );
  check_none( take( fs ) , "chg_costs( empty Range )" );
- mcf.chg_costs( nc.begin() , Subset() );
+ mcf.chg_costs( Block::MF_dbl_sp( nc ) , Subset() );
  check_none( take( fs ) , "chg_costs( empty Subset )" );
 
  // a short span is refused
@@ -765,7 +765,7 @@ static void test_costs( void )
  check( thrown , "chg_costs(): span shorter than the Range" );
 
  const Vec_CNumber nc3 = { 9 , 3 };
- mcf.chg_costs( nc3.begin() , Subset( { 4 , 1 } ) );  // unordered
+ mcf.chg_costs( Block::MF_dbl_sp( nc3 ) , Subset( { 4 , 1 } ) );  // unordered
  md = take( fs );
  check_sbst( md , MCFBlockMod::eChgCost , Subset( { 1 , 4 } ) ,
 	     "chg_costs( Subset )" );
@@ -801,7 +801,7 @@ static void test_capacities( void )
  check_abstract( mcf , "chg_ucap()" );
 
  const Vec_FNumber nu = { 6 , INF , 1 };
- mcf.chg_ucaps( nu.begin() , Range( 1 , 4 ) );
+ mcf.chg_ucaps( Block::MF_dbl_sp( nu ) , Range( 1 , 4 ) );
  md = take( fs );
  check_rngd( md , MCFBlockMod::eChgCaps , Range( 1 , 4 ) ,
 	     "chg_ucaps( Range )" );
@@ -811,13 +811,13 @@ static void test_capacities( void )
 	( mcf.get_U( 3 ) == 1 ) , "chg_ucaps( Range ): values" );
  check_abstract( mcf , "chg_ucaps( Range )" );
 
- mcf.chg_ucaps( nu.begin() , Range( 2 , 2 ) );
+ mcf.chg_ucaps( Block::MF_dbl_sp( nu ) , Range( 2 , 2 ) );
  check_none( take( fs ) , "chg_ucaps( empty Range )" );
- mcf.chg_ucaps( nu.begin() , Subset() );
+ mcf.chg_ucaps( Block::MF_dbl_sp( nu ) , Subset() );
  check_none( take( fs ) , "chg_ucaps( empty Subset )" );
 
  const Vec_FNumber nu2 = { 0 , 8 };
- mcf.chg_ucaps( nu2.begin() , Subset( { 4 , 0 } ) );  // unordered
+ mcf.chg_ucaps( Block::MF_dbl_sp( nu2 ) , Subset( { 4 , 0 } ) );  // unordered
  md = take( fs );
  check_sbst( md , MCFBlockMod::eChgCaps , Subset( { 0 , 4 } ) ,
 	     "chg_ucaps( Subset )" );
@@ -856,21 +856,21 @@ static void test_deficits( void )
  check_abstract( mcf , "chg_dfct()" );
 
  const Vec_FNumber nb = { -2 , 1 , 1 };
- mcf.chg_dfcts( nb.begin() , Range( 1 , 4 ) );
+ mcf.chg_dfcts( Block::MF_dbl_sp( nb ) , Range( 1 , 4 ) );
  md = take( fs );
  check_rngd( md , MCFBlockMod::eChgDfct , Range( 1 , 4 ) ,
 	     "chg_dfcts( Range )" );
  check_abstract( mcf , "chg_dfcts( Range )" );
 
- mcf.chg_dfcts( nb.begin() , Range( 4 , 9 ) );
+ mcf.chg_dfcts( Block::MF_dbl_sp( nb ) , Range( 4 , 9 ) );
  check_none( take( fs ) , "chg_dfcts( Range beyond the nodes )" );
- mcf.chg_dfcts( nb.begin() , Subset() );
+ mcf.chg_dfcts( Block::MF_dbl_sp( nb ) , Subset() );
  check_none( take( fs ) , "chg_dfcts( empty Subset )" );
 
  // unordered, the dynamic node first: its name is beyond the static nodes
  // but not beyond the static arcs
  const Vec_FNumber nb2 = { 5 , -5 };
- mcf.chg_dfcts( nb2.begin() , Subset( { 3 , 0 } ) );
+ mcf.chg_dfcts( Block::MF_dbl_sp( nb2 ) , Subset( { 3 , 0 } ) );
  md = take( fs );
  check_sbst( md , MCFBlockMod::eChgDfct , Subset( { 0 , 3 } ) ,
 	     "chg_dfcts( unordered Subset )" );
@@ -879,7 +879,7 @@ static void test_deficits( void )
  check_abstract( mcf , "chg_dfcts( unordered Subset )" );
 
  const Vec_FNumber nb3 = { -4 , 4 };
- mcf.chg_dfcts( nb3.begin() , Subset( { 0 , 3 } ) , true );
+ mcf.chg_dfcts( Block::MF_dbl_sp( nb3 ) , Subset( { 0 , 3 } ) , true );
  md = take( fs );
  check_sbst( md , MCFBlockMod::eChgDfct , Subset( { 0 , 3 } ) ,
 	     "chg_dfcts( ordered Subset )" );
@@ -1143,7 +1143,7 @@ static void test_range_ending_deleted( void )
 
  // arc 2 changes to the value arc 3 would have had, arc 3 is deleted
  const Vec_CNumber nc = { 9 , 2 , 1 };
- mcf.chg_costs( nc.begin() , Range( 1 , 4 ) );
+ mcf.chg_costs( Block::MF_dbl_sp( nc ) , Range( 1 , 4 ) );
  take( fs );
  check( ( mcf.get_C( 1 ) == 9 ) && ( mcf.get_C( 2 ) == 2 ) , "chg_costs() "
 	"of a Range ending on a deleted arc: costs " + str( mcf.get_C( 1 ) ) +
@@ -1151,7 +1151,7 @@ static void test_range_ending_deleted( void )
  check_abstract( mcf , "chg_costs() of a Range ending on a deleted arc" );
 
  const Vec_FNumber nu = { 9 , 5 , 2 };
- mcf.chg_ucaps( nu.begin() , Range( 1 , 4 ) );
+ mcf.chg_ucaps( Block::MF_dbl_sp( nu ) , Range( 1 , 4 ) );
  take( fs );
  check( ( mcf.get_U( 1 ) == 9 ) && ( mcf.get_U( 2 ) == 5 ) , "chg_ucaps() "
 	"of a Range ending on a deleted arc: capacities " +

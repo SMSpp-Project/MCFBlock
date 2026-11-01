@@ -1768,7 +1768,7 @@ public:
 
  /// change the costs of a contiguous interval of arcs
  /** Method to change the costs of a subset of arcs with "contiguous names".
-  * That is, *( NCost + i - strt ) becomes the new cost of the i-th arc in
+  * That is, NCost[ i - strt ] becomes the new cost of the i-th arc in
   * \p rng. Note that if the right extreme of the range is >= get_NArcs() it
   * is ignored; \p NCost has to be at least as long as what is left of
   * \p rng.
@@ -1795,22 +1795,9 @@ public:
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// change the costs of a contiguous interval, iterator form
- /** As the span form, \p NCost pointing to the first of the new costs; its
-  * length is taken from \p rng, restricted to what there is. */
-
- void chg_costs( c_Vec_CNumber_it NCost , Range rng = INFRange ,
-		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
-  rng.second = std::min( rng.second , get_NArcs() );
-  if( rng.second > rng.first )
-   chg_costs( MF_dbl_sp( & * NCost , rng.second - rng.first ) , rng , issueMod ,
-	      issueAMod );
-  }
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the costs of an arbitrary subset of arcs
  /** Method to change the costs of an arbitrary subset of arc. That is,
-  * *( NCost + i ) becomes the new cost of arc nms[ i ] for all 0 <= i <
+  * NCost[ i ] becomes the new cost of arc nms[ i ] for all 0 <= i <
   * nms.size(), \p NCost having to be at least as long as \p nms. The
   * parameter ordered tells if the nms vector is ordered for increasing
   * index of the arc. As the && tells, nms is "consumed" by the method,
@@ -1825,19 +1812,6 @@ public:
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// change the costs of an arbitrary subset, iterator form
- /** As the span form, \p NCost pointing to the first of the new costs; its
-  * length is taken from \p nms. */
-
- void chg_costs( c_Vec_CNumber_it NCost ,
-		 Subset && nms , bool ordered = false ,
-		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
-  if( ! nms.empty() )
-   chg_costs( MF_dbl_sp( & * NCost , nms.size() ) , std::move( nms ) , ordered ,
-	      issueMod , issueAMod );
-  }
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// changes the cost of the given arc
  /** Changes the cost of the given arc.
   *
@@ -1850,7 +1824,7 @@ public:
 /*--------------------------------------------------------------------------*/
  /// change the capacities of a contiguous interval of arcs
  /** Method to change the capacities of a subset of arcs with "contiguous
-  * names". That is, *( NCap + i - strt ) becomes the new capacity of the i-th
+  * names". That is, NCap[ i - strt ] becomes the new capacity of the i-th
   * arc in \p rng. Note that if the right extreme of the range is
   * >= get_NArcs() it is ignored; \p NCap has to be at least as long as what
   * is left of \p rng. Note that, according to the Configuration of
@@ -1883,22 +1857,9 @@ public:
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// change the capacities of a contiguous interval, iterator form
- /** As the span form, \p NCap pointing to the first of the new capacities; its
-  * length is taken from \p rng, restricted to what there is. */
-
- void chg_ucaps( c_Vec_FNumber_it NCap , Range rng = INFRange ,
-		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
-  rng.second = std::min( rng.second , get_NArcs() );
-  if( rng.second > rng.first )
-   chg_ucaps( MF_dbl_sp( & * NCap , rng.second - rng.first ) , rng , issueMod ,
-	      issueAMod );
-  }
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the capacities of an arbitrary subset of arcs
  /** Method to change the capacities of an arbitrary subset of arc. That is,
-  * *( NCap + i ) becomes the new capacity of arc nms[ i ] for all 0 <= i <
+  * NCap[ i ] becomes the new capacity of arc nms[ i ] for all 0 <= i <
   * nms.size(), \p NCap having to be at least as long as \p nms. The parameter
   * ordered tells if the nms vector is ordered for increasing index of the
   * arc. As the && tells, nms is "consumed" by the method, typically
@@ -1917,19 +1878,6 @@ public:
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// change the capacities of an arbitrary subset, iterator form
- /** As the span form, \p NCap pointing to the first of the new capacities; its
-  * length is taken from \p nms. */
-
- void chg_ucaps( c_Vec_FNumber_it NCap ,
-		 Subset && nms , bool ordered = false ,
-		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
-  if( ! nms.empty() )
-   chg_ucaps( MF_dbl_sp( & * NCap , nms.size() ) , std::move( nms ) , ordered ,
-	      issueMod , issueAMod );
-  }
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the capacity of the given arc
  /** Method to change the capacity of a given arc: NCap becomes the new
   * capacity of arc arc. Note that, according to the Configuration of the
@@ -1945,7 +1893,7 @@ public:
 /*--------------------------------------------------------------------------*/
  /// change the deficits of a contiguous interval of nodes
  /** Method to change the deficits of a subset of nodes with "contiguous
-  * names". That is, *( NDfct + i - strt ) becomes the new deficit of the i-th
+  * names". That is, NDfct[ i - strt ] becomes the new deficit of the i-th
   * node in \p rng. Note that if the right extreme of the range is
   * >= get_NNodes() it is ignored; \p NDfct has to be at least as long as
   * what is left of \p rng. Note that "node names" here go from 0 to
@@ -1969,22 +1917,9 @@ public:
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// change the deficits of a contiguous interval, iterator form
- /** As the span form, \p NDfct pointing to the first of the new deficits; its
-  * length is taken from \p rng, restricted to what there is. */
-
- void chg_dfcts( c_Vec_FNumber_it NDfct , Range rng = INFRange ,
-		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
-  rng.second = std::min( rng.second , get_NNodes() );
-  if( rng.second > rng.first )
-   chg_dfcts( MF_dbl_sp( & * NDfct , rng.second - rng.first ) , rng , issueMod ,
-	      issueAMod );
-  }
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// change the deficits of an arbitrary subset of nodes
  /** Method to change the deficits of an arbitrary subset of nodes. That is,
-  * *( NDfct + i ) becomes the new deficit of node nms[ i ] for all 0 <= i <
+  * NDfct[ i ] becomes the new deficit of node nms[ i ] for all 0 <= i <
   * nms.size(), \p NDfct having to be at least as long as \p nms. The
   * parameter ordered tells if the nms vector is ordered for increasing index
   * of the node. Note that "node names" here go from 0 to get_NNodes() - 1,
@@ -1998,19 +1933,6 @@ public:
  void chg_dfcts( MF_dbl_sp NDfct ,
 		 Subset && nms , bool ordered = false ,
 		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck );
-
-/*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
- /// change the deficits of an arbitrary subset, iterator form
- /** As the span form, \p NDfct pointing to the first of the new deficits; its
-  * length is taken from \p nms. */
-
- void chg_dfcts( c_Vec_FNumber_it NDfct ,
-		 Subset && nms , bool ordered = false ,
-		 ModParam issueMod = eNoBlck , ModParam issueAMod = eNoBlck ) {
-  if( ! nms.empty() )
-   chg_dfcts( MF_dbl_sp( & * NDfct , nms.size() ) , std::move( nms ) , ordered ,
-	      issueMod , issueAMod );
-  }
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// changes the deficit of the given node
@@ -2354,22 +2276,22 @@ public:
    * and be done with it.
 
   register_method< MCFBlock >( "MCFBlock::chg_costs", & MCFBlock::chg_costs,
-                               MS_dbl_rngd::args() );
+                               MS_sp_dbl_rngd::args() );
 
   register_method< MCFBlock >( "MCFBlock::chg_costs", & MCFBlock::chg_costs,
-                               MS_dbl_sbst::args() );
+                               MS_sp_dbl_sbst::args() );
 
   register_method< MCFBlock >( "MCFBlock::chg_ucaps", & MCFBlock::chg_ucaps,
-                               MS_dbl_rngd::args() );
+                               MS_sp_dbl_rngd::args() );
 
   register_method< MCFBlock >( "MCFBlock::chg_ucaps", & MCFBlock::chg_ucaps,
-                               MS_dbl_sbst::args() );
+                               MS_sp_dbl_sbst::args() );
 
   register_method< MCFBlock >( "MCFBlock::chg_dfcts", & MCFBlock::chg_dfcts,
-                               MS_dbl_rngd::args() );
+                               MS_sp_dbl_rngd::args() );
 
   register_method< MCFBlock >( "MCFBlock::chg_dfcts", & MCFBlock::chg_dfcts,
-                               MS_dbl_sbst::args() );
+                               MS_sp_dbl_sbst::args() );
 
   register_method< MCFBlock >( "MCFBlock::close_arcs", & MCFBlock::close_arcs,
                                MS_rngd::args() );
@@ -2383,27 +2305,6 @@ public:
   register_method< MCFBlock >( "MCFBlock::open_arcs", & MCFBlock::open_arcs,
                                MS_sbst::args() );
 				       !!*/
-  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_costs" ,
-                                                   & MCFBlock::chg_costs );
-
-  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
-   "MCFBlock::chg_costs" , & MCFBlock::chg_costs );
-
-  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_ucaps" ,
-                                                   & MCFBlock::chg_ucaps );
-
-  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
-   "MCFBlock::chg_ucaps" , & MCFBlock::chg_ucaps );
-
-  register_method< MCFBlock , MF_dbl_it , Range >( "MCFBlock::chg_dfcts" ,
-                                                   & MCFBlock::chg_dfcts );
-
-  register_method< MCFBlock , MF_dbl_it , Subset && , bool >(
-   "MCFBlock::chg_dfcts" , & MCFBlock::chg_dfcts );
-
-  // the same data-carrying methods in the span form, which the iterator
-  // one defers to
-
   register_method< MCFBlock , MF_dbl_sp , Range >( "MCFBlock::chg_costs" ,
                                                    & MCFBlock::chg_costs );
 
