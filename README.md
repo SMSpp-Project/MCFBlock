@@ -1,5 +1,11 @@
 # MCFBlock
 
+[![Pipeline](https://gitlab.com/smspp/mcfblock/badges/develop/pipeline.svg)](https://gitlab.com/smspp/mcfblock/-/pipelines?ref=develop)
+[![Release](https://gitlab.com/smspp/mcfblock/-/badges/release.svg)](https://gitlab.com/smspp/mcfblock/-/releases)
+[![Documentation](https://img.shields.io/badge/docs-Doxygen-blue)](https://smspp.gitlab.io/smspp-project/)
+[![C++ Standard](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL_v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+
 `MCFBlock` is a SMS++ :Block for Linear Min-Cost Flow Problems. It is a pure
 :Block depending only on the SMS++ core, and can be solved by any compatible
 :Solver, for instance the `MILPSolver` family, `MCFLemonSolver`, or
@@ -13,22 +19,11 @@ the [MCFClass project](http://www.di.unipi.it/optimize/Software/MCF.html)).
 These instructions will let you build MCFBlock on your system.
 
 
-The module also comes ready-made, in any of
-
-```sh
-sudo add-apt-repository ppa:smspp-project/smspp   # Ubuntu
-sudo apt install libsmspp-mcf-dev                 # and smspp-mcf for the tool
-
-conda install -c conda-forge smspp-project        # Linux, macOS, Windows
-
-brew tap SMSpp-Project/smspp                      # macOS, Linux
-brew install smspp
-
-vcpkg install "smspp[core,mcf]"                   # from the sources
-```
-
-where apt and the port give the module alone, while conda and the tap carry
-the whole framework. What follows is about building it yourself.
+The module also comes ready-made: on Ubuntu as `libsmspp-mcf-dev` (and
+`smspp-mcf` for the tool), in vcpkg as `smspp[core,mcf]`, and in the other
+channels that the [installation
+guide](https://gitlab.com/smspp/smspp-project/-/wikis/Installing-SMS++) of
+SMS++ lists. What follows is about building it yourself.
 
 ### Requirements
 

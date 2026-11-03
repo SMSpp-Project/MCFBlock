@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-03
+
+### Added
+
+- the tester checks what each physical Modification says it changes
+  (`changes()`) against what the change does to the model, written down in
+  the tester, for every type of `MCFBlockMod`
+
+- the makefiles build the C++20 module `smspp.mcfblock` when `SMSppMOD` is
+  not empty (e.g., `make SMSppMOD=1`), with clang++ 16 or later [see
+  `lib/makefile-mod` of SMS++]
+
+- the C++20 module `smspp.mcfblock` (`src/MCFBlock.cppm`), which exports
+  every name that the headers declare at namespace scope and re-exports
+  `smspp`, so that a source file can write `import smspp.mcfblock;` in place
+  of the `#include` of the headers; it is built with the CMake option
+  `SMSpp_BUILD_MODULE`, as the target `SMS++::MCFBlock_module`
+
+### Changed
+
+- the README leaves the channels that distribute SMS++ to the
+  installation guide of the wiki (Installing-SMS++), keeping the names
+  of the packages of the module
+
+- the Modification of the module say what they change to the constructor
+  of `Modification`, since `changes()` is no longer virtual and returns
+  that value, which whoever forwards them can refine with `set_changes()`
+
+- the pipeline builds the module also with its makefiles, after CMake, and
+  runs on a change of the makefiles too [see `ci/makefile` of the umbrella]
+
+- `SMSpp_BUILD_MODULE` no longer stops the configuration when the C++20
+  module cannot be built, i.e., with a CMake older than 3.28, a generator
+  other than Ninja or Visual Studio, a compiler other than Clang 16 (with
+  `clang-scan-deps`) or MSVC 19.34, or a module it imports that is not
+  there: the option is turned off with a warning that says why, and the
+  build goes on with the headers [see `cmake/CheckModule.cmake` of SMS++]
+
+- the instances of `data/` are downloaded and extracted by the targets
+  `download_mcf_<fmt>` and `extract_mcf_<fmt>`, written as in every module
+  that keeps its instances in the Package Registry, and the marker of the
+  extraction carries the format in its name, so that a tree extracted
+  before extracts once more; `download_dmx` and `extract_dmx` are now
+  `download_mcf_dmx` and `extract_mcf_dmx`, which `run_dmx2nc4` builds
+  first
+
+### Removed
+
+- the forms of `chg_costs()`, `chg_ucaps()` and `chg_dfcts()` taking an
+  iterator, and their registration in the methods factory, which has only
+  the span forms; `map_forward_Modification()`, `map_back_Modification()`
+  and the tester pass a span
+
+### Fixed
+
+- on Windows, the executables that copy their DLLs next to themselves
+  are linked one at a time (a job pool of Ninja), since two copies of the
+  same DLL into one directory collided (e.g., with the clang++ of MSYS2)
+
+- with the compilers of MinGW (MSYS2) the target asks whoever links it
+  for the symbol that forces the module in, as with MSVC and on macOS:
+  the linker imports a DLL only for the symbols asked for, so that a
+  program that used none had the module left out and its classes
+  missing from the factory
+
+- the makefiles of the tests and of the tools build also with g++: they
+  take the option that stops at the first error and the one of the
+  debugging information, which clang++ and g++ spell differently
+  (`-ferror-limit=1` and `-glldb` against `-fmax-errors=1` and `-ggdb`),
+  from `SMSppSWERR` and `SMSppSWDBG` of `lib/makefile-OS` of SMS++
+
+- the documentation of `MCFBlock.h`: the TeX quotes around a node and an
+  arc opened a code span that Doxygen never closed, so that it dropped
+  the class `MCFBlock` from the reference and took its methods for free
+  functions
+
 ## [0.7.0] - 2026-10-09
 
 ### Added
@@ -330,7 +406,8 @@ Minor point release to avoid the master branch to become too stale:
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.7.0...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.8.0...develop
+[0.8.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.7.0...0.8.0
 [0.7.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.1...0.7.0
 [0.6.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.0...0.6.1
 [0.6.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.5.1...0.6.0
