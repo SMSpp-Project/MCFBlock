@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Constraint were there, never when `solc` asked for the flows alone and
   also when it asked for the potentials alone
 
+- `get_R3_Block()` gave a copy with the closed arcs of the original open,
+  since a closed arc is a fixed Variable and the copy was loaded from the
+  capacities and costs alone; e.g., a `LagrangianDualSolver` with its
+  sub-Block copied, registered after some arcs were closed, solved the
+  problem as it was before
+
 ## [0.8.0] - 2026-11-03
 
 ### Added

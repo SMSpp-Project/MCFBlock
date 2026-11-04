@@ -1626,6 +1626,22 @@ static void test_map_solution( void )
 
 /*--------------------------------------------------------------------------*/
 
+static void test_R3B_closed_arcs( void )
+{
+ MCFBlock orig;
+ load( orig );
+ orig.close_arcs( Block::Subset( { 1 , 3 } ) , true );
+
+ auto copy = static_cast< MCFBlock * >( orig.get_R3_Block() );
+ bool same = true;
+ for( Block::Index i = 0 ; i < orig.get_NArcs() ; ++i )
+  same &= ( copy->is_closed( i ) == orig.is_closed( i ) );
+ check( same , "the copy has the closed arcs of the original" );
+ delete copy;
+ }
+
+/*--------------------------------------------------------------------------*/
+
 int main( void )
 {
  const std::vector< std::pair< std::string , void (*)( void ) > > tests = {
@@ -1648,6 +1664,7 @@ int main( void )
   { "flow_by_hand" , test_flow_by_hand } ,
   { "bounds" , test_bounds } ,
   { "map_solution" , test_map_solution } ,
+  { "R3B_closed_arcs" , test_R3B_closed_arcs } ,
   { "random" , test_random } };
 
  for( auto & [ name , test ] : tests )

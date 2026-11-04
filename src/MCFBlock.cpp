@@ -1379,7 +1379,16 @@ Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base ,
 	     get_NArcs() - get_NStaticArcs() ,
 	     get_MaxNNodes() - get_NStaticNodes() ,
 	     get_MaxNArcs() - get_NStaticArcs() );
- 
+
+ // a closed arc is a fixed Variable, which neither U nor C record
+ if( AR & HasVar ) {
+  Subset closed;
+  for( Index i = 0 ; i < get_NArcs() ; ++i )
+   if( is_closed( i ) )
+    closed.push_back( i );
+  MCFB->close_arcs( std::move( closed ) , true , eNoMod , eNoMod );
+  }
+
  return( MCFB );
 
  }  // end( MCFBlock::get_R3_Block )
