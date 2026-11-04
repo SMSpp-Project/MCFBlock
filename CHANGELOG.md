@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `map_back_solution()` and `map_forward_solution()` read the potentials of
+  a copy without its flow conservation Constraint out of an empty vector,
+  and crashed: they now throw, as documented; `map_forward_solution()` also
+  mapped the flows under the condition of the potentials, i.e., only when the
+  Constraint were there, never when `solc` asked for the flows alone and
+  also when it asked for the potentials alone
+
 ## [0.8.0] - 2026-11-03
 
 ### Added

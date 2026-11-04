@@ -1442,6 +1442,9 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
+  if( ! ( MCFB->AR & HasFlw ) )
+   throw( std::invalid_argument( "MCFBlock::map_back_solution: R3B has "
+				 "no flow conservation Constraint" ) );
 
   // map back the potentials- - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1530,7 +1533,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  // if required, map forward primal solution- - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
+ if( ( wsol != 2 ) && ( AR & HasVar ) ) {  // ... if any
   if( MCFB->get_NStaticArcs() != get_NStaticArcs() )
    throw( std::invalid_argument( "incompatible static flow size" ) );
 
@@ -1562,6 +1565,9 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
+  if( ! ( MCFB->AR & HasFlw ) )
+   throw( std::invalid_argument( "MCFBlock::map_forward_solution: R3B "
+				 "has no flow conservation Constraint" ) );
   // map forward the potentials - - - - - - - - - - - - - - - - - - - - - - -
 
   if( MCFB->get_NStaticNodes() != get_NStaticNodes() )

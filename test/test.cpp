@@ -1560,6 +1560,71 @@ static void test_random( void )
 /*--------------------------------------------------------------------------*/
 /*--------------------------------- MAIN -----------------------------------*/
 /*--------------------------------------------------------------------------*/
+/// map_back_solution() and map_forward_solution() between an MCFBlock and a
+/// copy of it, either of them possibly lacking the Constraint
+
+static void test_map_solution( void )
+{
+ auto thrown = [ & ]( const std::function< void( void ) > & f ) {
+  try { f(); }
+  catch( std::invalid_argument & ) { return( true ); }
+  return( false );
+  };
+ SimpleConfiguration< int > primal( 1 ) , dual( 2 );
+ const Vec_FNumber flow = { 2 , 2 , 2 , 0 , 4 };
+ const Vec_CNumber pi = { 1 , 2 , 3 , 4 };
+
+ MCFBlock orig;
+ load( orig );
+ generate( orig );
+
+ // a copy without the Constraint (load() always makes the Variable): the
+ // flows go both ways, the potentials are not there
+ {
+  MCFBlock copy;
+  load( copy );
+  copy.set_x( flow.begin() );
+  orig.map_back_solution( & copy , nullptr , & primal );
+  Vec_FNumber got( 5 );
+  orig.get_x( got.begin() );
+  check( got == flow , "map_back_solution() of the flows" );
+  check( thrown( [ & ] { orig.map_back_solution( & copy ); } ) ,
+	 "map_back_solution() from a copy without Constraint throws" );
+  check( thrown( [ & ] { orig.map_back_solution( & copy , nullptr ,
+						 & dual ); } ) ,
+	 "map_back_solution() of the potentials without Constraint throws" );
+  check( thrown( [ & ] { orig.map_forward_solution( & copy , nullptr ,
+						    & dual ); } ) ,
+	 "map_forward_solution() to a copy without Constraint throws" );
+  }
+
+ // the flows of an MCFBlock without the Constraint go forward
+ {
+  MCFBlock vonly , copy;
+  load( vonly );
+  vonly.set_x( flow.begin() );
+  load( copy );
+  vonly.map_forward_solution( & copy , nullptr , & primal );
+  Vec_FNumber got( 5 );
+  copy.get_x( got.begin() );
+  check( got == flow , "map_forward_solution() of the flows of an MCFBlock "
+	 "without Constraint" );
+  }
+
+ // a full copy: the potentials go both ways
+ {
+  MCFBlock copy;
+  load( copy );
+  generate( copy );
+  copy.set_pi( pi.begin() );
+  orig.map_back_solution( & copy , nullptr , & dual );
+  Vec_CNumber got( 4 );
+  orig.get_pi( got.begin() );
+  check( got == pi , "map_back_solution() of the potentials" );
+  }
+ }
+
+/*--------------------------------------------------------------------------*/
 
 int main( void )
 {
@@ -1582,6 +1647,7 @@ int main( void )
   { "abstract_to_physical" , test_abstract_to_physical } ,
   { "flow_by_hand" , test_flow_by_hand } ,
   { "bounds" , test_bounds } ,
+  { "map_solution" , test_map_solution } ,
   { "random" , test_random } };
 
  for( auto & [ name , test ] : tests )
