@@ -1641,6 +1641,39 @@ static void test_R3B_closed_arcs( void )
  }
 
 /*--------------------------------------------------------------------------*/
+/// dual_feasible() on the abstract representation, where the Objective is
+/// among the things active on a Variable: zero potentials and the cost of
+/// every arc on its bound constraint, then one bound dual wrong
+
+static void test_dual_feasible_abstract( void )
+{
+ MCFBlock mcf;
+ load( mcf );
+ generate( mcf );
+
+ auto set_duals = [ & mcf ]( double delta ) {
+  for( Index a = 0 ; a < mcf.get_NArcs() ; ++a ) {
+   auto x = mcf.i2p_x( a );
+   for( Index j = 0 ; j < x->get_num_active() ; ++j ) {
+    auto ci = x->get_active( j );
+    if( auto r = dynamic_cast< FRowConstraint * >( ci ) )
+     r->set_dual( 0 );
+    else
+     if( auto b = dynamic_cast< OneVarConstraint * >( ci ) )
+      b->set_dual( C0[ a ] + ( a == 0 ? delta : 0 ) );
+    }
+   }
+  };
+
+ set_duals( 0 );
+ check( mcf.dual_feasible( 1e-9 , true ) ,
+	"dual_feasible( , true ) accepts the bound duals equal to the costs" );
+ set_duals( 1 );
+ check( ! mcf.dual_feasible( 1e-9 , true ) ,
+	"dual_feasible( , true ) rejects a wrong bound dual" );
+ }
+
+/*--------------------------------------------------------------------------*/
 
 int main( void )
 {
@@ -1665,6 +1698,7 @@ int main( void )
   { "bounds" , test_bounds } ,
   { "map_solution" , test_map_solution } ,
   { "R3B_closed_arcs" , test_R3B_closed_arcs } ,
+  { "dual_feasible_abstract" , test_dual_feasible_abstract } ,
   { "random" , test_random } };
 
  for( auto & [ name , test ] : tests )

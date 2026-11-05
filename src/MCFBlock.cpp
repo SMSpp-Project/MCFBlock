@@ -956,11 +956,10 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
      auto lrci = get_lfc( rci );
      RCi -= rci->get_dual() * lrci->get_coefficient( lrci->is_active( xi ) );
      }
-    else {
-     auto bci = dynamic_cast< BoxConstraint * >( ci );
-     assert( bci );
-     RCi -= bci->get_dual();
-     }
+    else
+     if( auto bci = dynamic_cast< OneVarConstraint * >( ci ) )
+      RCi -= bci->get_dual();
+     // else not a Constraint, e.g., the Objective
     }
 
    RCi = std::abs( RCi );

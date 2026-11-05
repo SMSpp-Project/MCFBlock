@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sub-Block copied, registered after some arcs were closed, solved the
   problem as it was before
 
+- `dual_feasible( ceps , true )` took every non-row Stuff active on a flow
+  Variable for a `BoxConstraint`, while the Objective is one of them and the
+  bound constraints are `LB0Constraint`, and crashed on every instance
+
 ## [0.8.0] - 2026-11-03
 
 ### Added
