@@ -405,7 +405,7 @@ public:
   * - the dimension "DynNNodes" containing the current number of dynamic
   *   nodes: all the nodes between 0 and "NNodes" - "DynNNodes" - 1 are
   *   static, i.e., they cannot be deleted (and re-created), whereas all
-  *   those from "NNodes" + "DynNNodes" to "NNodes" - 1 are dynamic, i.e.,
+  *   those from "NNodes" - "DynNNodes" to "NNodes" - 1 are dynamic, i.e.,
   *   they can deleted and later on re-created; if "DynNNodes" > "NNodes",
   *   then it is intended that "DynNNodes" == "NNodes", i.e., all nodes are
   *   dynamic (but still "NNodes" is taken as the current number of nodes);
@@ -413,7 +413,7 @@ public:
   * - the dimension "DynNArcs" containing the current number of dynamic
   *   arcs: all the arcs between 0 and "NArcs" - "DynNArcs" - 1 are
   *   static, i.e., they cannot be deleted (and re-created), whereas all
-  *   those from "NArcs" + "DynNArcs" to "NArcs" - 1 are dynamic, i.e.,
+  *   those from "NArcs" - "DynNArcs" to "NArcs" - 1 are dynamic, i.e.,
   *   they can deleted and later on re-created; if "DynNArcs" > "NArcs",
   *   then it is intended that "DynNArcs" == "NArcs", i.e., all arcs are
   *   dynamic (but still "NArcs" is taken as the current number of arcs);
