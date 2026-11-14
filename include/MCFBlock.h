@@ -1754,7 +1754,15 @@ public:
  * Note: the methods accept the eDryRun value for the issueAMod parameter for
  * the "abstract" representation. This allows to re-use them within MCFBlock
  * itself when reacting to abstract Modification, where the  "abstract"
- * representation has been changed already.
+ * representation has been changed already. The value eDryRun for issueMod
+ * of the chg_*() methods means that no "physical" Modification is issued,
+ * while the physical representation, which the new data are compared
+ * against, is not always left alone: chg_ucap() and chg_dfct() then change
+ * the abstract representation alone, if issueAMod says so, while the other
+ * chg_*() methods change the physical representation together with the
+ * abstract one whenever they change the latter (issueAMod is not eDryRun
+ * and the corresponding part of the abstract representation has been
+ * constructed), and leave both unchanged otherwise.
  *  @{ */
 
  /// change the costs of a contiguous interval of arcs

@@ -1002,6 +1002,25 @@ static void test_mod_params( void )
 	     "chg_cost( eDryRun )" );
  check( md.abst.empty() , "chg_cost( eDryRun ): abstract" );
 
+ // eDryRun for the physical representation issues no physical
+ // Modification, but the costs change together with the Objective when
+ // that is changed [see the comments to the chg_*() methods]
+ mcf.chg_cost( 7 , 4 , eDryRun , eNoBlck );
+ md = take( fs );
+ check( md.phys.empty() && ( ! md.abst.empty() ) && ( mcf.get_C( 4 ) == 7 ) ,
+	"chg_cost( eDryRun , eNoBlck )" );
+ std::vector< double > c8 = { 8 };
+ mcf.chg_costs( Block::MF_dbl_sp( c8 ) , Range( 4 , 5 ) , eDryRun , eNoBlck );
+ md = take( fs );
+ check( md.phys.empty() && ( ! md.abst.empty() ) && ( mcf.get_C( 4 ) == 8 ) ,
+	"chg_costs( eDryRun , eNoBlck )" );
+ check_abstract( mcf , "chg_cost[s]( eDryRun , eNoBlck )" );
+
+ // and nothing changes if both are eDryRun
+ mcf.chg_cost( 9 , 4 , eDryRun , eDryRun );
+ check_none( take( fs ) , "chg_cost( eDryRun , eDryRun )" );
+ check( mcf.get_C( 4 ) == 8 , "chg_cost( eDryRun , eDryRun ): cost" );
+
  mcf.unregister_Solvers( true );
  }
 
