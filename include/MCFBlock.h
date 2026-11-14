@@ -594,53 +594,25 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the objective of the MCF
- /** Method that generates the objective of the MCF. Although this would seem
-  * to be an exceedingly simple object, there is still a nontrivial decision
-  * to be made about it, i.e., whether it is represented as a "sparse"
-  * LinearFunction or a "dense" one. This is governed by objc: if
+ /** Method that generates the objective of the MCF, an FRealObjective whose
+  * LinearFunction is "dense": each flow Variable is "active" in it, with its
+  * cost as coefficient (0 for a deleted arc), even if the cost is zero. This
+  * makes it easy to change the cost coefficients [see chg_cost[s]()] at the
+  * cost of more memory; a Solver "trusting" the MCFBlock about how many
+  * nonzeroes are there in the LinearFunction may then find more than there
+  * are. The parameter objc is ignored.
   *
-  * - either objc is not nullptr and it is a SimpleConfiguration< double >;
+  * A "sparse" LinearFunction, with only the flow Variable of nonzero cost
+  * active in it, is not supported, as it makes it inordinately more
+  * difficult to react to abstract Modification, while its actual impact on
+  * performances is very dubious. As a consequence,
   *
-  * - or f_BlockConfig is not nullptr,
-  *   f_BlockConfig->f_objective_Configuration is not nullptr,
-  *   and it is a SimpleConfiguration< double >;
+  *     THE ONLY Modification POSSIBLE TO THE Objective ARE CHANGING THE
+  *     COEFFICIENTS: DELETING Variable (AND, THEREFORE, ADDING THEM) IS
+  *     NOT ALLOWED
   *
-  * then the f_value of the SimpleConfiguration< int > is taken as the
-  * "sparsity parameter" (sprs) of the objective function; otherwise,
-  * sprs == 0. The parameter is used as follows: if the number of nonzero arc
-  * cost coefficients (at the time in which the method is called) is >=
-  * sprs * get_NArcs(), then the LinearFunction in the objective is created
-  * "dense": each flow Variable is "active" in it, even if it has a zero cost
-  * coefficient. Otherwise, the LinearFunction in the objective is created
-  * "sparse": only flow Variable with nonzero coefficient are "active" in it.
-  * A "dense" Objective makes it much easier to change the cost coefficients
-  * (see chg_cost[s]()), but it comes at the cost of more memory. Besides,
-  * Solver using it and "trusting" the MCFBlock about how many nonzeroes are
-  * there in the LinearFunction may be sorely disappointed, which may have
-  * adverse effects on efficiency.
-  *
-  * Yet, a "dense" Objective is the default, as with sprs == 0 the Objective
-  * is created "dense" even if all arc cost coefficients are zero.
-  *
-  * Note that the decision is taken at the moment in which this method is
-  * called, and never changed later, even if the number of nonzeroes
-  * changes dramatically. Also, note that if all cost coefficients are
-  * "naturally" nonzero, then the Objective will be "dense" no matter what the
-  * value of sprs is. Although this may seem obvious, this also means that the
-  * Objective will remain "dense" even if later on many coefficients become
-  * zero.
-  *
-  * IMPORTANT NOTE: ALLOWING SPARSE Objective MAKES IT INORDINATELY MORE
-  * DIFFICULT TO REACT TO ABSTRACT Modification, WHILE ITS ACTUAL IMPACT ON
-  * PERFORMANCES IS VERY DUBIOUS. THEREFORE, THE SUPPORT FOR IT IS ONLY
-  * HALF-BAKED, AND WHATEVER THERE IS CURRENTLY COMMENTED OUT. DEVELOPMENT
-  * OF THIS FEATURE WILL ONLY BE RESUMED IF CLEAR PROOF OF ITS WORTHINESS
-  * IS ACHIEVED.
-  *
-  * The consequence is that, currently, THE ONLY Modification POSSIBLE TO THE
-  * Objective ARE CHANGING THE COEFFICIENTS: DELETING Variable (AND,
-  * THEREFORE, ADDING THEM) IS NOT ALLOWED, the MCFBlock will throw exception
-  * while processing the corresponding "abstract" Modification. */
+  * and the MCFBlock throws exception while processing the corresponding
+  * "abstract" Modification. */
 
  void generate_objective( Configuration *objc = nullptr ) override;
 
