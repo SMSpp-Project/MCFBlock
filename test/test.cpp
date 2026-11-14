@@ -1642,8 +1642,10 @@ static void test_R3B_closed_arcs( void )
 
 /*--------------------------------------------------------------------------*/
 /// dual_feasible() on the abstract representation, where the Objective is
-/// among the things active on a Variable: zero potentials and the cost of
-/// every arc on its bound constraint, then one bound dual wrong
+/// among the things active on a Variable: zero potentials and the opposite
+/// of the cost of every arc on its bound constraint (the coefficient of the
+/// constraint in the Lagrangian function, as RowConstraint stores it), then
+/// one bound dual wrong
 
 static void test_dual_feasible_abstract( void )
 {
@@ -1660,7 +1662,7 @@ static void test_dual_feasible_abstract( void )
      r->set_dual( 0 );
     else
      if( auto b = dynamic_cast< OneVarConstraint * >( ci ) )
-      b->set_dual( C0[ a ] + ( a == 0 ? delta : 0 ) );
+      b->set_dual( - C0[ a ] + ( a == 0 ? delta : 0 ) );
     }
    }
   };
@@ -1671,6 +1673,47 @@ static void test_dual_feasible_abstract( void )
  set_duals( 1 );
  check( ! mcf.dual_feasible( 1e-9 , true ) ,
 	"dual_feasible( , true ) rejects a wrong bound dual" );
+ }
+
+/*--------------------------------------------------------------------------*/
+/// the potentials and the reduced costs have the signs of the network flow
+/// literature, the opposite of the dual values that the Constraint store
+/// (those that a general-purpose LP solver writes there); a dual solution
+/// written in the Constraint as such a solver writes it is dual feasible
+/// for both representations
+
+static void test_dual_sign( void )
+{
+ MCFBlock mcf;
+ load( mcf );
+ generate( mcf );
+
+ const Vec_CNumber pi = { 0 , -1 , -2 , -3 };
+ mcf.set_pi( pi.begin() );
+ bool same = true;
+ for( Index i = 0 ; i < 4 ; ++i )
+  same &= ( mcf.i2p_e( i )->get_dual() == - pi[ i ] ) &&
+          ( mcf.get_pi( i ) == pi[ i ] );
+ check( same , "set_pi() stores the opposite of the potentials" );
+
+ Vec_CNumber rc( 5 );
+ for( Index a = 0 ; a < 5 ; ++a )
+  rc[ a ] = C0[ a ] + pi[ SN0[ a ] - 1 ] - pi[ EN0[ a ] - 1 ];
+ mcf.set_rc( rc.begin() );
+ Vec_CNumber got( 5 );
+ mcf.get_rc( got.begin() );
+ same = ( got == rc );
+ for( Index a = 0 ; a < 5 ; ++a )
+  same &= ( mcf.i2p_ub( a )->get_dual() == - rc[ a ] );
+ check( same , "set_rc() stores the opposite of the reduced costs" );
+
+ // the same values written in the Constraint, as an LP solver does
+ for( Index i = 0 ; i < 4 ; ++i )
+  mcf.i2p_e( i )->set_dual( - pi[ i ] );
+ for( Index a = 0 ; a < 5 ; ++a )
+  mcf.i2p_ub( a )->set_dual( - rc[ a ] );
+ check( mcf.dual_feasible( 1e-9 , true ) && mcf.dual_feasible( 1e-9 ) ,
+	"the dual values of an LP solver are dual feasible" );
  }
 
 /*--------------------------------------------------------------------------*/
@@ -1699,6 +1742,7 @@ int main( void )
   { "map_solution" , test_map_solution } ,
   { "R3B_closed_arcs" , test_R3B_closed_arcs } ,
   { "dual_feasible_abstract" , test_dual_feasible_abstract } ,
+  { "dual_sign" , test_dual_sign } ,
   { "random" , test_random } };
 
  for( auto & [ name , test ] : tests )

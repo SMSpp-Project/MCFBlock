@@ -146,6 +146,19 @@ namespace SMSpp_di_unipi_it
  * \f]
  * are satisfied for all arcs (i, j) of A.
  *
+ * The signs of Pi[] and RC[] are those of the network flow literature,
+ * which are the opposite of those of the dual values of a RowConstraint.
+ * For a minimization problem, a RowConstraint stores the coefficient of its
+ * constraint in the Lagrangian function [see RowConstraint.h], which is
+ * - Pi[ i ] for the flow conservation constraint (1) of node i, and
+ * - RC[ i , j ] for the bound constraint (2) of arc (i, j). Hence, get_pi()
+ * and set_pi() (respectively, get_rc() and set_rc()) give and take Pi[]
+ * (respectively, RC[]) with the signs above, changing the sign of the dual
+ * values stored in the Constraint. A Solver that writes the dual values in
+ * the Constraint directly (as a general-purpose LP solver does) follows
+ * the convention of RowConstraint, one that calls set_pi() and set_rc() the
+ * one above, and both lead get_pi() and get_rc() to give the same values.
+ *
  * The graph G is allowed to be "partly dynamic". The sets of nodes and arcs
  * that are input at the beginning are assumed not to be changed (save for
  * changing costs, capacities, and deficits, and for arcs to be closed or
@@ -1488,9 +1501,10 @@ public:
    throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
   if( nde < get_NStaticNodes() )
-   return( E[ nde ].get_dual() );
+   return( - E[ nde ].get_dual() );
   else
-   return( std::next( dE.begin() , nde - get_NStaticNodes() )->get_dual() );
+   return( - std::next( dE.begin() , nde - get_NStaticNodes() )->get_dual()
+	   );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1526,9 +1540,10 @@ public:
    return( get_C( arc ) + get_pi( SN[ arc ] - 1 ) - get_pi( EN[ arc ] - 1 ) );
   else
    if( arc < get_NStaticArcs() )
-    return( UB[ arc ].get_dual() );
+    return( - UB[ arc ].get_dual() );
    else
-    return( std::next( dUB.begin() , arc - get_NStaticArcs() )->get_dual() );
+    return( - std::next( dUB.begin() , arc - get_NStaticArcs() )->get_dual()
+	    );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1566,8 +1581,9 @@ public:
  /// sets a contiguous interval of the potential solution
  /** Method to set the potential solution; the values found in the
   * c_Vec_CNumber starting from pstrt are copied into the potential of node
-  * (dual multiplier of the flow balance constraint) i for i in rng, in the
-  * same order. */
+  * i for i in rng, in the same order. The potential of a node is the
+  * opposite of the dual value of its flow balance constraint, as the
+  * comments of the class explain. */
 
  void set_pi( c_Vec_CNumber_it pstrt ,
 	      Range rng = Range( 0 , Inf< Index >() ) );
@@ -1576,8 +1592,9 @@ public:
  /// sets a generic subset of the potential solution
  /** Method to set the potential solution; the values found in the
   * c_Vec_FNumber starting from pstrt are copied into the potential of node
-  * (dual multiplier of the flow balance constraint) i for all i in sbst
-  * (that must be ordered in increasing sense), in the same order. */
+  * i for all i in sbst (that must be ordered in increasing sense), in the
+  * same order. The potential of a node is the opposite of the dual value of
+  * its flow balance constraint, as the comments of the class explain. */
 
  void set_pi( c_Vec_FNumber_it pstrt , c_Subset sbst );
 
@@ -1592,17 +1609,18 @@ public:
    throw( std::invalid_argument( "invalid node name" ) );
 
   if( nde < get_NStaticNodes() )
-   E[ nde ].set_dual( PSol );
+   E[ nde ].set_dual( - PSol );
   else
-   std::next( dE.begin() , nde - get_NStaticNodes() )->set_dual( PSol );
+   std::next( dE.begin() , nde - get_NStaticNodes() )->set_dual( - PSol );
   }
 
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the reduced costs
  /** Method to set the reduced costs solution; the values found in the
   * c_Vec_CNumber starting from rcstrt are copied into the reduced cost of
-  * arc (dual value of the bound constraint) i for i in rng, in the same
-  * order. */
+  * arc i for i in rng, in the same order. The reduced cost of an arc is the
+  * opposite of the dual value of its bound constraint, as the comments of
+  * the class explain. */
 
  void set_rc( c_Vec_CNumber_it rcstrt ,
 	      Range rng = Range( 0 , Inf< Index >() ) );
@@ -1611,8 +1629,9 @@ public:
  /// sets a generic subset of the reduced costs
  /** Method to set the reduced costs solution; the values found in the
   * c_Vec_FNumber starting from rcstrt are copied into the reduced cost of
-  * arc (dual value of the bound constraint) i for all i in sbst (that must
-  * be ordered in increasing sense), in the same order. */
+  * arc i for all i in sbst (that must be ordered in increasing sense), in
+  * the same order. The reduced cost of an arc is the opposite of the dual
+  * value of its bound constraint, as the comments of the class explain. */
 
  void set_rc( c_Vec_FNumber_it rcstrt , c_Subset sbst );
 
@@ -1627,9 +1646,9 @@ public:
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( arc < get_NStaticArcs() )
-  UB[ arc ].set_dual( RC );
+  UB[ arc ].set_dual( - RC );
  else
-  std::next( dUB.begin() , arc - get_NStaticArcs() )->set_dual( RC );
+  std::next( dUB.begin() , arc - get_NStaticArcs() )->set_dual( - RC );
 
  }  // end( MCFBlock::set_rc( one ) )
 

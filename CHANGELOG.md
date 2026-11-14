@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- the dual values of the flow conservation and bound Constraint follow the
+  convention of `RowConstraint` (for a minimization problem, the
+  coefficient of the constraint in the Lagrangian function), which is the
+  opposite of that of the network flow literature: `get_pi()`, `set_pi()`,
+  `get_rc()` and `set_rc()` keep giving and taking the potentials and the
+  reduced costs with the latter signs, and change the sign of what the
+  Constraint store, while `dual_feasible( , true )` reads the Constraint
+  with the former; the potentials that a general-purpose LP solver writes
+  were seen by `get_pi()` with the opposite sign of those of `MCFSolver`
+  and `MCFLemonSolver`, and the optimal dual solutions of the former were
+  not dual feasible for `dual_feasible()` and `is_optimal()`
+
 ### Fixed
 
 - `map_back_solution()` and `map_forward_solution()` read the potentials of
