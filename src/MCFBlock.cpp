@@ -72,7 +72,8 @@ static std::istream & eatDMXcomments( std::istream& is )
   is >> std::ws;  // skip whitespaces
   if( is.peek() == is.widen( 'c' ) )
    // a comment: skip the rest of line and move to next
-   is.ignore( std::numeric_limits< std::streamsize >::max() , is.widen( '\n' ) );
+   is.ignore( std::numeric_limits< std::streamsize >::max() ,
+	      is.widen( '\n' ) );
   else
    break;
   }

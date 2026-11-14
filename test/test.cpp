@@ -175,7 +175,7 @@ static void check_abstract( MCFBlock & mcf , const std::string & what ,
 
  if( obj ) {
   auto lf = static_cast< LinearFunction * >(
-			  mcf.get_objective< FRealObjective >()->get_function() );
+		     mcf.get_objective< FRealObjective >()->get_function() );
   check( lf->get_num_active_var() == m , what + ": " +
 	 std::to_string( lf->get_num_active_var() ) +
 	 " Variable in the Objective, " + std::to_string( m ) + " arcs" );
@@ -1171,7 +1171,7 @@ static void test_abstract_to_physical( void )
  auto fs = attach( mcf );
 
  auto lfo = static_cast< LinearFunction * >(
-			  mcf.get_objective< FRealObjective >()->get_function() );
+		     mcf.get_objective< FRealObjective >()->get_function() );
  lfo->modify_coefficient( 2 , 11 );
  auto md = take( fs );
  check( mcf.get_C( 2 ) == 11 , "objective coefficient: cost" );
@@ -1334,14 +1334,16 @@ static void test_bounds( void )
  check( mcf2.get_valid_lower_bound() == 0 , "no capacities: lower bound " +
 	str( mcf2.get_valid_lower_bound() ) );
  check( mcf2.get_valid_upper_bound( true ) == INF , "no capacities: "
-	"conditional upper bound " + str( mcf2.get_valid_upper_bound( true ) ) );
+	"conditional upper bound " +
+	str( mcf2.get_valid_upper_bound( true ) ) );
 
  // a deleted arc has no cost
  MCFBlock mcf3;
  load( mcf3 , 2 , 2 );
  mcf3.remove_arc( 3 );
  check( mcf3.get_valid_upper_bound( true ) == 30 , "deleted arc: "
-	"conditional upper bound " + str( mcf3.get_valid_upper_bound( true ) ) );
+	"conditional upper bound " +
+	str( mcf3.get_valid_upper_bound( true ) ) );
  check( mcf3.get_valid_lower_bound() == 0 , "deleted arc: lower bound " +
 	str( mcf3.get_valid_lower_bound() ) );
  }

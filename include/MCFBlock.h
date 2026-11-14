@@ -605,10 +605,10 @@ public:
   *   f_BlockConfig->f_objective_Configuration is not nullptr,
   *   and it is a SimpleConfiguration< double >;
   *
-  * then the f_value of the SimpleConfiguration< int > is taken as the "sparsity
-  * parameter" (sprs) of the objective function; otherwise, sprs == 0. The
-  * parameter is used as follows: if the number of nonzero arc cost
-  * coefficients (at the time in which the method is called) is >=
+  * then the f_value of the SimpleConfiguration< int > is taken as the
+  * "sparsity parameter" (sprs) of the objective function; otherwise,
+  * sprs == 0. The parameter is used as follows: if the number of nonzero arc
+  * cost coefficients (at the time in which the method is called) is >=
   * sprs * get_NArcs(), then the LinearFunction in the objective is created
   * "dense": each flow Variable is "active" in it, even if it has a zero cost
   * coefficient. Otherwise, the LinearFunction in the objective is created
