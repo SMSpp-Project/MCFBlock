@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-16
+
 ### Changed
 
 - the dual values of the flow conservation and bound Constraint follow the
@@ -448,7 +450,8 @@ Minor point release to avoid the master branch to become too stale:
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.8.0...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.9.0...develop
+[0.9.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.8.0...0.9.0
 [0.8.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.7.0...0.8.0
 [0.7.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.1...0.7.0
 [0.6.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.0...0.6.1
