@@ -182,12 +182,20 @@ if (SMSpp_BUILD_MODULE)
     target_compile_features(${modName}_module PUBLIC cxx_std_20)
     # the interface takes the include paths and the definitions of the
     # library, but not its compile options (e.g., the -fopenmp of a source,
-    # which no header needs), so that it agrees with the module it imports
+    # which no header needs), so that it agrees with the module it imports;
+    # they are taken from the target only in the build tree, while the
+    # installed package gives them by linking the installed library, since
+    # the target of that name is not there
+    set(_lib $<TARGET_PROPERTY:${modName},INTERFACE_INCLUDE_DIRECTORIES>)
     target_include_directories(${modName}_module PRIVATE
-            $<TARGET_PROPERTY:${modName},INTERFACE_INCLUDE_DIRECTORIES>)
+            $<BUILD_INTERFACE:${_lib}>)
+    set(_lib $<TARGET_PROPERTY:${modName},INTERFACE_COMPILE_DEFINITIONS>)
     target_compile_definitions(${modName}_module PRIVATE
-            $<TARGET_PROPERTY:${modName},INTERFACE_COMPILE_DEFINITIONS>)
-    target_link_libraries(${modName}_module PUBLIC $<LINK_ONLY:${modName}>
+            $<BUILD_INTERFACE:${_lib}>)
+    unset(_lib)
+    target_link_libraries(${modName}_module PUBLIC
+            $<BUILD_INTERFACE:$<LINK_ONLY:${modName}>>
+            $<INSTALL_INTERFACE:${modNamespace}::${modName}>
             ${modNamespace}::SMS++_module)
     add_library(${modNamespace}::${modName}_module ALIAS ${modName}_module)
 endif ()

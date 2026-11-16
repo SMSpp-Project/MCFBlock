@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- the installed module `smspp.mcfblock` could not be imported, since its
+  package gave the interface of the module the target of the library by its
+  name in the build tree, which an installed package does not have
+
 - `map_back_solution()` and `map_forward_solution()` read the potentials of
   a copy without its flow conservation Constraint out of an empty vector,
   and crashed: they now throw, as documented; `map_forward_solution()` also
