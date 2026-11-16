@@ -183,19 +183,26 @@ if (SMSpp_BUILD_MODULE)
     # the interface takes the include paths and the definitions of the
     # library, but not its compile options (e.g., the -fopenmp of a source,
     # which no header needs), so that it agrees with the module it imports;
-    # they are taken from the target only in the build tree, while the
-    # installed package gives them by linking the installed library, since
-    # the target of that name is not there
-    set(_lib $<TARGET_PROPERTY:${modName},INTERFACE_INCLUDE_DIRECTORIES>)
+    # the installed package takes them from the installed library, whose
+    # target of this name is not there, and gives the include paths as -I
+    # options, before which CMake puts no prefix of the package
+    set(_inc $<TARGET_PROPERTY:${modName},INTERFACE_INCLUDE_DIRECTORIES>)
+    set(_def $<TARGET_PROPERTY:${modName},INTERFACE_COMPILE_DEFINITIONS>)
     target_include_directories(${modName}_module PRIVATE
-            $<BUILD_INTERFACE:${_lib}>)
-    set(_lib $<TARGET_PROPERTY:${modName},INTERFACE_COMPILE_DEFINITIONS>)
+            $<BUILD_INTERFACE:${_inc}>)
     target_compile_definitions(${modName}_module PRIVATE
-            $<BUILD_INTERFACE:${_lib}>)
+            $<BUILD_INTERFACE:${_def}>)
+    set(_lib ${modNamespace}::${modName})
+    set(_inc $<TARGET_PROPERTY:${_lib},INTERFACE_INCLUDE_DIRECTORIES>)
+    set(_def $<TARGET_PROPERTY:${_lib},INTERFACE_COMPILE_DEFINITIONS>)
+    target_compile_options(${modName}_module PRIVATE
+            $<INSTALL_INTERFACE:$<LIST:TRANSFORM,${_inc},PREPEND,-I>>)
+    target_compile_definitions(${modName}_module PRIVATE
+            $<INSTALL_INTERFACE:${_def}>)
     unset(_lib)
-    target_link_libraries(${modName}_module PUBLIC
-            $<BUILD_INTERFACE:$<LINK_ONLY:${modName}>>
-            $<INSTALL_INTERFACE:${modNamespace}::${modName}>
+    unset(_inc)
+    unset(_def)
+    target_link_libraries(${modName}_module PUBLIC $<LINK_ONLY:${modName}>
             ${modNamespace}::SMS++_module)
     add_library(${modNamespace}::${modName}_module ALIAS ${modName}_module)
 endif ()
