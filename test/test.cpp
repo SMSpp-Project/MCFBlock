@@ -175,7 +175,7 @@ static void check_abstract( MCFBlock & mcf , const std::string & what ,
 
  if( obj ) {
   auto lf = static_cast< LinearFunction * >(
-			  mcf.get_objective< FRealObjective >()->get_function() );
+		     mcf.get_objective< FRealObjective >()->get_function() );
   check( lf->get_num_active_var() == m , what + ": " +
 	 std::to_string( lf->get_num_active_var() ) +
 	 " Variable in the Objective, " + std::to_string( m ) + " arcs" );
@@ -1002,6 +1002,25 @@ static void test_mod_params( void )
 	     "chg_cost( eDryRun )" );
  check( md.abst.empty() , "chg_cost( eDryRun ): abstract" );
 
+ // eDryRun for the physical representation issues no physical
+ // Modification, but the costs change together with the Objective when
+ // that is changed [see the comments to the chg_*() methods]
+ mcf.chg_cost( 7 , 4 , eDryRun , eNoBlck );
+ md = take( fs );
+ check( md.phys.empty() && ( ! md.abst.empty() ) && ( mcf.get_C( 4 ) == 7 ) ,
+	"chg_cost( eDryRun , eNoBlck )" );
+ std::vector< double > c8 = { 8 };
+ mcf.chg_costs( Block::MF_dbl_sp( c8 ) , Range( 4 , 5 ) , eDryRun , eNoBlck );
+ md = take( fs );
+ check( md.phys.empty() && ( ! md.abst.empty() ) && ( mcf.get_C( 4 ) == 8 ) ,
+	"chg_costs( eDryRun , eNoBlck )" );
+ check_abstract( mcf , "chg_cost[s]( eDryRun , eNoBlck )" );
+
+ // and nothing changes if both are eDryRun
+ mcf.chg_cost( 9 , 4 , eDryRun , eDryRun );
+ check_none( take( fs ) , "chg_cost( eDryRun , eDryRun )" );
+ check( mcf.get_C( 4 ) == 8 , "chg_cost( eDryRun , eDryRun ): cost" );
+
  mcf.unregister_Solvers( true );
  }
 
@@ -1171,7 +1190,7 @@ static void test_abstract_to_physical( void )
  auto fs = attach( mcf );
 
  auto lfo = static_cast< LinearFunction * >(
-			  mcf.get_objective< FRealObjective >()->get_function() );
+		     mcf.get_objective< FRealObjective >()->get_function() );
  lfo->modify_coefficient( 2 , 11 );
  auto md = take( fs );
  check( mcf.get_C( 2 ) == 11 , "objective coefficient: cost" );
@@ -1334,14 +1353,16 @@ static void test_bounds( void )
  check( mcf2.get_valid_lower_bound() == 0 , "no capacities: lower bound " +
 	str( mcf2.get_valid_lower_bound() ) );
  check( mcf2.get_valid_upper_bound( true ) == INF , "no capacities: "
-	"conditional upper bound " + str( mcf2.get_valid_upper_bound( true ) ) );
+	"conditional upper bound " +
+	str( mcf2.get_valid_upper_bound( true ) ) );
 
  // a deleted arc has no cost
  MCFBlock mcf3;
  load( mcf3 , 2 , 2 );
  mcf3.remove_arc( 3 );
  check( mcf3.get_valid_upper_bound( true ) == 30 , "deleted arc: "
-	"conditional upper bound " + str( mcf3.get_valid_upper_bound( true ) ) );
+	"conditional upper bound " +
+	str( mcf3.get_valid_upper_bound( true ) ) );
  check( mcf3.get_valid_lower_bound() == 0 , "deleted arc: lower bound " +
 	str( mcf3.get_valid_lower_bound() ) );
  }
@@ -1560,6 +1581,163 @@ static void test_random( void )
 /*--------------------------------------------------------------------------*/
 /*--------------------------------- MAIN -----------------------------------*/
 /*--------------------------------------------------------------------------*/
+/// map_back_solution() and map_forward_solution() between an MCFBlock and a
+/// copy of it, either of them possibly lacking the Constraint
+
+static void test_map_solution( void )
+{
+ auto thrown = [ & ]( const std::function< void( void ) > & f ) {
+  try { f(); }
+  catch( std::invalid_argument & ) { return( true ); }
+  return( false );
+  };
+ SimpleConfiguration< int > primal( 1 ) , dual( 2 );
+ const Vec_FNumber flow = { 2 , 2 , 2 , 0 , 4 };
+ const Vec_CNumber pi = { 1 , 2 , 3 , 4 };
+
+ MCFBlock orig;
+ load( orig );
+ generate( orig );
+
+ // a copy without the Constraint (load() always makes the Variable): the
+ // flows go both ways, the potentials are not there
+ {
+  MCFBlock copy;
+  load( copy );
+  copy.set_x( flow.begin() );
+  orig.map_back_solution( & copy , nullptr , & primal );
+  Vec_FNumber got( 5 );
+  orig.get_x( got.begin() );
+  check( got == flow , "map_back_solution() of the flows" );
+  check( thrown( [ & ] { orig.map_back_solution( & copy ); } ) ,
+	 "map_back_solution() from a copy without Constraint throws" );
+  check( thrown( [ & ] { orig.map_back_solution( & copy , nullptr ,
+						 & dual ); } ) ,
+	 "map_back_solution() of the potentials without Constraint throws" );
+  check( thrown( [ & ] { orig.map_forward_solution( & copy , nullptr ,
+						    & dual ); } ) ,
+	 "map_forward_solution() to a copy without Constraint throws" );
+  }
+
+ // the flows of an MCFBlock without the Constraint go forward
+ {
+  MCFBlock vonly , copy;
+  load( vonly );
+  vonly.set_x( flow.begin() );
+  load( copy );
+  vonly.map_forward_solution( & copy , nullptr , & primal );
+  Vec_FNumber got( 5 );
+  copy.get_x( got.begin() );
+  check( got == flow , "map_forward_solution() of the flows of an MCFBlock "
+	 "without Constraint" );
+  }
+
+ // a full copy: the potentials go both ways
+ {
+  MCFBlock copy;
+  load( copy );
+  generate( copy );
+  copy.set_pi( pi.begin() );
+  orig.map_back_solution( & copy , nullptr , & dual );
+  Vec_CNumber got( 4 );
+  orig.get_pi( got.begin() );
+  check( got == pi , "map_back_solution() of the potentials" );
+  }
+ }
+
+/*--------------------------------------------------------------------------*/
+
+static void test_R3B_closed_arcs( void )
+{
+ MCFBlock orig;
+ load( orig );
+ orig.close_arcs( Block::Subset( { 1 , 3 } ) , true );
+
+ auto copy = static_cast< MCFBlock * >( orig.get_R3_Block() );
+ bool same = true;
+ for( Block::Index i = 0 ; i < orig.get_NArcs() ; ++i )
+  same &= ( copy->is_closed( i ) == orig.is_closed( i ) );
+ check( same , "the copy has the closed arcs of the original" );
+ delete copy;
+ }
+
+/*--------------------------------------------------------------------------*/
+/// dual_feasible() on the abstract representation, where the Objective is
+/// among the things active on a Variable: zero potentials and the opposite
+/// of the cost of every arc on its bound constraint (the coefficient of the
+/// constraint in the Lagrangian function, as RowConstraint stores it), then
+/// one bound dual wrong
+
+static void test_dual_feasible_abstract( void )
+{
+ MCFBlock mcf;
+ load( mcf );
+ generate( mcf );
+
+ auto set_duals = [ & mcf ]( double delta ) {
+  for( Index a = 0 ; a < mcf.get_NArcs() ; ++a ) {
+   auto x = mcf.i2p_x( a );
+   for( Index j = 0 ; j < x->get_num_active() ; ++j ) {
+    auto ci = x->get_active( j );
+    if( auto r = dynamic_cast< FRowConstraint * >( ci ) )
+     r->set_dual( 0 );
+    else
+     if( auto b = dynamic_cast< OneVarConstraint * >( ci ) )
+      b->set_dual( - C0[ a ] + ( a == 0 ? delta : 0 ) );
+    }
+   }
+  };
+
+ set_duals( 0 );
+ check( mcf.dual_feasible( 1e-9 , true ) ,
+	"dual_feasible( , true ) accepts the bound duals equal to the costs" );
+ set_duals( 1 );
+ check( ! mcf.dual_feasible( 1e-9 , true ) ,
+	"dual_feasible( , true ) rejects a wrong bound dual" );
+ }
+
+/*--------------------------------------------------------------------------*/
+/// the potentials and the reduced costs have the signs of the network flow
+/// literature, the opposite of the dual values that the Constraint store
+/// (those that a general-purpose LP solver writes there); a dual solution
+/// written in the Constraint as such a solver writes it is dual feasible
+/// for both representations
+
+static void test_dual_sign( void )
+{
+ MCFBlock mcf;
+ load( mcf );
+ generate( mcf );
+
+ const Vec_CNumber pi = { 0 , -1 , -2 , -3 };
+ mcf.set_pi( pi.begin() );
+ bool same = true;
+ for( Index i = 0 ; i < 4 ; ++i )
+  same &= ( mcf.i2p_e( i )->get_dual() == - pi[ i ] ) &&
+          ( mcf.get_pi( i ) == pi[ i ] );
+ check( same , "set_pi() stores the opposite of the potentials" );
+
+ Vec_CNumber rc( 5 );
+ for( Index a = 0 ; a < 5 ; ++a )
+  rc[ a ] = C0[ a ] + pi[ SN0[ a ] - 1 ] - pi[ EN0[ a ] - 1 ];
+ mcf.set_rc( rc.begin() );
+ Vec_CNumber got( 5 );
+ mcf.get_rc( got.begin() );
+ same = ( got == rc );
+ for( Index a = 0 ; a < 5 ; ++a )
+  same &= ( mcf.i2p_ub( a )->get_dual() == - rc[ a ] );
+ check( same , "set_rc() stores the opposite of the reduced costs" );
+
+ // the same values written in the Constraint, as an LP solver does
+ for( Index i = 0 ; i < 4 ; ++i )
+  mcf.i2p_e( i )->set_dual( - pi[ i ] );
+ for( Index a = 0 ; a < 5 ; ++a )
+  mcf.i2p_ub( a )->set_dual( - rc[ a ] );
+ check( mcf.dual_feasible( 1e-9 , true ) && mcf.dual_feasible( 1e-9 ) ,
+	"the dual values of an LP solver are dual feasible" );
+ }
+
+/*--------------------------------------------------------------------------*/
 
 int main( void )
 {
@@ -1582,6 +1760,10 @@ int main( void )
   { "abstract_to_physical" , test_abstract_to_physical } ,
   { "flow_by_hand" , test_flow_by_hand } ,
   { "bounds" , test_bounds } ,
+  { "map_solution" , test_map_solution } ,
+  { "R3B_closed_arcs" , test_R3B_closed_arcs } ,
+  { "dual_feasible_abstract" , test_dual_feasible_abstract } ,
+  { "dual_sign" , test_dual_sign } ,
   { "random" , test_random } };
 
  for( auto & [ name , test ] : tests )

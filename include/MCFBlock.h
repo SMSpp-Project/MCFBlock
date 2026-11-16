@@ -146,6 +146,19 @@ namespace SMSpp_di_unipi_it
  * \f]
  * are satisfied for all arcs (i, j) of A.
  *
+ * The signs of Pi[] and RC[] are those of the network flow literature,
+ * which are the opposite of those of the dual values of a RowConstraint.
+ * For a minimization problem, a RowConstraint stores the coefficient of its
+ * constraint in the Lagrangian function [see RowConstraint.h], which is
+ * - Pi[ i ] for the flow conservation constraint (1) of node i, and
+ * - RC[ i , j ] for the bound constraint (2) of arc (i, j). Hence, get_pi()
+ * and set_pi() (respectively, get_rc() and set_rc()) give and take Pi[]
+ * (respectively, RC[]) with the signs above, changing the sign of the dual
+ * values stored in the Constraint. A Solver that writes the dual values in
+ * the Constraint directly (as a general-purpose LP solver does) follows
+ * the convention of RowConstraint, one that calls set_pi() and set_rc() the
+ * one above, and both lead get_pi() and get_rc() to give the same values.
+ *
  * The graph G is allowed to be "partly dynamic". The sets of nodes and arcs
  * that are input at the beginning are assumed not to be changed (save for
  * changing costs, capacities, and deficits, and for arcs to be closed or
@@ -405,7 +418,7 @@ public:
   * - the dimension "DynNNodes" containing the current number of dynamic
   *   nodes: all the nodes between 0 and "NNodes" - "DynNNodes" - 1 are
   *   static, i.e., they cannot be deleted (and re-created), whereas all
-  *   those from "NNodes" + "DynNNodes" to "NNodes" - 1 are dynamic, i.e.,
+  *   those from "NNodes" - "DynNNodes" to "NNodes" - 1 are dynamic, i.e.,
   *   they can deleted and later on re-created; if "DynNNodes" > "NNodes",
   *   then it is intended that "DynNNodes" == "NNodes", i.e., all nodes are
   *   dynamic (but still "NNodes" is taken as the current number of nodes);
@@ -413,7 +426,7 @@ public:
   * - the dimension "DynNArcs" containing the current number of dynamic
   *   arcs: all the arcs between 0 and "NArcs" - "DynNArcs" - 1 are
   *   static, i.e., they cannot be deleted (and re-created), whereas all
-  *   those from "NArcs" + "DynNArcs" to "NArcs" - 1 are dynamic, i.e.,
+  *   those from "NArcs" - "DynNArcs" to "NArcs" - 1 are dynamic, i.e.,
   *   they can deleted and later on re-created; if "DynNArcs" > "NArcs",
   *   then it is intended that "DynNArcs" == "NArcs", i.e., all arcs are
   *   dynamic (but still "NArcs" is taken as the current number of arcs);
@@ -581,53 +594,25 @@ public:
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
  /// generate the objective of the MCF
- /** Method that generates the objective of the MCF. Although this would seem
-  * to be an exceedingly simple object, there is still a nontrivial decision
-  * to be made about it, i.e., whether it is represented as a "sparse"
-  * LinearFunction or a "dense" one. This is governed by objc: if
+ /** Method that generates the objective of the MCF, an FRealObjective whose
+  * LinearFunction is "dense": each flow Variable is "active" in it, with its
+  * cost as coefficient (0 for a deleted arc), even if the cost is zero. This
+  * makes it easy to change the cost coefficients [see chg_cost[s]()] at the
+  * cost of more memory; a Solver "trusting" the MCFBlock about how many
+  * nonzeroes are there in the LinearFunction may then find more than there
+  * are. The parameter objc is ignored.
   *
-  * - either objc is not nullptr and it is a SimpleConfiguration< double >;
+  * A "sparse" LinearFunction, with only the flow Variable of nonzero cost
+  * active in it, is not supported, as it makes it inordinately more
+  * difficult to react to abstract Modification, while its actual impact on
+  * performances is very dubious. As a consequence,
   *
-  * - or f_BlockConfig is not nullptr,
-  *   f_BlockConfig->f_objective_Configuration is not nullptr,
-  *   and it is a SimpleConfiguration< double >;
+  *     THE ONLY Modification POSSIBLE TO THE Objective ARE CHANGING THE
+  *     COEFFICIENTS: DELETING Variable (AND, THEREFORE, ADDING THEM) IS
+  *     NOT ALLOWED
   *
-  * then the f_value of the SimpleConfiguration< int > is taken as the "sparsity
-  * parameter" (sprs) of the objective function; otherwise, sprs == 0. The
-  * parameter is used as follows: if the number of nonzero arc cost
-  * coefficients (at the time in which the method is called) is >=
-  * sprs * get_NArcs(), then the LinearFunction in the objective is created
-  * "dense": each flow Variable is "active" in it, even if it has a zero cost
-  * coefficient. Otherwise, the LinearFunction in the objective is created
-  * "sparse": only flow Variable with nonzero coefficient are "active" in it.
-  * A "dense" Objective makes it much easier to change the cost coefficients
-  * (see chg_cost[s]()), but it comes at the cost of more memory. Besides,
-  * Solver using it and "trusting" the MCFBlock about how many nonzeroes are
-  * there in the LinearFunction may be sorely disappointed, which may have
-  * adverse effects on efficiency.
-  *
-  * Yet, a "dense" Objective is the default, as with sprs == 0 the Objective
-  * is created "dense" even if all arc cost coefficients are zero.
-  *
-  * Note that the decision is taken at the moment in which this method is
-  * called, and never changed later, even if the number of nonzeroes
-  * changes dramatically. Also, note that if all cost coefficients are
-  * "naturally" nonzero, then the Objective will be "dense" no matter what the
-  * value of sprs is. Although this may seem obvious, this also means that the
-  * Objective will remain "dense" even if later on many coefficients become
-  * zero.
-  *
-  * IMPORTANT NOTE: ALLOWING SPARSE Objective MAKES IT INORDINATELY MORE
-  * DIFFICULT TO REACT TO ABSTRACT Modification, WHILE ITS ACTUAL IMPACT ON
-  * PERFORMANCES IS VERY DUBIOUS. THEREFORE, THE SUPPORT FOR IT IS ONLY
-  * HALF-BAKED, AND WHATEVER THERE IS CURRENTLY COMMENTED OUT. DEVELOPMENT
-  * OF THIS FEATURE WILL ONLY BE RESUMED IF CLEAR PROOF OF ITS WORTHINESS
-  * IS ACHIEVED.
-  *
-  * The consequence is that, currently, THE ONLY Modification POSSIBLE TO THE
-  * Objective ARE CHANGING THE COEFFICIENTS: DELETING Variable (AND,
-  * THEREFORE, ADDING THEM) IS NOT ALLOWED, the MCFBlock will throw exception
-  * while processing the corresponding "abstract" Modification. */
+  * and the MCFBlock throws exception while processing the corresponding
+  * "abstract" Modification. */
 
  void generate_objective( Configuration *objc = nullptr ) override;
 
@@ -1488,9 +1473,10 @@ public:
    throw( std::logic_error( "potentials unavailable if Constraint aren't" ) );
 
   if( nde < get_NStaticNodes() )
-   return( E[ nde ].get_dual() );
+   return( - E[ nde ].get_dual() );
   else
-   return( std::next( dE.begin() , nde - get_NStaticNodes() )->get_dual() );
+   return( - std::next( dE.begin() , nde - get_NStaticNodes() )->get_dual()
+	   );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1526,9 +1512,10 @@ public:
    return( get_C( arc ) + get_pi( SN[ arc ] - 1 ) - get_pi( EN[ arc ] - 1 ) );
   else
    if( arc < get_NStaticArcs() )
-    return( UB[ arc ].get_dual() );
+    return( - UB[ arc ].get_dual() );
    else
-    return( std::next( dUB.begin() , arc - get_NStaticArcs() )->get_dual() );
+    return( - std::next( dUB.begin() , arc - get_NStaticArcs() )->get_dual()
+	    );
   }
 
 /*--------------------------------------------------------------------------*/
@@ -1566,8 +1553,9 @@ public:
  /// sets a contiguous interval of the potential solution
  /** Method to set the potential solution; the values found in the
   * c_Vec_CNumber starting from pstrt are copied into the potential of node
-  * (dual multiplier of the flow balance constraint) i for i in rng, in the
-  * same order. */
+  * i for i in rng, in the same order. The potential of a node is the
+  * opposite of the dual value of its flow balance constraint, as the
+  * comments of the class explain. */
 
  void set_pi( c_Vec_CNumber_it pstrt ,
 	      Range rng = Range( 0 , Inf< Index >() ) );
@@ -1576,8 +1564,9 @@ public:
  /// sets a generic subset of the potential solution
  /** Method to set the potential solution; the values found in the
   * c_Vec_FNumber starting from pstrt are copied into the potential of node
-  * (dual multiplier of the flow balance constraint) i for all i in sbst
-  * (that must be ordered in increasing sense), in the same order. */
+  * i for all i in sbst (that must be ordered in increasing sense), in the
+  * same order. The potential of a node is the opposite of the dual value of
+  * its flow balance constraint, as the comments of the class explain. */
 
  void set_pi( c_Vec_FNumber_it pstrt , c_Subset sbst );
 
@@ -1592,17 +1581,18 @@ public:
    throw( std::invalid_argument( "invalid node name" ) );
 
   if( nde < get_NStaticNodes() )
-   E[ nde ].set_dual( PSol );
+   E[ nde ].set_dual( - PSol );
   else
-   std::next( dE.begin() , nde - get_NStaticNodes() )->set_dual( PSol );
+   std::next( dE.begin() , nde - get_NStaticNodes() )->set_dual( - PSol );
   }
 
 /*--------------------------------------------------------------------------*/
  /// sets a contiguous interval of the reduced costs
  /** Method to set the reduced costs solution; the values found in the
   * c_Vec_CNumber starting from rcstrt are copied into the reduced cost of
-  * arc (dual value of the bound constraint) i for i in rng, in the same
-  * order. */
+  * arc i for i in rng, in the same order. The reduced cost of an arc is the
+  * opposite of the dual value of its bound constraint, as the comments of
+  * the class explain. */
 
  void set_rc( c_Vec_CNumber_it rcstrt ,
 	      Range rng = Range( 0 , Inf< Index >() ) );
@@ -1611,8 +1601,9 @@ public:
  /// sets a generic subset of the reduced costs
  /** Method to set the reduced costs solution; the values found in the
   * c_Vec_FNumber starting from rcstrt are copied into the reduced cost of
-  * arc (dual value of the bound constraint) i for all i in sbst (that must
-  * be ordered in increasing sense), in the same order. */
+  * arc i for all i in sbst (that must be ordered in increasing sense), in
+  * the same order. The reduced cost of an arc is the opposite of the dual
+  * value of its bound constraint, as the comments of the class explain. */
 
  void set_rc( c_Vec_FNumber_it rcstrt , c_Subset sbst );
 
@@ -1627,9 +1618,9 @@ public:
   throw( std::invalid_argument( "invalid arc name" ) );
 
  if( arc < get_NStaticArcs() )
-  UB[ arc ].set_dual( RC );
+  UB[ arc ].set_dual( - RC );
  else
-  std::next( dUB.begin() , arc - get_NStaticArcs() )->set_dual( RC );
+  std::next( dUB.begin() , arc - get_NStaticArcs() )->set_dual( - RC );
 
  }  // end( MCFBlock::set_rc( one ) )
 
@@ -1763,7 +1754,15 @@ public:
  * Note: the methods accept the eDryRun value for the issueAMod parameter for
  * the "abstract" representation. This allows to re-use them within MCFBlock
  * itself when reacting to abstract Modification, where the  "abstract"
- * representation has been changed already.
+ * representation has been changed already. The value eDryRun for issueMod
+ * of the chg_*() methods means that no "physical" Modification is issued,
+ * while the physical representation, which the new data are compared
+ * against, is not always left alone: chg_ucap() and chg_dfct() then change
+ * the abstract representation alone, if issueAMod says so, while the other
+ * chg_*() methods change the physical representation together with the
+ * abstract one whenever they change the latter (issueAMod is not eDryRun
+ * and the corresponding part of the abstract representation has been
+ * constructed), and leave both unchanged otherwise.
  *  @{ */
 
  /// change the costs of a contiguous interval of arcs

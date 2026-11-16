@@ -72,7 +72,8 @@ static std::istream & eatDMXcomments( std::istream& is )
   is >> std::ws;  // skip whitespaces
   if( is.peek() == is.widen( 'c' ) )
    // a comment: skip the rest of line and move to next
-   is.ignore( std::numeric_limits< std::streamsize >::max() , is.widen( '\n' ) );
+   is.ignore( std::numeric_limits< std::streamsize >::max() ,
+	      is.widen( '\n' ) );
   else
    break;
   }
@@ -954,13 +955,12 @@ bool MCFBlock::dual_feasible( c_CNumber ceps , bool useabstract )
     auto ci = xi->get_active( j );
     if( auto rci = dynamic_cast< FRowConstraint * >( ci ) ) {
      auto lrci = get_lfc( rci );
-     RCi -= rci->get_dual() * lrci->get_coefficient( lrci->is_active( xi ) );
+     RCi += rci->get_dual() * lrci->get_coefficient( lrci->is_active( xi ) );
      }
-    else {
-     auto bci = dynamic_cast< BoxConstraint * >( ci );
-     assert( bci );
-     RCi -= bci->get_dual();
-     }
+    else
+     if( auto bci = dynamic_cast< OneVarConstraint * >( ci ) )
+      RCi += bci->get_dual();
+     // else not a Constraint, e.g., the Objective
     }
 
    RCi = std::abs( RCi );
@@ -1379,7 +1379,16 @@ Block * MCFBlock::get_R3_Block( Configuration *r3bc , Block * base ,
 	     get_NArcs() - get_NStaticArcs() ,
 	     get_MaxNNodes() - get_NStaticNodes() ,
 	     get_MaxNArcs() - get_NStaticArcs() );
- 
+
+ // a closed arc is a fixed Variable, which neither U nor C record
+ if( AR & HasVar ) {
+  Subset closed;
+  for( Index i = 0 ; i < get_NArcs() ; ++i )
+   if( is_closed( i ) )
+    closed.push_back( i );
+  MCFB->close_arcs( std::move( closed ) , true , eNoMod , eNoMod );
+  }
+
  return( MCFB );
 
  }  // end( MCFBlock::get_R3_Block )
@@ -1442,6 +1451,9 @@ void MCFBlock::map_back_solution( Block *R3B , Configuration *r3bc ,
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
+  if( ! ( MCFB->AR & HasFlw ) )
+   throw( std::invalid_argument( "MCFBlock::map_back_solution: R3B has "
+				 "no flow conservation Constraint" ) );
 
   // map back the potentials- - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1530,7 +1542,7 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  // if required, map forward primal solution- - - - - - - - - - - - - - - - -
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
- if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
+ if( ( wsol != 2 ) && ( AR & HasVar ) ) {  // ... if any
   if( MCFB->get_NStaticArcs() != get_NStaticArcs() )
    throw( std::invalid_argument( "incompatible static flow size" ) );
 
@@ -1562,6 +1574,9 @@ void MCFBlock::map_forward_solution( Block *R3B , Configuration *r3bc ,
  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
  if( ( wsol != 1 ) && ( AR & HasFlw ) ) {  // ... if any
+  if( ! ( MCFB->AR & HasFlw ) )
+   throw( std::invalid_argument( "MCFBlock::map_forward_solution: R3B "
+				 "has no flow conservation Constraint" ) );
   // map forward the potentials - - - - - - - - - - - - - - - - - - - - - - -
 
   if( MCFB->get_NStaticNodes() != get_NStaticNodes() )
@@ -1996,13 +2011,13 @@ void MCFBlock::get_pi( Vec_CNumber_it PSol , Range rng ) const
 
  Index i = rng.first;
  for( ; i < std::min( rng.second , get_NStaticNodes() ) ; )
-  *(PSol++) = E[ i++ ].get_dual();
+  *(PSol++) = - E[ i++ ].get_dual();
 
  if( HasDynamicE() ) {
   auto dei = std::next( dE.begin() , rng.first >= get_NStaticNodes() ?
 			             i - get_NStaticNodes() : 0 );
   for( ; i++ < std::min( rng.second , get_NNodes() ) ; )
-   *(PSol++) = (*(dei++)).get_dual();
+   *(PSol++) = - (*(dei++)).get_dual();
   }
  }  // end( MCFBlock::get_pi( range ) )
 
@@ -2017,7 +2032,7 @@ void MCFBlock::get_pi( Vec_CNumber_it PSol , c_Subset & nms ) const
 
  if( HasDynamicE() ) {
   while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticNodes() ) )
-   *(PSol++) = E[ *(nmsi++) ].get_dual();
+   *(PSol++) = - E[ *(nmsi++) ].get_dual();
 
   if( nmsi == nms.end() )
    return;
@@ -2025,13 +2040,13 @@ void MCFBlock::get_pi( Vec_CNumber_it PSol , c_Subset & nms ) const
   auto i = get_NStaticNodes();
   for( auto dei = dE.begin() ; nmsi != nms.end() ; ++dei )
    if( *nmsi == i++ ) {
-    *(PSol++) = (*dei).get_dual();
+    *(PSol++) = - (*dei).get_dual();
     nmsi++;
     }
   }
  else
   while( nmsi != nms.end() )
-   *(PSol++) = E[ *(nmsi++) ].get_dual();
+   *(PSol++) = - E[ *(nmsi++) ].get_dual();
 
  }  // end( MCFBlock::get_pi( subset ) )
 
@@ -2047,13 +2062,13 @@ void MCFBlock::get_rc( Vec_CNumber_it RC , Range rng ) const
   Index i = rng.first;
   if( HasStaticX() )
    for( ; i < std::min( rng.second , get_NStaticArcs() ) ; )
-    *(RC++) = UB[ i++ ].get_dual();
+    *(RC++) = - UB[ i++ ].get_dual();
 
   if( HasDynamicX() ) {
    auto dubi = std::next( dUB.begin() , rng.first >= get_NStaticArcs() ?
 			                i - get_NStaticArcs() : 0 );
    for( ; i++ < std::min( rng.second , get_NArcs() ) ; )
-    *(RC++) = (*(dubi++)).get_dual();
+    *(RC++) = - (*(dubi++)).get_dual();
    }
   }
  else
@@ -2076,7 +2091,7 @@ void MCFBlock::get_rc( Vec_CNumber_it RC , c_Subset & nms ) const
  if( AR & HasBnd ) {
   if( HasDynamicX() ) {
    while( ( nmsi != nms.end() ) && ( *nmsi < get_NStaticArcs() ) )
-     *(RC++) = UB[ *(nmsi++) ].get_dual();
+     *(RC++) = - UB[ *(nmsi++) ].get_dual();
 
    if( nmsi == nms.end() )
     return;
@@ -2084,13 +2099,13 @@ void MCFBlock::get_rc( Vec_CNumber_it RC , c_Subset & nms ) const
    auto i = get_NStaticArcs();
    for( auto dubi = dUB.begin() ; nmsi != nms.end() ; ++dubi )
     if( *nmsi == i++ ) {
-     *(RC++) = (*dubi).get_dual();
+     *(RC++) = - (*dubi).get_dual();
      nmsi++;
      }
    }
   else
    while( nmsi != nms.end() ) 
-    *(RC++) = UB[ *(nmsi++) ].get_dual();
+    *(RC++) = - UB[ *(nmsi++) ].get_dual();
   }
  else
   for( ; nmsi != nms.end() ; ++nmsi ) 
@@ -2170,7 +2185,7 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , Range rng )
  if( HasStaticE() )
   for( auto ei = E.begin() + i ;
        i < std::min( rng.second , get_NStaticNodes() ) ; ++i )
-   (ei++)->set_dual( *(pstrt++) );
+   (ei++)->set_dual( - *(pstrt++) );
 
  if( ( ! HasDynamicE() ) || ( rng.second <= get_NStaticNodes() ) )
   return;
@@ -2180,7 +2195,7 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , Range rng )
   dei = std::next( dei , i - get_NStaticNodes() );
 
  for( ; i < std::min( rng.second , get_NNodes() ) ; ++i )
-  (dei++)->set_dual( *(pstrt++) );
+  (dei++)->set_dual( - *(pstrt++) );
 
  }  // end( MCFBlock::set_pi( range ) )
 
@@ -2195,7 +2210,7 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Subset sbst )
 
  if( HasStaticE() )
   while( ( it != sbst.end() ) && ( *it < get_NStaticNodes() ) )
-   E[ *(it++) ].set_dual( *(pstrt++) );
+   E[ *(it++) ].set_dual( - *(pstrt++) );
 
  if( ! HasDynamicE() )
   return;
@@ -2206,7 +2221,7 @@ void MCFBlock::set_pi( c_Vec_CNumber_it pstrt , c_Subset sbst )
  while( it != sbst.end() ) {
   Index h = *(it++);
   dEi = std::next( dEi , h - prev );
-  dEi->set_dual( *(pstrt++) );
+  dEi->set_dual( - *(pstrt++) );
   prev = h;
   }
  }  // end( MCFBlock::set_pi( subset ) )
@@ -2226,7 +2241,7 @@ void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , Range rng )
  if( HasStaticX() )
   for( auto ubi = UB.begin() + i ;
        i < std::min( rng.second , get_NStaticArcs() ) ; ++i )
-   (ubi++)->set_dual( *(rcstrt++) );
+   (ubi++)->set_dual( - *(rcstrt++) );
 
  if( ( ! HasDynamicX() ) || ( rng.second <= get_NStaticArcs() ) )
   return;
@@ -2236,7 +2251,7 @@ void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , Range rng )
   dubi = std::next( dubi , i - get_NStaticArcs() );
 
  for( ; i < std::min( rng.second , get_NArcs() ) ; ++i )
-  (dubi++)->set_dual( *(rcstrt++) );
+  (dubi++)->set_dual( - *(rcstrt++) );
 
  }  // end( MCFBlock::set_rc( range ) )
 
@@ -2251,7 +2266,7 @@ void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Subset sbst )
 
  if( HasStaticX() )
   while( ( it != sbst.end() ) && ( *it < get_NStaticArcs() ) )
-   UB[ *(it++) ].set_dual( *(rcstrt++) );
+   UB[ *(it++) ].set_dual( - *(rcstrt++) );
 
  if( ! HasDynamicX() )
   return;
@@ -2262,7 +2277,7 @@ void MCFBlock::set_rc( c_Vec_CNumber_it rcstrt , c_Subset sbst )
  while( it != sbst.end() ) {
   Index h = *(it++);
   dubi = std::next( dubi , h - prev );
-  dubi->set_dual( *(rcstrt++) );
+  dubi->set_dual( - *(rcstrt++) );
   prev = h;
   }
  }  // end( MCFBlock::set_rc( subset ) )

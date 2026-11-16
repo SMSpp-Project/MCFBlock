@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-16
+
+### Changed
+
+- the dual values of the flow conservation and bound Constraint follow the
+  convention of `RowConstraint` (for a minimization problem, the
+  coefficient of the constraint in the Lagrangian function), which is the
+  opposite of that of the network flow literature: `get_pi()`, `set_pi()`,
+  `get_rc()` and `set_rc()` keep giving and taking the potentials and the
+  reduced costs with the latter signs, and change the sign of what the
+  Constraint store, while `dual_feasible( , true )` reads the Constraint
+  with the former; the potentials that a general-purpose LP solver writes
+  were seen by `get_pi()` with the opposite sign of those of `MCFSolver`
+  and `MCFLemonSolver`, and the optimal dual solutions of the former were
+  not dual feasible for `dual_feasible()` and `is_optimal()`
+
+### Fixed
+
+- `dmx2nc4` uses `smspp_terminate()` of the core, with which it aborts with a
+  message when `std::terminate()` is called with no exception, e.g., by the
+  destructor of a `std::thread` that can still be joined, where rethrowing
+  the null exception crashed
+
+- the installed module `smspp.mcfblock` could not be imported, since its
+  package gave the interface of the module the target of the library by its
+  name in the build tree, which an installed package does not have
+
+- `map_back_solution()` and `map_forward_solution()` read the potentials of
+  a copy without its flow conservation Constraint out of an empty vector,
+  and crashed: they now throw, as documented; `map_forward_solution()` also
+  mapped the flows under the condition of the potentials, i.e., only when the
+  Constraint were there, never when `solc` asked for the flows alone and
+  also when it asked for the potentials alone
+
+- `get_R3_Block()` gave a copy with the closed arcs of the original open,
+  since a closed arc is a fixed Variable and the copy was loaded from the
+  capacities and costs alone; e.g., a `LagrangianDualSolver` with its
+  sub-Block copied, registered after some arcs were closed, solved the
+  problem as it was before
+
+- `dual_feasible( ceps , true )` took every non-row Stuff active on a flow
+  Variable for a `BoxConstraint`, while the Objective is one of them and the
+  bound constraints are `LB0Constraint`, and crashed on every instance
+
 ## [0.8.0] - 2026-11-03
 
 ### Added
@@ -406,7 +450,8 @@ Minor point release to avoid the master branch to become too stale:
 
 - First test release.
 
-[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.8.0...develop
+[Unreleased]: https://gitlab.com/smspp/mcfblock/-/compare/0.9.0...develop
+[0.9.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.8.0...0.9.0
 [0.8.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.7.0...0.8.0
 [0.7.0]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.1...0.7.0
 [0.6.1]: https://gitlab.com/smspp/mcfblock/-/compare/0.6.0...0.6.1
