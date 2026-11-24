@@ -4,9 +4,9 @@
 #                                                                            #
 #   makefile of test (for MCFBlock)                                          #
 #                                                                            #
-#                                Donato Meoli                                #
-#                          Dipartimento di Informatica                       #
-#                              Universita' di Pisa                           #
+#                             Antonio Frangioni                              #
+#                         Dipartimento di Informatica                        #
+#                             Universita' di Pisa                            #
 #                                                                            #
 ##############################################################################
 
